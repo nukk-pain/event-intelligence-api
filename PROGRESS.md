@@ -105,6 +105,18 @@ stable and deployment-ready.
   and `EV·피지컬 AI를 위한 배터리 안전성 및 충전 인프라 구축 방안 세미나`.
   Chrome/Selenium verified desktop search, 375px mobile layout, date-ordered
   cards, and no horizontal overflow.
+- Event display deployment verification (2026-06-22): committed
+  `5597ad8 Show all venue events`; deployed linux/amd64 binary SHA256
+  `f213739bff953c24e942a5e2115d9dd87cde0823a32f783ec6d2ca27ca946a2c`;
+  `eventsintel-api` restarted active on `developer-vps` at
+  `2026-06-21 15:18:23 UTC`. Public smoke returned 200 for `/`, `/healthz`,
+  `/llms.txt`, `/api/v1`, `/api/v1/schema`, `/api/v1/openapi.yaml`, and
+  `/api/v1/events`. Production ingest completed at `2026-06-21 15:33:18 UTC`
+  with COEX raw=2090, discovered=400, stored=400 and KINTEX stored=9. Public
+  API returned 15 COEX events for `since=2026-08-01&before=2026-08-31`,
+  including `AI서밋서울앤엑스포` and `2026 국제 병원의료산업 박람회`; public
+  Chrome/Selenium verified the new root HTML, date-first event list, search for
+  `AI서밋`, and no 375px horizontal overflow.
 
 ## Validation Notes
 
@@ -120,8 +132,8 @@ No product validation has been run yet. Current evidence level is Low.
 
 ## Next Action
 
-Deploy the event display policy fix to `events.nukk.net`, then run a public
-ingest and smoke test for August 2026 COEX events.
+Continue source coverage and UI review with the updated policy that venue/date
+lists show all discovered COEX/KINTEX events.
 
 ## Decision Needed
 
