@@ -1,0 +1,23 @@
+url: https://www.kintex.com/web/ko/event/list.do
+captured_at: 2026-06-21
+endpoint: list.do (WORKING — resolves PREFLIGHT finding I4)
+notes: |
+  SPIKE result (2026-06-21). Tried over plain HTTP with a polite UA:
+    - list.do                -> 200, contains 9 unique event seqs via
+                                href="javascript:fnView('./view.do', <seq>);"  ← WORKING
+    - clist.do?searchType=11 -> 200 but 0 seqs (rows loaded via AJAX, not in initial HTML)
+    - clist.do?searchType=D  -> 200 but 0 seqs (same)
+    - homepage (/)           -> 200, has 11 view.do?seq= links (mixed promo, not the canonical listing)
+  list.do is the canonical, deterministic listing. Discovery parses the
+  fnView('./view.do', <seq>) JS handler in each card anchor (no browser needed).
+  Detail pages live at /web/ko/event/view.do?seq=<seq> (confirmed 200, has 기간/장소/주최).
+seqs_expected:
+  - "2025044109"
+  - "26030510"
+  - "26033102"
+  - "26040707"
+  - "26041303"
+  - "26051808"
+  - "26052601"
+  - "26060201"
+  - "26060206"

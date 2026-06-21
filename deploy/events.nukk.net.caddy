@@ -1,0 +1,9 @@
+# Append this block to /etc/caddy/Caddyfile on developer-vps, then:
+#   sudo caddy fmt --overwrite /etc/caddy/Caddyfile
+#   sudo caddy validate --config /etc/caddy/Caddyfile
+#   sudo systemctl reload caddy
+# Mirrors the existing cold/holiday/calendar.nukk.net reverse-proxy pattern.
+
+events.nukk.net {
+	reverse_proxy 127.0.0.1:3005
+}

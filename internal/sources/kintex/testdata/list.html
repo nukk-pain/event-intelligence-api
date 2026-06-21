@@ -1,0 +1,1962 @@
+
+
+
+
+
+
+
+ 
+
+ 
+
+
+
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<title>리스트보기 | 행사안내 | KINTEX</title>
+
+
+
+
+
+
+
+ 
+
+ 
+
+
+
+<title>KINTEX</title>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="Author" content="KINTEX">
+<meta name="Keywords" content="KINTEX">
+<meta name="Description" content="KINTEX">
+<meta name="viewport"
+	content="width=device-width, initial-scale=1, minimum-scale=1.0, maximum-scale=2.5, user-scalable=yes">
+<meta name="format-detection" content="telephone=no">
+<META http-equiv="Expires" content="-1">
+<META http-equiv="Pragma" content="no-cache">
+<META http-equiv="Cache-Control" content="No-Cache">
+
+<!-- SNS Share -->
+<meta property="og:title" content="KINTEX">
+<meta property="og:type" content="website">
+<meta property="og:url" content="대표도메인">
+<meta property="og:image" content="/public/common/images/common/sns.jpg">
+<meta property="og:description" content="KINTEX">
+
+<link rel="icon" href="/public/common/images/common/favicon.png">
+
+<!-- front css -->
+<link rel="stylesheet" href="/public/common/css/style.css" media="all">
+<link rel="stylesheet" href="/public/common/css/esg.css" media="all">
+<script src="/public/common/js/jquery.js"></script>
+<script src="/public/common/js/jquery-ui.min.js"></script>
+<script src="/public/common/js/swiper/swiper.min.js"></script>
+<script type="text/javascript"
+	src="/public/common/js/jquery.form.min.js" charset="utf-8"></script>
+
+<script src="/public/common/js/common2.js"></script>
+
+<!--[if lte IE 9]>
+<link rel="stylesheet" href="/admin/common/css/ie9.css" media="all">
+<script src="/admin/common/js/placeholders.min.js"></script>
+<script src="/admin/common/js/html5.js"></script>
+<![endif]-->
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async
+	src="https://www.googletagmanager.com/gtag/js?id=G-QSYXB9QMEL"></script>
+<script>
+	window.dataLayer = window.dataLayer || [];
+	function gtag() {
+		dataLayer.push(arguments);
+	}
+	gtag('js', new Date());
+
+	gtag('config', 'G-QSYXB9QMEL');
+</script>
+<!-- beusable 트래킹 코드 230808  newdana  -->
+<script type="text/javascript">
+	(function(w, d, a) {
+		w.__beusablerumclient__ = {
+			load : function(src) {
+				var b = d.createElement("script");
+				b.src = src;
+				b.async = true;
+				b.type = "text/javascript";
+				d.getElementsByTagName("head")[0].appendChild(b);
+			}
+		};
+		w.__beusablerumclient__.load(a + "?url=" + encodeURIComponent(d.URL));
+	})(window, document, "//rum.beusable.net/load/b230831e190445u550");
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){
+	if($('input:checkbox[name="cateAll"]').is(":checked") ){
+		$('input:checkbox[name="cate"]').each(function() {
+			this.checked = true;
+		});
+	}
+	
+	var ck = true;
+	$('input:checkbox[name="cate"]').each(function() {
+	      if(this.checked){//checked 처리된 항목의 값
+	    	   
+	      }else{
+	    	  ck = false;
+	      }
+	 });
+	$("input:checkbox[id='c1']").prop("checked", ck);
+});
+
+var fnSearchForm = function() {
+	
+	$("input[name='pageIndex']").val(1);
+	$('#searchKeyword').val($('#searchKeywordTmp').val());
+	
+	$('#searchStartDt').val($('#searchStartDtTmp').val());
+	$('#searchEndDt').val($('#searchEndDtTmp').val());
+	
+	
+	var searchType ="";
+	 $('input:checkbox[name="cate"]').each(function() {
+	      if(this.checked){//checked 처리된 항목의 값
+	    	  searchType += this.value +",";
+	      	  /* console.log(this.value);
+	      		console.log(searchType); */
+	      }
+	 });
+
+	$('#searchType').val(searchType);
+	
+	$("#searchForm").submit();
+};
+
+
+//페이징 이동 
+function fnPaging(pageIndex){
+    var frm = document.searchForm;
+    frm.action="./list.do";
+    $("input[name='pageIndex']").val( pageIndex );
+    frm.submit();
+}
+
+
+function dateSetting(dateType){
+	var today = new Date();
+	var startDate = "";
+	var endDate = "";
+	
+	var year = today.getFullYear();
+    var month = ("0" + (1 + today.getMonth())).slice(-2);
+    var day = ("0" + today.getDate()).slice(-2);
+
+    //console.log(year + "-" + month + "-" + day);
+    $("#searchStartDtTmp").val(year + "-" + month + "-" + day);
+
+	// 최근 3개월
+	if(dateType == '3M'){
+		today.setMonth(today.getMonth() + 3);
+		$("#searchCheck").val(3);
+	}else if(dateType == '1M'){		
+		today.setMonth(today.getMonth() + 1);
+		$("#searchCheck").val(1);
+	}else if(dateType == '6M'){	
+		today.setMonth(today.getMonth() + 6);
+		$("#searchCheck").val(6);
+	}
+	
+	var year2 = today.getFullYear();
+    var month2 = ("0" + (1 + today.getMonth())).slice(-2);
+    var day2 = ("0" + today.getDate()).slice(-2);
+
+    //console.log(year2 + "-" + month2 + "-" + day2);
+    $("#searchEndDtTmp").val(year2 + "-" + month2 + "-" + day2);
+    
+    fnSearchForm();
+} 
+
+function fnChkSelect(_obj){
+	if($(_obj).val() == ''){
+		if($('input:checkbox[name="cateAll"]').is(":checked") ){
+			$('input:checkbox[name="cate"]').each(function() {
+				this.checked = true;
+			});
+		}else{
+			$('input:checkbox[name="cate"]').each(function() {
+				this.checked = false;
+			});
+		}
+	}else{
+		var ck = true;
+		$('input:checkbox[name="cate"]').each(function() {
+		      if(this.checked){//checked 처리된 항목의 값
+		    	   
+		      }else{
+		    	  ck = false;
+		      }
+		 });
+		$("input:checkbox[id='c1']").prop("checked", ck);
+		
+	}
+}
+
+function fnExcel(){
+	$("#searchForm").attr("action", "./downExcel.do");
+	$("#searchForm").submit();
+	$("#searchForm").attr("action", "./list.do");
+}
+
+function fnClist(){
+	$("#searchForm").attr("action", "./clist.do");
+	$("#searchForm").submit();
+}
+
+//엔터검색
+function fnEnterSearch(e){
+	if (window.event.keyCode == 13) {
+		fnSearchForm();
+	}
+}
+
+</script>
+
+
+</head>
+<body>
+
+<div id="skipNavi">
+	<a href="#dBody">본문 바로가기</a>
+	<a href="#dHead">메뉴 바로가기</a>
+</div>
+
+<!-- wrap -->
+<section id="wrap">
+	<!-- dHead -->
+	<div id="dHead">
+		
+
+
+
+
+
+
+ 
+
+ 
+
+
+
+
+    <h1><a href="/web/ko/index.do">KINTEX</a></h1>
+	<button type="button" class="btn-gnb-menu-toggle btn-gnb-menu-open">전체 메뉴 열기</button>
+
+	<div class="language-menu">
+		<button type="button" class="selected-menu" title="글로벌 메뉴 열기">KOR</button>
+		<div class="menu-list">
+			<ul>
+				<li><a href="/web/en/index.do">ENG</a></li>
+				
+			</ul>
+		</div>
+	</div>
+	<a href="/web/ko/search/list.do" class="btn-combine-search">통합검색 바로가기</a>
+
+
+	<div id="header-ko" class="header-wrap">
+		<div class="inner">
+			<div class="header-data">
+				<div class="language-menu mobile-block">
+					<button type="button" class="selected-menu" title="글로벌 메뉴 열기">KOR</button>
+					<div class="menu-list">
+						<ul>
+							<li><a href="/web/en/index.do" class="btn-language-item">ENG</a></li>
+							<!--  <li><a href="/web/ch/index.do" class="btn-language-item">CHN</a></li>-->
+						</ul>
+					</div>
+				</div>
+				<div class="facility-link mobile-block"><a href="/web/ko/index_organizer.do"><span><em>ORGANIZER</em> 임대문의</span></a></div>
+				<nav id="gnb">
+					<ul class="gnb-wrap">
+						<!--
+						//	@ 1뎁스 메뉴 활성화시 one-depth 클래스에 actived클래스 추가
+						-->
+						<li class="one-depth actived">
+							<a href="#" class="btn-one-depth">행사안내</a>
+							<!-- <a href="/web/ko/event/clist.do" class="btn-one-depth">행사안내</a> -->
+							<div class="two-depth">
+								<ul>
+									<li><a href="/web/ko/event/clist.do" class="btn-two-depth">전체 일정</a></li>
+									<li><a href="/web/ko/event/clist.do?searchType=11" class="btn-two-depth">전시 일정</a></li>
+									<li><a href="/web/ko/event/clist.do?searchType=23" class="btn-two-depth">회의 일정</a></li>
+									<li><a href="/web/ko/event/clist.do?searchType=12" class="btn-two-depth">문화행사 일정</a></li>
+									<li><a href="/web/ko/event/clist.do?searchType=D" class="btn-two-depth">기타 행사 일정</a></li>
+								</ul>
+							</div>
+						</li>
+						<li class="one-depth ">
+							<!-- <a href="/web/ko/html/facility/exhibition_overview.do" class="btn-one-depth">시설안내</a> -->
+							<a href="#" class="btn-one-depth">시설안내</a>
+							<div class="two-depth">
+								<ul>
+									<li><a href="/web/ko/html/facility/exhibition_overview.do" class="btn-two-depth">전시홀</a></li>
+									<li><a href="/web/ko/html/facility/meeting_request.do" class="btn-two-depth">회의실</a></li>
+									<li><a href="/web/ko/html/facility/office_overview.do" class="btn-two-depth">킨텍스타워</a></li>
+									<li><a href="/web/ko/html/facility/subsidiary_overview.do" class="btn-two-depth">부대시설</a></li>
+									<li><a href="/web/ko/facility/ccpy/list.do" class="btn-two-depth">등록업체안내</a></li>
+								</ul>
+							</div>
+						</li>
+						<li class="one-depth ">
+							<a href="#" class="btn-one-depth">이용안내</a>
+							<!-- <a href="/web/ko/service/facilities.do?gubun=A05001" class="btn-one-depth">이용안내</a> -->
+							<div class="two-depth">
+								<ul>
+									<li><a href="/web/ko/service/facilities.do?gubun=A05001" class="btn-two-depth">편의시설</a></li>
+									<li><a href="/web/ko/html/service/parking_transportation.do" class="btn-two-depth">교통안내</a></li>
+									<li><a href="/web/ko/service/parking_user.do" class="btn-two-depth">주차안내</a></li>
+									<li><a href="https://goyang.kintex.com:440/" class="btn-two-depth" target="_blank">고양시민 주차할인</a></li>
+									<li><a href="/web/ko/html/service/hotel.do" class="btn-two-depth">공식제휴호텔</a></li>
+									<li><a href="/web/ko/html/service/tourist_attraction.do" class="btn-two-depth">관광안내</a></li>
+								</ul>
+							</div>
+						</li>
+						<li class="one-depth ">
+							<!-- <a href="/web/ko/customer/notice/list.do" class="btn-one-depth">홍보센터</a> -->
+							<a href="#" class="btn-one-depth">홍보센터</a>
+							<div class="two-depth">
+								<ul>
+									<li><a href="/web/ko/customer/notice/list.do" class="btn-two-depth">공지사항</a></li>
+									<li><a href="/web/ko/customer/news/list.do" class="btn-two-depth">홍보자료</a></li>
+									<li><a href="/web/ko/customer/voice/info.do" class="btn-two-depth">고객만족센터</a></li>
+									<li><a href="https://k-mice.visitkorea.or.kr/vr/sites/KIN.kto?lang=ko#" target="_blank" title="새창이동" class="btn-two-depth">VR보기</a></li>
+									<li><a href="/web/ko/customer/voice/csr.do" class="btn-two-depth">KINTEX CSR</a></li>
+								</ul>
+							</div>
+						</li>
+						<li class="one-depth ">
+							<a href="#" class="btn-one-depth">열린경영</a>
+							<!-- <a href="/web/ko/html/company/about.do" class="btn-one-depth">KINTEX</a> -->
+							<div class="two-depth">
+								<ul>
+									<li><a href="/web/ko/html/company/about.do" class="btn-two-depth">개요</a></li>
+									<li><a href="/web/ko/html/company/overview_ceo.do" class="btn-two-depth">CEO 인사말</a></li>
+									<li><a href="/web/ko/html/company/esg.do" class="btn-two-depth">KINTEX ESG</a></li>
+									<li><a href="/web/ko/company/business.do" class="btn-two-depth">윤리.인권.안전경영</a></li>
+									<li><a href="/web/ko/company/ir.do" class="btn-two-depth">경영공시</a></li>
+									<li><a href="/web/ko/company/organization.do" class="btn-two-depth">조직도</a></li>
+									<li><a href="/web/ko/html/company/contact.do" class="btn-two-depth">위치안내</a></li>
+								</ul>
+							</div>
+						</li>
+					</ul>
+				</nav>
+				
+				<button type="button" class="btn-gnb-menu-toggle btn-gnb-menu-close">전체 메뉴 닫기</button>
+			</div>
+			<div class="facility-link pc-block"><a href="/web/ko/index_organizer.do"><span><em>ORGANIZER</em> 임대문의</span></a></div>
+		</div>
+		<!-- 2021-08-06 웹접근성 : 영역 삭제
+		<div class="language-menu pc-block">
+			<button type="button" class="selected-menu"  title="글로벌 메뉴 열기">KOR</button>
+			<div class="menu-list">
+				<ul>
+					<li><a href="/web/en/index.do">ENG</a></li>
+					<li><a href="/web/ch/index.do">CHN</a></li>
+				</ul>
+			</div>
+		</div>
+		-->
+		<a href="/web/ko/search/list.do" class="btn-combine-search pc-block">통합검색 바로가기</a>
+	</div>
+ 
+	</div>
+	<!-- //dHead -->
+
+	<!-- sub-visual -->
+	<article class="sub-visual schedule-visual">
+		<div class="visual"></div>
+		<div class="inner">
+			<hgroup class="title-group">
+				<h2>전체일정</h2>
+			</hgroup>
+		</div>
+	</article>
+	<!-- //sub-visual -->
+
+	<!-- dBody -->
+	<!--
+	//	@ 상위 클래스
+	//	1. main			:	메인
+	//	2. schedule		:	행사안내
+	//	3. facility		:	시설/임대
+	//	4. service		:	고객/서비스
+	//	5. customer		:	홍보센터
+	//	6. company		:	KINTEX
+	//	7. etc			:	기타
+	-->
+	<!-- 2022-09-26 웹접근성 심사수정 tabindex="0" 내용 삭제 처리   -->
+	<div id="dBody" class="schedule">
+
+		<!-- location-wrap -->
+		<div id="location" class="location-wrap">
+			
+
+
+
+
+
+
+ 
+
+ 
+
+
+
+    
+    <div class="location-inner">
+		<div class="inner">
+			<a href="/web/ko/index.do" class="btn-location-home">홈으로 바로가기</a>
+			<ul class="location-menu">
+				<!--
+				//	@ 로케이션
+				//	- 상세 메뉴가 있을 경우 location-menu-cell 클래스에 detail-depth-item 클래스 추가
+				-->
+				<li class="location-menu-cell">
+					
+					
+						<a href="/web/ko/event/clist.do" class="btn-depth-title">행사안내</a>
+					
+					
+					
+					
+					
+					
+					
+					
+				
+					
+					
+					
+				</li>
+				<li class="location-menu-cell detail-depth-item">
+					<button type="button" class="btn-depth-title">
+						
+						전체 일정
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+					</button>
+					<div class="detail-menu">
+						<ul>
+							<!--
+							//	메뉴 활성화시 li태그에 actived클래스 추가
+							-->
+							
+								<li class="actived"><a href="/web/ko/event/clist.do" class="btn-menu-item">전체 일정</a></li>
+								
+							
+							
+							
+							
+							
+							
+							
+							
+						</ul>
+					</div>
+				</li>
+			</ul>
+		</div>
+	</div>
+ 
+		</div>
+		<!-- //location-wrap -->
+
+		<h3 class="blind">리스트 보기</h3>
+
+		<!-- contents-tab -->
+		<div class="contents-tab">
+			<div class="contents-tab-inner">
+				<!-- 활성화 메뉴 -->
+				<button type="button" class="btn-contents-tab-toggle">리스트 보기</button>
+				<ul class="contents-tab-list">
+					<!--
+					//	contents-tab-cell 클래스에 actived클래스 추가시 활성화
+					-->
+					<li class="contents-tab-cell"><a class="btn-contents-tab-nav-item" href="javascript:fnClist();">캘린더 보기</a></li>
+					<li class="contents-tab-cell actived"><a class="btn-contents-tab-nav-item" href="#">리스트 보기</a></li>
+				</ul>
+			</div>
+		</div>
+		<!-- //contents-tab -->
+		
+		<form name="searchForm" id="searchForm"  action="./list.do" method="get">
+			<input type="hidden" name="seq" id="seq" value=""/>
+			<input type="hidden" name="pageIndex" id="pageIndex" value="1"/>
+			<input type="hidden" name="pageUnit" id="pageUnit" value="9"/>
+			<input type="hidden" name="searchKeyword" id="searchKeyword" value=""/>
+			<input type="hidden" name="searchType" id="searchType" value=""/>
+			<input type="hidden" name="searchStartDt" id="searchStartDt" value="2026-06-21"/>
+			<input type="hidden" name="searchEndDt" id="searchEndDt" value="2026-07-21"/>
+			<input type="hidden" name="searchCheck" id="searchCheck" value=""/>
+			
+		</form>
+
+		<section id="contents">						
+			
+			<!-- 검색 영역 -->
+			<form>
+				<fieldset>
+					<legend>행사 검색 입력 폼</legend>
+					<div class="filter-search-wrap">
+						<div class="form-basic-search">
+							
+							<div class="sort-check-list">
+								<div class="list-inner">
+									<!--<div class="check-cell"><label for="c1" class="form-checkbox"><input type="checkbox" id="c1" name="cateAll" value=""  onclick="fnChkSelect(this);" checked ><span class="form-check-icon"><em>전체</em></span></label></div>-->
+									<div class="check-cell"><label for="c2" class="form-checkbox"><input type="checkbox" id="c2" name="cate" value="11" onclick="fnChkSelect(this);" checked><span class="form-check-icon"><em>전시</em></span></label></div>
+									<div class="check-cell"><label for="c3" class="form-checkbox"><input type="checkbox" id="c3" name="cate" value="23" onclick="fnChkSelect(this);" checked><span class="form-check-icon"><em>회의</em></span></label></div>
+									<div class="check-cell"><label for="c4" class="form-checkbox"><input type="checkbox" id="c4" name="cate" value="12" onclick="fnChkSelect(this);" checked><span class="form-check-icon"><em>문화행사</em></span></label></div>
+									<div class="check-cell"><label for="c5" class="form-checkbox"><input type="checkbox" id="c5" name="cate" value="D" onclick="fnChkSelect(this);" checked><span class="form-check-icon"><em>기타행사</em></span></label></div>
+								</div>
+							</div>
+							
+							<div class="input">
+								<label for="search" class="blind">행사명 입력</label>
+								<input type="text" id="searchKeywordTmp" name="searchKeywordTmp" placeholder="행사 명으로 검색 가능합니다." onKeyPress="javascript:fnEnterSearch()" value="" title="검색어">
+							</div>
+						</div>
+						<div class="filter-sort">
+							<div class="form-button-check-wrap">
+								<label for="c21" class="form-button-check"><input tabindex="0" type="radio" id="c21" name="check2" value="1" onclick="dateSetting('1M')" checked><span class="value">1개월</span></label>	
+								<label for="c22" class="form-button-check"><input tabindex="1" type="radio" id="c22" name="check2" value="3" onclick="dateSetting('3M')"  ><span class="value">3개월</span></label>	
+								<label for="c23" class="form-button-check"><input tabindex="2" type="radio" id="c23" name="check2" value="6" onclick="dateSetting('6M')" ><span class="value">6개월</span></label>	
+							</div>
+							<div class="sort-date">
+								<div class="date-input-wrap">
+									<div class="cell"><div class="date-input"><label for="searchStartDtTmp" class="blind">행사 시작일 입력</label><input type="text" id="searchStartDtTmp" name="searchStartDtTmp" class="datepicker-input" value="2026-06-21"></div></div>
+									<div class="cell"><div class="date-input"><label for="searchEndDtTmp" class="blind">행사 종료일 입력</label><input type="text" id="searchEndDtTmp" name="searchEndDtTmp" class="datepicker-input" value="2026-07-21"></div></div>
+								</div>
+							</div>										
+							<div class="all-download"><a href="javascript:;" onclick="javascript:fnExcel(); return false;" class="btn-basic btn-border-blue btn-size-middle btn-schedule-download">전체 일정 다운로드</a></div>
+						</div>
+						<button type="button" class="btn-basic btn-black btn-search" onclick="fnSearchForm();">검색</button>
+					</div>
+				</fieldset>
+			</form>
+			<!-- //검색 영역 -->
+			
+			<div class="thumb-board-list schedule-board-list">
+				<!-- 내용 있을 때 -->
+				
+					<div class="grid-frame-layout">	
+						
+						
+							
+							
+							
+								<!-- 전시회 -->
+							
+							
+							
+						
+							<div class="grid-frame-cell grid-03">
+								<a class="btn-square-item red" href="javascript:fnView('./view.do', 26051808);">
+									<div class="item-thumb">
+										<div class="item-label">
+											<div class="item-label-data">
+												<div class="ko-txt">
+													
+														
+														
+														
+															전시회<br />
+															EXHIBITION
+														
+														
+														
+													
+												</div>
+												<!--<div class="en-txt">
+													
+														
+														
+														
+														
+																													
+														
+													
+												</div>-->
+											</div>
+										</div>
+										<div class="thumb ratio-125">
+											
+												
+												
+												
+													
+												
+												
+												
+											
+										
+											
+												
+													<img onerror="this.src='/public/common/images/tmp/thum_384x480_1.png'"  src="/imageView.do?atchmnflNo=469199&fileseq=1" alt="제53회 맘앤베이비엑스포/2026.06.18~2026.06.21//>"  >
+												
+												
+												
+											
+										</div>
+									</div>
+									<div class="item-info-wrap">
+										<div class="item-subject">제53회 맘앤베이비엑스포</div>
+										<div class="item-client">
+											
+													전시홀 10
+													
+													
+													
+												
+										</div>
+										<div class="item-date">2026.06.18~2026.06.21</div>
+									</div>
+								</a>
+							</div>
+						
+						
+							
+							
+							
+								<!-- 전시회 -->
+							
+							
+							
+						
+							<div class="grid-frame-cell grid-03">
+								<a class="btn-square-item red" href="javascript:fnView('./view.do', 26060201);">
+									<div class="item-thumb">
+										<div class="item-label">
+											<div class="item-label-data">
+												<div class="ko-txt">
+													
+														
+														
+														
+															전시회<br />
+															EXHIBITION
+														
+														
+														
+													
+												</div>
+												<!--<div class="en-txt">
+													
+														
+														
+														
+														
+																													
+														
+													
+												</div>-->
+											</div>
+										</div>
+										<div class="thumb ratio-125">
+											
+												
+												
+												
+													
+												
+												
+												
+											
+										
+											
+												
+													<img onerror="this.src='/public/common/images/tmp/thum_384x480_1.png'"  src="/imageView.do?atchmnflNo=469209&fileseq=1" alt="2026고양가구박람회/2026.06.18~2026.06.21//>"  >
+												
+												
+												
+											
+										</div>
+									</div>
+									<div class="item-info-wrap">
+										<div class="item-subject">2026고양가구박람회</div>
+										<div class="item-client">
+											
+													전시홀 7
+													
+													
+													
+													,
+													
+												
+													전시홀 8
+													
+													
+													
+												
+										</div>
+										<div class="item-date">2026.06.18~2026.06.21</div>
+									</div>
+								</a>
+							</div>
+						
+						
+							
+							
+							
+								<!-- 전시회 -->
+							
+							
+							
+						
+							<div class="grid-frame-cell grid-03">
+								<a class="btn-square-item red" href="javascript:fnView('./view.do', 26041303);">
+									<div class="item-thumb">
+										<div class="item-label">
+											<div class="item-label-data">
+												<div class="ko-txt">
+													
+														
+														
+														
+															전시회<br />
+															EXHIBITION
+														
+														
+														
+													
+												</div>
+												<!--<div class="en-txt">
+													
+														
+														
+														
+														
+																													
+														
+													
+												</div>-->
+											</div>
+										</div>
+										<div class="thumb ratio-125">
+											
+												
+												
+												
+													
+												
+												
+												
+											
+										
+											
+												
+													<img onerror="this.src='/public/common/images/tmp/thum_384x480_1.png'"  src="/imageView.do?atchmnflNo=469216&fileseq=2" alt="2026 어린이안전박람회/2026.06.25~2026.06.27//>"  >
+												
+												
+												
+											
+										</div>
+									</div>
+									<div class="item-info-wrap">
+										<div class="item-subject">2026 어린이안전박람회</div>
+										<div class="item-client">
+											
+													전시홀 7A
+													
+													
+													
+												
+										</div>
+										<div class="item-date">2026.06.25~2026.06.27</div>
+									</div>
+								</a>
+							</div>
+						
+						
+							
+							
+								<!-- 이벤트 -->
+							
+							
+							
+							
+						
+							<div class="grid-frame-cell grid-03">
+								<a class="btn-square-item green" href="javascript:fnView('./view.do', 26040707);">
+									<div class="item-thumb">
+										<div class="item-label">
+											<div class="item-label-data">
+												<div class="ko-txt">
+													
+														
+														
+															문화행사<br />
+															Culture
+														
+														
+														
+														
+													
+												</div>
+												<!--<div class="en-txt">
+													
+														
+														
+														
+														
+																													
+														
+													
+												</div>-->
+											</div>
+										</div>
+										<div class="thumb ratio-125">
+											
+												
+												
+													
+												
+												
+												
+												
+											
+										
+											
+												
+													<img onerror="this.src='/public/common/images/tmp/thum_384x480_2.png'"  src="/imageView.do?atchmnflNo=469171&fileseq=2" alt="2026 마이케이 페스타/2026.06.25~2026.06.28//>"  >
+												
+												
+												
+											
+										</div>
+									</div>
+									<div class="item-info-wrap">
+										<div class="item-subject">2026 마이케이 페스타</div>
+										<div class="item-client">
+											
+													전시홀 1
+													
+													
+													
+													,
+													
+												
+													전시홀 2
+													
+													
+													
+													,
+													
+												
+													전시홀 3
+													
+													
+													
+												
+										</div>
+										<div class="item-date">2026.06.25~2026.06.28</div>
+									</div>
+								</a>
+							</div>
+						
+						
+							
+							
+							
+								<!-- 전시회 -->
+							
+							
+							
+						
+							<div class="grid-frame-cell grid-03">
+								<a class="btn-square-item red" href="javascript:fnView('./view.do', 26060206);">
+									<div class="item-thumb">
+										<div class="item-label">
+											<div class="item-label-data">
+												<div class="ko-txt">
+													
+														
+														
+														
+															전시회<br />
+															EXHIBITION
+														
+														
+														
+													
+												</div>
+												<!--<div class="en-txt">
+													
+														
+														
+														
+														
+																													
+														
+													
+												</div>-->
+											</div>
+										</div>
+										<div class="thumb ratio-125">
+											
+												
+												
+												
+													
+												
+												
+												
+											
+										
+											
+												
+													<img onerror="this.src='/public/common/images/tmp/thum_384x480_1.png'"  src="/imageView.do?atchmnflNo=469232&fileseq=1" alt="렙타일페어/2026.06.27~2026.06.28//>"  >
+												
+												
+												
+											
+										</div>
+									</div>
+									<div class="item-info-wrap">
+										<div class="item-subject">렙타일페어</div>
+										<div class="item-client">
+											
+													전시홀 6B
+													
+													
+													
+												
+										</div>
+										<div class="item-date">2026.06.27~2026.06.28</div>
+									</div>
+								</a>
+							</div>
+						
+						
+							
+							
+							
+								<!-- 전시회 -->
+							
+							
+							
+						
+							<div class="grid-frame-cell grid-03">
+								<a class="btn-square-item red" href="javascript:fnView('./view.do', 26033102);">
+									<div class="item-thumb">
+										<div class="item-label">
+											<div class="item-label-data">
+												<div class="ko-txt">
+													
+														
+														
+														
+															전시회<br />
+															EXHIBITION
+														
+														
+														
+													
+												</div>
+												<!--<div class="en-txt">
+													
+														
+														
+														
+														
+																													
+														
+													
+												</div>-->
+											</div>
+										</div>
+										<div class="thumb ratio-125">
+											
+												
+												
+												
+													
+												
+												
+												
+											
+										
+											
+												
+													<img onerror="this.src='/public/common/images/tmp/thum_384x480_1.png'"  src="/imageView.do?atchmnflNo=469112&fileseq=1" alt="2026년 제5회 킨텍스 캠핑페스타/2026.07.03~2026.07.05//>"  >
+												
+												
+												
+											
+										</div>
+									</div>
+									<div class="item-info-wrap">
+										<div class="item-subject">2026년 제5회 킨텍스 캠핑페스타</div>
+										<div class="item-client">
+											
+													전시홀 2
+													
+													
+													
+												
+										</div>
+										<div class="item-date">2026.07.03~2026.07.05</div>
+									</div>
+								</a>
+							</div>
+						
+						
+							
+							
+							
+								<!-- 전시회 -->
+							
+							
+							
+						
+							<div class="grid-frame-cell grid-03">
+								<a class="btn-square-item red" href="javascript:fnView('./view.do', 2025044109);">
+									<div class="item-thumb">
+										<div class="item-label">
+											<div class="item-label-data">
+												<div class="ko-txt">
+													
+														
+														
+														
+															전시회<br />
+															EXHIBITION
+														
+														
+														
+													
+												</div>
+												<!--<div class="en-txt">
+													
+														
+														
+														
+															EXHIBITION
+														
+														
+														
+													
+												</div>-->
+											</div>
+										</div>
+										<div class="thumb ratio-125">
+											
+												
+												
+												
+													
+												
+												
+												
+											
+										
+											
+												
+													<img onerror="this.src='/public/common/images/tmp/thum_384x480_1.png'"  src="/imageView.do?atchmnflNo=468981&fileseq=1" alt="대한민국 국제 관광박람회/2026.07.03~2026.07.05//>"  >
+												
+												
+												
+											
+										</div>
+									</div>
+									<div class="item-info-wrap">
+										<div class="item-subject">대한민국 국제 관광박람회</div>
+										<div class="item-client">
+											
+													전시홀 10
+													
+													
+													
+												
+										</div>
+										<div class="item-date">2026.07.03~2026.07.05</div>
+									</div>
+								</a>
+							</div>
+						
+						
+							
+							
+								<!-- 이벤트 -->
+							
+							
+							
+							
+						
+							<div class="grid-frame-cell grid-03">
+								<a class="btn-square-item green" href="javascript:fnView('./view.do', 26052601);">
+									<div class="item-thumb">
+										<div class="item-label">
+											<div class="item-label-data">
+												<div class="ko-txt">
+													
+														
+														
+															문화행사<br />
+															Culture
+														
+														
+														
+														
+													
+												</div>
+												<!--<div class="en-txt">
+													
+														
+														
+														
+														
+																													
+														
+													
+												</div>-->
+											</div>
+										</div>
+										<div class="thumb ratio-125">
+											
+												
+												
+													
+												
+												
+												
+												
+											
+										
+											
+												
+													<img onerror="this.src='/public/common/images/tmp/thum_384x480_2.png'"  src="/imageView.do?atchmnflNo=469233&fileseq=2" alt="2026 팔레트 페스티벌/2026.07.04~2026.07.05//>"  >
+												
+												
+												
+											
+										</div>
+									</div>
+									<div class="item-info-wrap">
+										<div class="item-subject">2026 팔레트 페스티벌</div>
+										<div class="item-client">
+											
+													전시홀 9
+													
+													
+													
+												
+										</div>
+										<div class="item-date">2026.07.04~2026.07.05</div>
+									</div>
+								</a>
+							</div>
+						
+						
+							
+							
+							
+								<!-- 전시회 -->
+							
+							
+							
+						
+							<div class="grid-frame-cell grid-03">
+								<a class="btn-square-item red" href="javascript:fnView('./view.do', 26030510);">
+									<div class="item-thumb">
+										<div class="item-label">
+											<div class="item-label-data">
+												<div class="ko-txt">
+													
+														
+														
+														
+															전시회<br />
+															EXHIBITION
+														
+														
+														
+													
+												</div>
+												<!--<div class="en-txt">
+													
+														
+														
+														
+														
+																													
+														
+													
+												</div>-->
+											</div>
+										</div>
+										<div class="thumb ratio-125">
+											
+												
+												
+												
+													
+												
+												
+												
+											
+										
+											
+												
+													<img onerror="this.src='/public/common/images/tmp/thum_384x480_1.png'"  src="/imageView.do?atchmnflNo=469220&fileseq=1" alt="AI안전보건박람회(2026국제안전보건전시회)/2026.07.06~2026.07.09//>"  >
+												
+												
+												
+											
+										</div>
+									</div>
+									<div class="item-info-wrap">
+										<div class="item-subject">AI안전보건박람회(2026국제안전보건전시회)</div>
+										<div class="item-client">
+											
+													전시홀 7
+													
+													
+													
+													,
+													
+												
+													전시홀 8
+													
+													
+													
+												
+										</div>
+										<div class="item-date">2026.07.06~2026.07.09</div>
+									</div>
+								</a>
+							</div>
+						
+					</div>
+				
+				<div class="paging">
+					<div class="paging-wrap">
+						
+
+
+
+
+
+
+ 
+
+ 
+
+
+
+	
+		<a href="javascript:fnPaging('1')" class="btn-first">처음으로</a><a href="javascript:fnPaging('1')" class="btn-prev">이전으로</a><ol class="paging-list"><li><strong>1</strong></li><li><a href="javascript:fnPaging('2')" >2</a></li></ol><a href="javascript:fnPaging('2')" class="btn-next">다음으로</a><a href="javascript:fnPaging('2')" class="btn-last">마지막으로</a>
+	
+
+					</div>
+				</div>
+				<!-- //내용 있을 때 -->
+				
+				
+			</div>
+	
+		</section>
+        
+	</div>
+	<!-- //dBody -->
+
+	<!-- dFoot -->
+	<footer id="dFoot">
+		
+
+		<div class="main-bottom-nav">
+			<a href="/web/ko/event/clist.do"><img src="/public/common/images/icon/icon_main_bottom_nav1.png" alt="행사일정" width="40"/><div class="txt">행사일정</div></a>
+			<a href="/web/ko/customer/notice/list.do"><img src="/public/common/images/icon/icon_main_bottom_nav2.png" alt="공지사항" width="40"/><div class="txt">공지사항</div></a>
+			<a href="/web/ko/service/parking_user.do#scroll-section1" id="ParkingPage"><img src="/public/common/images/icon/icon_main_bottom_nav3.png" alt="주차안내" width="40"/><div class="txt">주차안내</div></a>
+			<a href="/web/ko/html/company/contact.do"><img src="/public/common/images/icon/icon_main_bottom_nav4.png" alt="오시는길" width="40"/><div class="txt">오시는길</div></a>
+			<a href="https://k-mice.visitkorea.or.kr/vr/sites/KIN.kto?lang=ko" target="_blank"><img src="/public/common/images/icon/icon_main_bottom_nav5.png" alt="VR보기" width="40"/><div class="txt">VR보기</div></a>
+		</div>
+		
+		<!-- 20210630 수정 -->
+		<div id="page-top"><button type="button" class="btn-page-top">TOP</button></div>
+		<!-- //20210630 수정 -->
+		
+
+		<div class="footer-point-visual">
+			<div class="inner">
+				<div class="point-desc">GLOBAL TOP CLASS<strong>EXHIBITION &amp; CONVENTION CENTER</strong></div>
+			</div>
+		</div>
+		<div class="footer-wrap">
+			<div class="inner">	
+				<div class="footer-data">
+					<!--<h2><img src="/public/common/images/common/footer_logo_blue.png" alt="KINTEX" width="174"/></h2>-->
+					<ul class="footer-sns-menu">
+						<li><h2><img src="/public/common/images/common/footer_logo_blue.png" alt="KINTEX" width="174"/></h2></li>
+						<li><a href="https://blog.naver.com/kintex_korea" target="_blank" title="새창이동" class="btn-sns-blog">블로그 바로가기</a></li>
+						<li><a href="https://www.facebook.com/kintexkr" target="_blank" title="새창이동" class="btn-sns-facebook">페이스북 바로가기</a></li>
+						<li><a href="https://www.instagram.com/kintex_korea/" target="_blank" title="새창이동" class="btn-sns-instargram">인스타그램 블로그 바로가기</a></li>
+						<li><a href="https://www.youtube.com/c/%ED%82%A8%ED%85%8D%EC%8A%A4TV" target="_blank" title="새창이동" class="btn-sns-youtube">유튜브 바로가기</a></li>
+					</ul>	
+
+					<div class="footer-modal">
+						<ul class="modal-list">
+							<li><a href="#" onclick="front.pop.open('PrivacyPolicy' , this);">개인정보처리방침</a></li>
+							<li><a href="/web/ko/management_of_image_information.do" target="_blank" title="새창이동">고정형 영상정보처리기기 운영·관리 방침</a></li>
+							<li><a href="#" onclick="front.pop.open('mailPermission' , this);">이메일주소 무단수집거부</a></li>
+							<li><a href="#" onclick="front.pop.open('publicDataAccess' , this);">공공데이터 개방</a></li>
+						</ul>
+					</div>
+
+					<address class="address-info">
+						<span class="address-cell">10390, 경기도 고양시 일산서구 킨텍스로 217-60</span>
+						<span class="address-cell">
+							<span class="address-item">사업자등록번호 : 128-81-78009</span><br>
+							<span class="address-item">대표이사 : 이민우</span>
+							<span class="address-item"><a href="mailTo:kjna@kintex.com">E-MAIL : kjna@kintex.com</a></span>
+						</span>
+						<span class="address-cell">
+							<span class="address-item">TEL : 031-995-8114</span>
+							<!--<span class="address-item">FAX : 031-810-8083</span><br>-->
+						</span>
+					</address>
+					<p class="copy">Copyright © KINTEX All rights reserved.12</p>
+					<a href="http://www.webwatch.or.kr/Situation/WA_Situation.html?MenuCD=110" title="국가 공인 인증기관 : 웹와치" class="web_accessibility" target="_blank"><img src="/public/common/images/common/web_accessibility.gif" alt="과학기술정보통신부 WEB ACCESSIBILITY 마크(웹 접근성 품질인증 마크)" /></a>
+					<a href="https://earthcheck.org/" title="Earth Check (친환경관광인증시스템)" class="EarthCheck" target="_blank"><img src="/public/common/images/common/earth_check_2021_logo.jpg" alt="Earth Check (친환경관광인증시스템) GOLD 4년차 획득" /></a>
+					
+					<!--
+					<ul class="footer-sns-menu">
+						<li><a href="#" target="_blank" title="새창이동" class="btn-sns-blog">블로그 바로가기</a></li>
+						<li><a href="#" target="_blank" title="새창이동" class="btn-sns-naver">네이버 바로가기</a></li>
+						<li><a href="#" target="_blank" title="새창이동" class="btn-sns-facebook">페이스북 바로가기</a></li>
+						<li><a href="#" target="_blank" title="새창이동" class="btn-sns-instargram">인스타그램 블로그 바로가기</a></li>
+						<li><a href="#" target="_blank" title="새창이동" class="btn-sns-youtube">유튜브 바로가기</a></li>
+					</ul>				
+					
+					<ul class="footer-etc-menu">
+						<li><a href="#">KINTEX소개</a></li>
+						<li><a href="#">찾아오시는 길</a></li>
+						<li><a href="#"><em>개인정보처리방침</em></a></li>
+						<li><a href="#">이메일주소 무단수집거부</a></li>
+					</ul>
+					<div class="footer-sitemap">
+						<dl>
+							<dt><a href="#">행사안내</a></dt>
+							<dd><a href="#">전체 일정</a></dd>
+							<dd><a href="#">전시 일정</a></dd>
+							<dd><a href="#">회의 일정</a></dd>
+							<dd><a href="#">문화공연 일정</a></dd>
+							<dd><a href="#">기타 행사 일정</a></dd>
+						</dl>
+						<dl>
+							<dt><a href="#">시설/임대</a></dt>
+							<dd><a href="#">전시홀</a></dd>
+							<dd><a href="#">회의실</a></dd>
+							<dd><a href="#">오피스</a></dd>
+							<dd><a href="#">부대시설</a></dd>
+							<dd><a href="#">로케이션</a></dd>
+							<dd><a href="#">연회서비스</a></dd>
+							<dd><a href="#">협력업체안내</a></dd>
+							<dd><a href="#">킨텍스 광고안내</a></dd>
+						</dl>
+						<dl>
+							<dt><a href="#">고객/서비스</a></dt>
+							<dd><a href="#">편의시설</a></dd>
+							<dd><a href="#">교통안내</a></dd>
+							<dd><a href="#">숙박안내</a></dd>
+							<dd><a href="#">관광안내</a></dd>
+						</dl>
+						<dl>
+							<dt><a href="#">홍보센터</a></dt>
+							<dd><a href="#">공지사항</a></dd>
+							<dd><a href="#">홍보자료</a></dd>
+							<dd><a href="#">고객만족센터</a></dd>
+							<dd><a href="https://k-mice.visitkorea.or.kr/vr/sites/KIN.kto?lang=ko#" target="_blank" title="새창이동">VR보기</a></dd>
+						</dl>
+						<dl>
+							<dt><a href="#">KINTEX</a></dt>
+							<dd><a href="#">개요</a></dd>
+							<dd><a href="#">ESG 경영</a></dd>
+							<dd><a href="#">경영공시</a></dd>
+							<dd><a href="#">조직도</a></dd>
+							<dd><a href="#">위치안내</a></dd>
+						</dl>
+					</div>
+					-->
+				</div>
+			</div>
+		</div>
+
+<iframe name="resultFrame" id="resultFrame" width="0" height="0" class="invisible-all" style="display:none;" title="파일다운로드"></iframe>
+
+
+
+
+<!-- 개인정보 처리방침 -->
+<article id="PrivacyPolicy" class="layer-pop-wrap">
+	<div class="layer-pop-parent">
+		<div class="layer-pop-children">
+
+			<div class="pop-data alert-data">
+                <div class="pop-head">
+                    <div class="btn-pop-head">
+                        <button type="button" onclick="front.pop.close();">창닫기</button>
+                    </div>
+                </div>
+				<div class="pop-body">
+						<div class="con-title">킨텍스 개인정보 처리방침</div>
+						<p>
+							킨텍스(이하 ‘회사’라 한다)는 개인정보 보호법 제30조에 따라 정보주체의 개인정보를 보호하고 이와 관련한 고충을 신속하고 원활하게 처리할 수 있도록 하기 위하여 다음과 같이 개인정보 처리지침을 수립․공개합니다.
+						</p>
+	
+						<dl>
+							<dt>제1조(개인정보의 처리목적) 회사는 다음의 목적을 위하여 개인정보를 처리합니다. 처리하고 있는 개인정보는 다음의 목적 이외의 용도로는 이용되지 않으며, 이용목적이 변경되는 경우에는 개인정보 보호법 제18조에 따라 별도의 동의를 받는 등 필요한 조치를 이행할 예정입니다.</dt>
+							<dd>
+								<div>
+									1. 웹페이지 회원 가입 및 관리(5항 참조)
+									회원 가입의사 확인, 회원제 서비스 제공에 따른 본인 식별․인증, 회원자격 유지․관리, 제한적 본인확인제 시행에 따른 본인확인, 서비스 부정이용 방지, 만 14세 미만 아동의 개인정보 처리시 법정대리인의 동의여부 확인, 각종 고지․통지, 고충처리 등을 목적으로 개인정보를 처리합니다.
+									<br/>
+									2. 재화 또는 서비스 제공
+									전시/컨벤션 서비스 제공, 콘텐츠 제공, 맞춤서비스 제공, 본인인증, 연령인증, 요금결제․정산등을 목적으로 개인정보를 처리합니다.
+									<br/>
+									3. 고충처리
+									민원인의 신원 확인, 민원사항 확인, 사실조사를 위한 연락․통지, 처리결과 통보 등의 목적으로 개인정보를 처리합니다.
+									<br/>
+									4. 마케팅 및 광고에의 활용
+									신규 서비스 및 맞춤 서비스 제공, 이벤트 및 광고성 정보 제공 및 참여기회 제공 , 인구통계학적 특성에 따른 서비스 제공 및 광고등을 목적으로 개인정보를 처리합니다.
+									또한 재화나 서비스의 홍보 또는 판매 권유 등을 위하여 해당 개인정보를 이용하여 정보주체에게 연락할 수 있습니다.
+									<br/>
+									5. 운영 사이트별 개인정보파일
+									<table cellpadding="0" cellspacing="0" class="normalTbl mb10" summary="전시장 임대 요율표">
+										<caption>
+										<br>
+										</caption>
+									
+										<thead>
+										  <tr>
+											<th style="color:#4364ac;font-weight:bold; font-size:10pt;" scope="col">홈페이지/서비스명</th>
+											<th style="color:#4364ac;font-weight:bold; font-size:10pt;" scope="col">개인정보파일명</th>
+											<th style="color:#4364ac;font-weight:bold; font-size:10pt;" scope="col">홈페이지 </th>
+										  </tr>
+										</thead>
+										<tbody>
+										  <tr>
+											<td height="28" class="tit_td">킨텍스 홈페이지</td>
+											<td>홈페이지 회원 목록</td>
+											<td class="right_td">https://www.kintex.com</td>
+										  </tr>
+										  <tr>
+											<td height="28" class="tit_td">킨텍스앱</td>
+											<td>앱 회원 목록</td>
+											<td class="right_td">&nbsp;</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">전시플랫폼 홈페이지</td>
+											<td>회원 목록</td>
+											<td class="right_td">https://www.kintex.com</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">온라인 작업 신고서</td>
+											<td>회원 목록</td>
+											<td class="right_td">https://kxfp.kintex.com</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">K-MED EXPO 베트남</td>
+											<td>회원/참관객 목록</td>
+											<td class="right_td">https://www.kmedexpo.com</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">K-뷰티엑스포 대만</td>
+											<td>회원/참관객 목록</td>
+											<td class="right_td">https://www.tw.k-beautyexpo.co.kr</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">K-뷰티엑스포 코리아</td>
+											<td>회원/참관객 목록</td>
+											<td class="right_td">https://www.kbeautyexpo.com</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">사이공뷰티쇼.,K-뷰티베트남</td>
+											<td>회원/참관객 목록</td>
+											<td class="right_td">https://www.kbeautyexpovn.com</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">K-MEDITECH EXPO 말레이시아</td>
+											<td>회원/참관객 목록</td>
+											<td class="right_td">https://kbrandweek.com</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">K-뷰티엑스포 말레이시아</td>
+											<td>회원/참관객 목록</td>
+											<td class="right_td">https://www.kbeautyexpomy.com</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">서울모빌리티쇼</td>
+											<td>회원/참관객 목록</td>
+											<td class="right_td">https://mobilityshow.or.kr</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">소부장뿌리기술대전</td>
+											<td>회원/참관객 목록</td>
+											<td class="right_td">http://www.techinsideshow.kr</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">디지털미디어테크쇼</td>
+											<td>회원/참관객 목록</td>
+											<td class="right_td">https://k-dmts.com</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">디지털퓨쳐쇼</td>
+											<td>회원/참관객 목록</td>
+											<td class="right_td">https://www.digitalfutureshow.com</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">드론도심항공모빌리티</td>
+											<td>회원/참관객 목록</td>
+											<td class="right_td">https://www.goyangdue.kr</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">H2MEET</td>
+											<td>회원/참관객 목록</td>
+											<td class="right_td">https://www.h2meet.com</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">서울푸드</td>
+											<td>회원/참관객 목록</td>
+											<td class="right_td">https://seoulfood.kotra.biz</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">플레이엑스포</td>
+											<td>회원/참관객 목록</td>
+											<td class="right_td">https://www.playx4.or.kr</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">경기국제웹툰페어</td>
+											<td>회원/참관객 목록</td>
+											<td class="right_td">https://www.webtoonfair.com</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">K-GEO Festa</td>
+											<td>회원/참관객 목록</td>
+											<td class="right_td">https://www.kgeofesta.kr</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">경기국제보트쇼</td>
+											<td>회원/참관객 목록</td>
+											<td class="right_td">ttps://kibs.com</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">나라장터엑스포</td>
+											<td>회원/참관객 목록</td>
+											<td class="right_td">https://www.koppex.com</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">도로교통박람회</td>
+											<td>회원/참관객 목록</td>
+											<td class="right_td">https://www.kroad.or.kr</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">월드시티테크엑스포</td>
+											<td>회원/참관객 목록</td>
+											<td class="right_td">https://worldcitytechexpo.com</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">아트아시아 </td>
+											<td>참관객 목록</td>
+											<td class="right_td">https://art-asia.org</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">대한민국안전산업박람회</td>
+											<td>회원/참관객 목록</td>
+											<td class="right_td">https://k-safetyexpo.com</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">건설안전박람회</td>
+											<td>회원/참관객 목록</td>
+											<td class="right_td">https://www.k-consafetyexpo.com</td>
+										  </tr>
+										  <tr>
+											<td height="30" class="tit_td">경기국제포럼</td>
+											<td>회원/참관객 목록</td>
+											<td class="right_td">https://www.3gtf.com</td>
+										  </tr>
+										</tbody>
+									</table>
+									※ 회사에서 운영하는 서비스의 개인정보의 항목 및 목적에 대한 자세한 사항은 해당 서비스 홈페이지 개인정보 처리방침을 확인해주시기 바랍니다.
+								</div>
+							</dd>
+	
+	
+							<dt>제2조(개인정보의 처리 및 보유기간)</dt>
+	
+							<dd>
+								① 회사는 법령에 따른 개인정보 보유․이용기간 또는 정보주체로부터 개인정보를 수집시에 동의받은 개인정보 보유․이용기간 내에서 개인정보를 처리․보유합니다.<br/>
+	
+								② 각각의 개인정보 처리 및 보유 기간은 다음과 같습니다.<br/>
+								
+								1. 홈페이지 회원 가입 및 관리 : 홈페이지 탈퇴시까지<br/>
+								다만, 다음의 사유에 해당하는 경우에는 해당 사유 종료시까지<br/>
+								1) 관계 법령 위반에 따른 수사․조사 등이 진행중인 경우에는 해당 수사․조사 종료시까지<br/>
+								
+								2. 재화 또는 서비스 제공 : 재화․서비스 공급완료 및 요금결제․정산 완료시까지<br/>
+								다만, 다음의 사유에 해당하는 경우에는 해당 기간 종료시까지<br/>
+								1) 「전자상거래 등에서의 소비자 보호에 관한 법률」에 따른 표시․광고, 계약내용 및 이행 등 거래에 관한 기록<br/>
+								- 표시․광고에 관한 기록 : 6개월<br/>
+								- 계약 또는 청약철회, 대금결제, 재화 등의 공급기록 : 5년<br/>
+								- 소비자 불만 또는 분쟁처리에 관한 기록 : 3년<br/>
+							</dd>
+	
+							<dt>제3조(개인정보의 제3자 제공)</dt>
+	
+							<dd>
+								① 회사는 정보주체의 개인정보를 제1조(개인정보의 처리 목적)에서 명시한 범위 내에서만 처리하며, 정보주체의 동의, 법률의 특별한 규정 등 개인정보 보호법 제17조에 해당하는 경우에 개인정보를 제3자에게 제공할 수 있습니다.<br/>
+								② 회사는 다음과 같이 개인정보를 제3자에게 제공할 수 있습니다.<br/>
+								1. 킨텍스 앱 서비스를 사용하는 행사 주최자<br/>
+								- 제공받는 자의 개인정보 이용목적 : 전행사에서 제공하는 무료 서비스, 유료 결제 서비스, 이벤트 공동개최, 마케팅, 광고 등<br/>
+								- 제공하는 개인정보 항목 : 아이디, 이름, 휴대폰번호, 지역구분, 성별, 출생년도, 직장명(단체), 추천인(ID또는 이름), 전시회/컨벤션 별 설문조사 항목 정보<br/>
+								- 제공받는 자의 개인정보 보유 이용기간 : 행사 종료 시 까지<br/>
+	
+								2. 한국전시산업진흥회(AKEI)<br/>
+								- 제공받는 자의 개인정보 이용목적 : 한국전시산업진흥회 전시회 인증을 위한 정보 제공<br/>
+								- 제공하는 개인정보 항목 : 아이디, 이름, 휴대폰번호, 지역구분, 성별, 출생년도, 직장명(단체), 추천인(ID또는 이름), 전시회/컨벤션 별 설문조사 항목 정보<br/>
+								- 제공받는 자의 개인정보 보유 이용기간 : 전시회 인증 완료 시까지<br/>
+							</dd>
+	
+							<dt>제4조(개인정보처리의 위탁)</dt>
+	
+							<dd>
+								① 회사는 원활한 개인정보 업무처리를 위하여 다음과 같이 개인정보 처리업무를 위탁하고 있습니다.<br/>
+	
+								1. 기간계 시스템 운영<br/>
+								- 위탁받는 자 (수탁자) : ㈜유알피<br/>
+								- 위탁하는 업무의 내용 : 킨텍스 기간계 시스템 유지보수, 고객DB 관리<br/>
+	
+								2. 주관전시회 홈페이지 운영<br/>
+								- 위탁받는 자 (수탁자) : 마이스허브, 마이스엔, 에스브이엠플래닛, 미리소프트<br/>
+								- 위탁하는 업무의 내용 : 주관전시회 홈페이지 관리, 참관객/참가업체 DB관리<br/>
+	
+								3. 주관전시회 티켓업무 운영<br/>
+								- 위탁받는 자 (수탁자) : ㈜시스포유, 고벤트 주식회사<br/>
+								- 위탁하는 업무의 내용 : 주관전시회 티켓발급 업무, 참관객/참가업체 DB관리<br/>
+								② 회사는 위탁계약 체결시 개인정보 보호법 제26조에 따라 위탁업무 수행목적 외 개인정보 처리금지, 기술적․관리적 보호조치, 재위탁 제한, 수탁자에 대한 관리․감독, 손해배상 등 책임에 관한 사항을 계약서 등 문서에 명시하고, 수탁자가 개인정보를 안전하게 처리하는지를 감독하고 있습니다.<br/>
+								③ 위탁업무의 내용이나 수탁자가 변경될 경우에는 지체없이 본 개인정보 처리방침을 통하여 공개하도록 하겠습니다.
+							</dd>
+	
+							<dt>제5조(정보주체의 권리․의무 및 행사방법)</dt>
+	
+							<dd>
+								① 정보주체는 회사에 대해 언제든지 개인정보 열람·정정·삭제·처리정지 요구 등의 권리를 행사할 수 있습니다.<br/>
+								② 제1항에 따른 권리 행사는 회사에 대해 「개인정보 보호법」 시행령 제41조 제1항에 따라 서면, 전자우편, 모사전송(FAX) 등을 통해 할 수 있으며, 회사는 이에 대해 지체없이 조치하겠습니다.<br/>
+								③ 정보주체가 개인정보의 오류 등에 대한 정정 또는 삭제를 요구한 경우에는 회사는 정정 또는 삭제를 완료할 때까지 당해 개인정보를 이용하거나 제공하지 않습니다.<br/>
+								④ 제1항에 따른 권리 행사는 정보주체의 법정대리인이나 위임을 받은 자 등 대리인을 통해 할 수도 있습니다. 이 경우 “개인정보 처리 방법에 관한 고시(제2020-7호)” 별지 제11호 서식에 따른 위임장을 제출하셔야 합니다.<br/>
+								⑤ 정보주체는 개인정보 보호법 등 관계법령을 위반하여 회사가 처리하고 있는 정보주체 본인이나 타인의 개인정보 및 사생활을 침해하여서는 아니됩니다.								
+								⑥ 개인정보 열람 및 처리정지 요구는 「개인정보 보호법」 제35조 제4항, 제37조 제2항에 의하여 정보주체의 권리가 제한될 수 있습니다.
+								⑦ 개인정보의 정정 및 삭제 요구는 다른 법령에서 그 개인정보 수집 대상으로 명시되어 있는 경우에는 그 삭제를 요구할 수 없습니다.
+								⑧ 회사는 정보주체 권리에 따른 열람의 요구, 정정‧삭제의 요구, 처리정지의 요구 시 열람 등 요구를 한 자가 본인이거나 정당한 대리인인지를 확인합니다.
+							</dd>
+	
+							<dt>제6조(처리하는 개인정보 항목) 회사는 다음의 개인정보 항목을 처리하고 있습니다.</dt>
+	
+							<dd>
+							   1. 수집항목 
+							   - 킨텍스 홈페이지<br/>
+								 · 필수항목 : 이름, 이메일, 연락처<br/>
+							   - 전시플랫폼<br/>
+								 · 필수항목 : 이름, 이메일(아이디), 연락처
+								 · 선택항목 : 회사명, 회사주소, 회사대표자, 회사연락처, 홈페이지 주소<br/>
+							   - 킨텍스 앱<br/>
+								 · 필수항목 : 이름, 이메일(아이디), 연락처, 지역구분, 성별, 출생년도, <br/>
+								 · 선택항목 : 직장명(단체), 추천인(ID또는이름), 설문조사<br/>
+	
+								2. 수집방법 : 서비스별 회원가입, 문의게시판<br/>
+	
+								3. 인터넷 서비스 이용과정에서 아래 개인정보 항목이 자동으로 생성되어 수집될 수 있습니다. <br/>
+								 ․IP주소, 쿠키, MAC주소, 서비스 이용기록, 접속 로그, 불량 이용기록
+							</dd>
+	
+							<dt>제7조(개인정보의 파기)</dt>
+	
+							<dd>
+								① 회사는 개인정보 보유기간의 경과, 처리목적 달성 등 개인정보가 불필요하게 되었을 때에는 지체없이 해당 개인정보를 파기합니다.<br/>
+								② 정보주체로부터 동의받은 개인정보 보유기간이 경과하거나 처리목적이 달성되었음에도 불구하고 다른 법령에 따라 개인정보를 계속 보존하여야 하는 경우에는, 해당 개인정보를 별도의 데이터베이스(DB)로 옮기거나 보관장소를 달리하여 보존합니다.<br/>
+								③ 개인정보 파기의 절차 및 방법은 다음과 같습니다.<br/>
+								1. 파기절차<br/>
+								회사는 파기 사유가 발생한 개인정보(또는 개인정보파일)를 선정하고, 회사의 개인정보 보호책임자의 승인을 받아 개인정보(또는 개인정보파일)를 파기합니다.<br/>
+								2. 파기방법<br/>
+								회사는 전자적 파일 형태로 기록․저장된 개인정보는 기록을 재생할 수 없도록 DB데이터 삭제 등의 방법을 이용하여 파기하며, 종이 문서에 기록․저장된 개인정보는 분쇄기로 분쇄하거나 소각하여 파기합니다.
+							</dd>
+	
+							<dt>제8조(개인정보의 안전성 확보조치) 회사는 개인정보의 안전성 확보를 위해 다음과 같은 조치를 취하고 있습니다.</dt>
+	
+							<dd>
+								1. 관리적 조치 : 내부관리계획 수립․시행, 정기적 직원 교육 등<br/>
+								2. 기술적 조치 : 개인정보처리시스템 등의 접근권한 관리, 접근통제, 고유식별정보 등의 암호화, 보안프로그램 설치<br/>
+								3. 물리적 조치 : 전산실, 자료보관실 등의 접근통제
+							</dd>
+	
+							<dt>제9조(개인정보 자동 수집 장치의 설치∙운영 및 거부에 관한 사항)</dt>
+	
+							<dd>
+								① 회사는 이용자에게 개별적인 맞춤서비스를 제공하기 위해 이용정보를 저장하고 수시로 불러오는 ‘쿠키(cookie)’를 사용할 수 있습니다.<br/>
+								② 쿠키는 웹사이트를 운영하는데 이용되는 서버(http)가 이용자의 컴퓨터 브라우저에게 보내는 소량의 정보이며 이용자들의 PC 컴퓨터내의 하드디스크에 저장되기도 합니다.<br/>
+								가. 쿠키의 사용목적: 이용자가 방문한 각 서비스와 웹 사이트들에 대한 방문 및 이용형태, 인기 검색어, 보안접속 여부, 등을 파악하여 이용자에게 최적화된 정보 제공을 위해 사용됩니다.<br/>
+								나. 쿠키의 설치∙운영 및 거부 : 웹브라우저 상단의 도구>인터넷 옵션>개인정보 메뉴의 옵션 설정을 통해 쿠키 저장을 거부 할 수 있습니다.<br/>
+								다. 쿠키 저장을 거부할 경우 맞춤형 서비스 이용에 어려움이 발생할 수 있습니다.
+							</dd>
+	
+							<dt>제10조(개인정보 보호책임자)</dt>
+	
+							<dd>
+								① 회사는 개인정보 처리에 관한 업무를 총괄해서 책임지고, 개인정보 처리와 관련한 정보주체의 불만처리 및 피해구제 등을 위하여 아래와 같이 개인정보 보호책임자를 지정하고 있습니다.<br/>
+	
+								▶ 개인정보 보호책임자 : 경영부사장<br/>
+	
+<!-- 								▶ 개인정보 보호 관리자<br/> -->
+<!-- 								부서명 : 디지털혁신팀<br/> -->
+<!-- 								관리자 : 팀장 천은희<br/> -->
+<!-- 								연락처 : tel : 031-995-8301, ehchun@kintex.com, fax : 031-995-8368<br/> -->
+	
+<!-- 								▶ 개인정보 보호 담당자<br/> -->
+<!-- 								부서명 : 디지털혁신팀<br/> -->
+<!-- 								담당자 : 과장 이근수<br/> -->
+<!-- 								연락처 : tel : 031-995-8363, gslee@kintex.com, fax : 031-995-8368<br/> -->
+	
+								② 정보주체는 회사의 서비스(또는 사업)을 이용하면서 발생한 모든 개인정보 보호 관련 문의, 불만처리, 피해구제 등에 관한 사항을 개인정보 담당부서로 문의하실 수 있습니다. 회사는 정보주체의 문의에 대해 지체없이 답변 및 처리해드릴 것입니다.
+							</dd>
+	
+							<dt>제11조(개인정보 열람청구) 정보주체는 개인정보 보호법 제35조에 따른 개인정보의 열람 청구를 아래의 부서에 할 수 있습니다. 회사는 정보주체의 개인정보 열람청구가 신속하게 처리되도록 노력하겠습니다.</dt>
+	
+							<dd>
+								▶ 개인정보 열람청구 접수․처리 부서<br/>
+								부서명 : AI솔루션팀
+							</dd>
+	
+							<dt>제12조(권익침해 구제방법) 정보주체는 아래의 기관에 대해 개인정보 침해에 대한 피해구제, 상담 등을 문의하실 수 있습니다.</dt>
+	
+							<dd>
+								&lt;아래의 기관은 회사와는 별개의 기관으로서, 회사의 자체적인 개인정보 불만처리, 피해구제 결과에 만족하지 못하시거나 보다 자세한 도움이 필요하시면 문의하여 주시기 바랍니다&gt;<br/><br/>
+	
+								▶ 개인정보 침해신고센터 (한국인터넷진흥원 운영)<br/>
+								- 소관업무 : 개인정보 침해사실 신고, 상담 신청<br/>
+								- 홈페이지 : privacy.kisa.or.kr<br/>
+								- 전화 : (국번없이) 118<br/>
+								- 주소 : (58324) 전남 나주시 진흥길 9(빛가람동 301-2) 3층 개인정보침해신고센터<br/>
+	
+								▶ 개인정보 분쟁조정위원회<br/>
+								- 소관업무 : 개인정보 분쟁조정신청, 집단분쟁조정 (민사적 해결)<br/>
+								- 홈페이지 : www.kopico.go.kr<br/>
+								- 전화 : (국번없이) 1833-6972<br/>
+								- 주소 : (03171)서울특별시 종로구 세종대로 209 정부서울청사 4층<br/>
+	
+								▶ 대검찰청 사이버범죄수사단 : 02-3480-3573 (www.spo.go.kr)<br/>
+	
+								▶ 경찰청 사이버안전국 : 182 (http://cyberbureau.police.go.kr)
+							</dd>
+	
+							<dt>제13조(영상정보처리기기 설치․운영)</dt>
+	
+							<dd>
+								① 회사는 아래와 같이 영상정보처리기기를 설치․운영하고 있습니다.<br/>
+								1. 영상정보처리기기 설치근거․목적 : 킨텍스의 시설안전․화재예방<br/>
+								2. 설치 대수, 설치 위치, 촬영 범위 : 1전시장 225대 2전시장 564대 총789대,전시장 로비․전시실 등 주요시설물에 설치, 촬영범위는 주요시설물의 전 공간을 촬영<br/>
+								3. 관리책임자, 담당부서 및 영상정보에 대한 접근권한자 : 시설운영팀<br/>
+								4. 영상정보 촬영시간, 보관기간, 보관장소, 처리방법<br/>
+								- 촬영시간 : 24시간 촬영<br/>
+								- 보관장소 및 처리방법 : 영상정보처리기기 통제실에 보관․처리<br/>
+								5. 영상정보 확인 방법 및 장소 : 시설운영팀<br/>
+								6. 정보주체의 영상정보 열람 등 요구에 대한 조치 : 개인영상정보 열람․존재확인 청구서로 신청하여야 하며, 정보주체 자신이 촬영된 경우 또는 명백히 정보주체의 생명․신체․재산 이익을 위해 필요한 경우에 한해 열람을 허용함<br/>
+								7. 영상정보 보호를 위한 기술적․관리적․물리적 조치 : 내부관리계획 수립, 접근통제 및 접근권한 제한, 영상정보의 안전한 저장․전송기술 적용, 처리기록 보관 및 위․변조 방지조치, 보관시설 마련 및 잠금장치 설치 등
+							</dd>
+	
+							<dt>제14조(개인정보 처리방침 변경)</dt>
+	
+							<dd>
+								① 이 개인정보 처리방침은 2025. 11.11 부터 적용됩니다.<br/>
+								② 이전의 개인정보 처리방침은 아래에서 확인하실 수 있습니다.<br/>								
+							</dd>
+
+							<dt>제15조(개인정보의 수집.이용)</dt>
+	
+							<dd>
+								①개인정보처리자는 개인정보보호법 제15조 제1항 제2호부터 제7호까지의 요건 중 어느 하나를 정보주체의 동의를 받지않더라도 수집, 이용할 수 있습니다.<br/>
+								②개인정보처리자는 다음 각 호의 어느 하나에 해당하는 경우에는 개인정보를 수집할 수 있으며 그 수집 목적의 범위에서 이용할 수 있다.<br/>
+								1. 법률에 특별한 규정이 있거나 법령상 의무를 준수하기 위하여 불가피한 경우<br/>
+								2. 정보주체와 체결한 계약을 이행하거나 계약을 체결하는 과정에서 정보주체의 요청에 따른 조치를 이행하기 위하여 필요한 경우<br/>
+								3. 명백히 정보주체 또는 제3자의 급박한 생명, 신체, 재산의 이익을 위하여 필요하다고 인정되는 경우<br/>
+								4. 개인정보처리자의 정당한 이익을 달성하기 위하여 필요한 경우로서 명백하게 정보주체의 권리보다 우선하는 경우. 이 경우 개인정보처리자의 정당한 이익과 상당한 관련이 있고 합리적인 범위를 초과하지 아니하는 경우에 한한다.<br/>
+								5. 공중위생 등 공공의 안전과 안녕을 위하여 긴급히 필요한 경우	<br/>							
+							</dd>
+						</dl>
+					</div>
+			</div>
+
+		</div>
+</article>
+
+<!-- 이메일무단수집거부 -->
+<article id="mailPermission" class="layer-pop-wrap">
+	<div class="layer-pop-parent">
+		<div class="layer-pop-children">
+
+			<div class="pop-data alert-data">
+                <div class="pop-head">
+                    <div class="btn-pop-head">
+                        <button type="button" onclick="front.pop.close();">창닫기</button>
+                    </div>
+                </div>
+				<div class="pop-body">
+					<div class="con-title">이메일무단수집거부</div>
+					<p>
+						본 웹사이트에 게시된 이메일 주소가 전자 우편 수집 프로그램이나 그 밖의 기술적 장치를 이용하여 무단으로 수집되는 것을 거부하며 이를 위반 시 정보 통신망법에 의해 형사 처벌 됨을 유념하시기 바랍니다.
+					</p>
+				</div>
+			</div>
+
+		</div>
+</article>
+
+
+<!-- 공공데이터 개방 -->
+<article id="publicDataAccess" class="layer-pop-wrap">
+	<div class="layer-pop-parent">
+		<div class="layer-pop-children">
+
+			<div class="pop-data alert-data">
+                <div class="pop-head">
+                    <div class="btn-pop-head">
+                        <button type="button" onclick="front.pop.close();">창닫기</button>
+                    </div>
+                </div>
+				<div class="pop-body">
+						<div class="con-title">킨텍스 공공데이터 개방</div>
+
+						<dl>
+							<dt>공공데이터란?</dt>
+							<dd>
+								데이터베이스, 전자화된 파일 등 공공기관이 법령 등 에서 정하는 목적을 위하여 생성 또는 취득하여 관리 하고 있는 광(光) 또는 전자적 방식으로 처리된 자료 또는 정보입니다.
+							</dd>
+
+							<dt>공공데이터 개방이란?</dt>
+							<dd>
+								공공기관이 이용자에게 공공테이터를 활용할 수 있는 형태로 제공하고, 제공받은 공공테이터를 영리적ㆍ비영리적으로 이용할 권한을 부여하는 것
+							</dd>
+						</dl>
+
+						<h4>공공데이터 개방 현황</h4>
+						<ul>
+							<li>1.킨텍스_KINTEX앱을 통한 행사 사전등록 현황 <a href="https://data.gg.go.kr/portal/data/service/selectServicePage.do?page=1&sortColumn=&sortDirection=&infId=DVTNALW26ZSHTO0AKBIH29992486&infSeq=1&searchWord=%ED%82%A8%ED%85%8D%EC%8A%A4" target="_blank">바로가기</a></li>
+						<li>2.킨텍스_KINTEX 행사 일정 <a href="https://data.gg.go.kr/portal/data/service/selectServicePage.do?page=1&sortColumn=&sortDirection=&infId=TM03IWAWFH17G6VM827729982969&infSeq=1&searchWord=%ED%82%A8%ED%85%8D%EC%8A%A4" target="_blank">바로가기</a></li>
+						<li>3. 킨텍스_행사 협력 업체 <a href="https://data.gg.go.kr/portal/data/service/selectServicePage.do?page=1&rows=10&sortColumn=&sortDirection=&infId=UCXQN1DM9EEYK46N9CAS30929019&infSeq=1&order=&searchWord=KINTEX" target="_blank">바로가기</a></li>
+						<li>4. 킨텍스_시설 현황 <a href="https://data.gg.go.kr/portal/data/service/selectServicePage.do?page=1&rows=10&sortColumn=&sortDirection=&infId=VRYOMEX2OKHCRTDQAMPO30917869&infSeq=1&order=&searchWord=KINTEX" target="_blank">바로가기</a></li>
+						<li>5. 킨텍스_편의시설 정보 <a href="https://data.gg.go.kr/portal/data/service/selectServicePage.do?page=1&rows=10&sortColumn=&sortDirection=&infId=KU8POAMB2Q02SPOYUBUM37427456&infSeq=1&order=&searchWord=kintex" target="_blank">바로가기</a></li>
+						<li>6. 킨텍스_인근호텔 목록 <a href="https://data.gg.go.kr/portal/data/service/selectServicePage.do?page=1&rows=10&sortColumn=&sortDirection=&infId=I63XLXSFY5XQ1KKOZMV837414648&infSeq=1&order=&searchWord=kintex" target="_blank">바로가기</a></li>
+						</ul>
+
+						<h4>공공데이터 제공 책임관</h4>
+						<ul>
+							<li>공공데이터 제공 실무자 : AI솔루션팀/팀장 천은희</li>
+							<li>공공데이터 제공 실무자 : AI솔루션팀/차장 이근수</li>
+						</ul>
+
+						<p class="center">
+							<a href="https://data.gg.go.kr/portal/mainPage.do" target="_blank">경기데이터드림</a>
+						</p>
+					</div
+			</div>
+
+		</div>
+</article>
+	
+ 
+	</footer>
+	<!-- //dFoot -->
+</section>
+<!-- //wrap -->
+
+
+<!-- 검색어 미입력 팝업 -->
+<article id="pop-01" class="layer-pop-wrap">
+	<div class="layer-pop-parent">
+		<div class="layer-pop-children">
+
+			<div class="pop-data alert-data">
+				<div class="pop-body">
+					<div class="msg-txt">행사명을 입력해 주세요.</div>
+				</div>
+				<div class="pop-footer">
+					<div class="btn-pop-wrap">
+						<button type="button" class="btn-basic btn-black" onclick="front.pop.close();">확인</button>
+					</div>
+				</div>
+			</div>
+
+		</div>
+	</div>
+</article>
+<!-- //검색어 미입력 팝업 -->
+
+<script src="/public/common/js/front_ui.js"></script>
+<script>
+$(function(){
+	$(".datepicker-input").datepicker({
+		showOn:"both",
+		buttonImage:"/public/common/images/datepicker/btn_datepicker.png",
+		buttonImageOnly:true,
+		dateFormat: 'yy-mm-dd',
+		prevText: '이전 달',
+		nextText: '다음 달',
+		monthNames: ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],
+		monthNamesShort: ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],
+		dayNames: ['일','월','화','수','목','금','토'],
+		dayNamesShort: ['일','월','화','수','목','금','토'],
+		dayNamesMin: ['일','월','화','수','목','금','토'],
+		showMonthAfterYear: true,
+		yearSuffix: '년'
+	});
+
+});
+</script>
+</body>
+</html>

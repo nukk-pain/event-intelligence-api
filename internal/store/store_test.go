@@ -1,0 +1,308 @@
+package store_test
+
+import (
+	"context"
+	"database/sql"
+	"path/filepath"
+	"testing"
+
+	"github.com/smpain/event-intelligence-api/internal/model"
+	"github.com/smpain/event-intelligence-api/internal/store"
+)
+
+func strptr(s string) *string { return &s }
+
+// newEvent builds a minimal valid Event for tests.
+func newEvent() model.Event {
+	return model.Event{
+		SchemaVersion:  model.SchemaVersion,
+		EventID:        "coex-2026-ai-expo",
+		SeriesID:       strptr("ai-expo-korea"),
+		Name:           "AI EXPO KOREA",
+		NameKo:         strptr("국제인공지능대전"),
+		StartDate:      strptr("2026-05-12"),
+		EndDate:        strptr("2026-05-14"),
+		Timezone:       strptr("Asia/Seoul"),
+		DateConfidence: "high",
+		Status:         "scheduled",
+		Format:         "onsite",
+		Venue:          &model.Venue{VenueID: strptr("coex"), Name: "COEX", City: "Seoul"},
+		Country:        "KR",
+		Categories:     []string{"ai"},
+		Audience:       []string{"b2b", "buyers"},
+		Actions:        model.Actions{},
+		CostHint:       "unknown",
+		Sources: []model.Source{
+			{URL: "https://www.coex.co.kr/", Type: "venue", Publisher: "COEX", RetrievedAt: "2026-06-21T10:00:00Z"},
+		},
+		LastCheckedAt: "2026-06-21T10:00:00Z",
+		UpdateState:   "new",
+		Confidence:    "high",
+		MissingFields: []string{"register_url", "homepage_url"},
+		CuratedBy:     "smpain",
+		CreatedAt:     "2026-06-21T10:00:00Z",
+		UpdatedAt:     "2026-06-21T10:00:00Z",
+		BatchID:       "batch-001",
+	}
+}
+
+func openTestDB(t *testing.T) *sql.DB {
+	t.Helper()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "test.db")
+	db, err := store.OpenWrite(path)
+	if err != nil {
+		t.Fatalf("OpenWrite: %v", err)
+	}
+	t.Cleanup(func() { db.Close() })
+	if err := store.Migrate(db); err != nil {
+		t.Fatalf("Migrate: %v", err)
+	}
+	return db
+}
+
+func TestOpenReadSucceedsAfterFreshMigration(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "fresh.db")
+
+	wdb, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatalf("open raw sqlite db: %v", err)
+	}
+	if err := store.Migrate(wdb); err != nil {
+		t.Fatalf("Migrate: %v", err)
+	}
+	if err := wdb.Close(); err != nil {
+		t.Fatalf("close write db: %v", err)
+	}
+
+	rdb, err := store.OpenRead(path)
+	if err != nil {
+		t.Fatalf("OpenRead after fresh migration: %v", err)
+	}
+	defer rdb.Close()
+}
+
+// TestContentHashStableUnderFreshnessChange proves requirement (a): two builds
+// of the same event differing ONLY in freshness/operational fields produce a
+// byte-identical content_hash.
+func TestContentHashStableUnderFreshnessChange(t *testing.T) {
+	a := newEvent()
+	b := newEvent()
+
+	// Mutate ONLY excluded fields on b.
+	b.LastCheckedAt = "2099-12-31T23:59:59Z"
+	b.CreatedAt = "2000-01-01T00:00:00Z"
+	b.UpdatedAt = "2099-12-31T23:59:59Z"
+	b.BatchID = "batch-999"
+	b.UpdateState = "updated"
+	b.Sources[0].RetrievedAt = "2099-12-31T23:59:59Z"
+
+	ha := store.ContentHash(a)
+	hb := store.ContentHash(b)
+
+	if ha == "" {
+		t.Fatal("ContentHash returned empty string")
+	}
+	if ha != hb {
+		t.Fatalf("content_hash changed under freshness-only mutation:\n a=%s\n b=%s", ha, hb)
+	}
+}
+
+// TestContentHashChangesWithSemanticChange ensures the hash is sensitive to a
+// real source-derived field change (negative control for the test above).
+func TestContentHashChangesWithSemanticChange(t *testing.T) {
+	a := newEvent()
+	b := newEvent()
+	b.Status = "cancelled"
+
+	if store.ContentHash(a) == store.ContentHash(b) {
+		t.Fatal("content_hash did not change when status changed")
+	}
+}
+
+// TestContentHashSortsArrays proves the canonical serialization sorts arrays so
+// element order from the source does not affect the hash.
+func TestContentHashSortsArrays(t *testing.T) {
+	a := newEvent()
+	a.Categories = []string{"ai", "bio"}
+	a.Audience = []string{"b2b", "buyers"}
+	a.MissingFields = []string{"register_url", "homepage_url"}
+	a.Sources = []model.Source{
+		{URL: "https://a.example/", Type: "venue", Publisher: "A", RetrievedAt: "2026-06-21T10:00:00Z"},
+		{URL: "https://b.example/", Type: "press", Publisher: "B", RetrievedAt: "2026-06-21T10:00:00Z"},
+	}
+
+	b := newEvent()
+	b.Categories = []string{"bio", "ai"}                       // reversed
+	b.Audience = []string{"buyers", "b2b"}                     // reversed
+	b.MissingFields = []string{"homepage_url", "register_url"} // reversed
+	b.Sources = []model.Source{
+		{URL: "https://b.example/", Type: "press", Publisher: "B", RetrievedAt: "2099-12-31T00:00:00Z"},
+		{URL: "https://a.example/", Type: "venue", Publisher: "A", RetrievedAt: "2000-01-01T00:00:00Z"},
+	}
+
+	if store.ContentHash(a) != store.ContentHash(b) {
+		t.Fatal("content_hash sensitive to array order; arrays must be sorted in canonical form")
+	}
+}
+
+// TestContentHashNormalizesWhitespace proves whitespace normalization in name.
+func TestContentHashNormalizesWhitespace(t *testing.T) {
+	a := newEvent()
+	a.Name = "AI EXPO KOREA"
+	b := newEvent()
+	b.Name = "  AI   EXPO\tKOREA  "
+
+	if store.ContentHash(a) != store.ContentHash(b) {
+		t.Fatal("content_hash sensitive to insignificant whitespace; must normalize")
+	}
+}
+
+// TestUpsertEventInsertsAndUpdates proves a round-trip upsert: insert then
+// update by event_id, plus raw_snapshot and last_checked_at persistence.
+func TestUpsertEventInsertsAndUpdates(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+
+	e := newEvent()
+	snap := &model.RawSnapshot{
+		EventID:     e.EventID,
+		SourceID:    strptr("coex"),
+		URL:         strptr("https://www.coex.co.kr/event/1"),
+		ContentType: strptr("text/html"),
+		Body:        []byte("<html>v1</html>"),
+		ContentHash: strptr(store.ContentHash(e)),
+		RetrievedAt: "2026-06-21T10:00:00Z",
+	}
+
+	if err := store.UpsertEvent(ctx, db, e, nil, snap); err != nil {
+		t.Fatalf("first UpsertEvent: %v", err)
+	}
+
+	gotName, gotHash := readEventRow(t, db, e.EventID)
+	if gotName != "AI EXPO KOREA" {
+		t.Fatalf("name = %q, want AI EXPO KOREA", gotName)
+	}
+	if gotHash != store.ContentHash(e) {
+		t.Fatalf("content_hash = %q, want %q", gotHash, store.ContentHash(e))
+	}
+
+	// Update: change a semantic field, re-upsert.
+	e.Name = "AI EXPO KOREA 2026"
+	e.LastCheckedAt = "2026-06-22T10:00:00Z"
+	if err := store.UpsertEvent(ctx, db, e, nil, snap); err != nil {
+		t.Fatalf("second UpsertEvent: %v", err)
+	}
+
+	gotName, _ = readEventRow(t, db, e.EventID)
+	if gotName != "AI EXPO KOREA 2026" {
+		t.Fatalf("after update name = %q, want AI EXPO KOREA 2026", gotName)
+	}
+
+	// Exactly one row should exist for this event_id.
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM events WHERE event_id=?`, e.EventID).Scan(&n); err != nil {
+		t.Fatalf("count: %v", err)
+	}
+	if n != 1 {
+		t.Fatalf("event row count = %d, want 1", n)
+	}
+
+	// last_checked_at must reflect the update.
+	var lca string
+	if err := db.QueryRow(`SELECT last_checked_at FROM events WHERE event_id=?`, e.EventID).Scan(&lca); err != nil {
+		t.Fatalf("read last_checked_at: %v", err)
+	}
+	if lca != "2026-06-22T10:00:00Z" {
+		t.Fatalf("last_checked_at = %q, want 2026-06-22T10:00:00Z", lca)
+	}
+}
+
+// TestUpsertEventWritesChangeLog proves change_log rows are inserted within the
+// same upsert transaction.
+func TestUpsertEventWritesChangeLog(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+
+	e := newEvent()
+	if err := store.UpsertEvent(ctx, db, e, nil, nil); err != nil {
+		t.Fatalf("seed upsert: %v", err)
+	}
+
+	changes := []model.ChangeLog{
+		{EventID: e.EventID, FieldPath: "status", OldValue: strptr("scheduled"), NewValue: strptr("cancelled"), ChangedAt: "2026-06-22T10:00:00Z", BatchID: strptr("batch-002")},
+	}
+	e.Status = "cancelled"
+	if err := store.UpsertEvent(ctx, db, e, changes, nil); err != nil {
+		t.Fatalf("upsert with changes: %v", err)
+	}
+
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM change_log WHERE event_id=? AND field_path='status'`, e.EventID).Scan(&n); err != nil {
+		t.Fatalf("count change_log: %v", err)
+	}
+	if n != 1 {
+		t.Fatalf("change_log rows = %d, want 1", n)
+	}
+}
+
+// TestUpsertEventRollsBackOnError proves requirement (b): if the transaction
+// fails AFTER the event upsert but BEFORE change_log inserts complete, the
+// whole transaction rolls back and the prior good row is preserved unchanged.
+func TestUpsertEventRollsBackOnError(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+
+	// Seed a known-good row.
+	good := newEvent()
+	if err := store.UpsertEvent(ctx, db, good, nil, nil); err != nil {
+		t.Fatalf("seed upsert: %v", err)
+	}
+	priorName, priorHash := readEventRow(t, db, good.EventID)
+
+	// Now attempt an upsert whose change_log batch contains an invalid row that
+	// will fail mid-transaction (NULL into a NOT NULL column: field_path).
+	bad := good
+	bad.Name = "MUTATED — must not persist"
+	badChanges := []model.ChangeLog{
+		// First change is valid; the second references a non-existent event_id
+		// which violates the change_log -> events foreign key (foreign_keys=ON),
+		// forcing the transaction to fail AFTER the event upsert but during the
+		// change_log inserts.
+		{EventID: good.EventID, FieldPath: "name", OldValue: strptr(priorName), NewValue: strptr(bad.Name), ChangedAt: "2026-06-22T10:00:00Z"},
+		{EventID: "does-not-exist-anywhere", FieldPath: "status", ChangedAt: "2026-06-22T10:00:00Z"},
+	}
+
+	err := store.UpsertEvent(ctx, db, bad, badChanges, nil)
+	if err == nil {
+		t.Fatal("expected UpsertEvent to fail on bad change_log, got nil")
+	}
+
+	// The event row must be UNCHANGED (rollback).
+	gotName, gotHash := readEventRow(t, db, good.EventID)
+	if gotName != priorName {
+		t.Fatalf("rollback failed: name = %q, want preserved %q", gotName, priorName)
+	}
+	if gotHash != priorHash {
+		t.Fatalf("rollback failed: content_hash = %q, want preserved %q", gotHash, priorHash)
+	}
+
+	// No change_log rows should have been committed.
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM change_log WHERE event_id=?`, good.EventID).Scan(&n); err != nil {
+		t.Fatalf("count change_log: %v", err)
+	}
+	if n != 0 {
+		t.Fatalf("change_log rows = %d after rollback, want 0", n)
+	}
+}
+
+func readEventRow(t *testing.T, db *sql.DB, id string) (name, contentHash string) {
+	t.Helper()
+	var ch sql.NullString
+	if err := db.QueryRow(`SELECT name, content_hash FROM events WHERE event_id=?`, id).Scan(&name, &ch); err != nil {
+		t.Fatalf("readEventRow %s: %v", id, err)
+	}
+	return name, ch.String
+}

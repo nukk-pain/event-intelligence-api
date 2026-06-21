@@ -1,0 +1,16 @@
+[Unit]
+Description=eventsintel ingest batch (COEX/KINTEX crawl + normalize + diff)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/srv/developer/events-intel
+ExecStart=/srv/developer/events-intel/eventsintel ingest
+Environment=EVENTSINTEL_DB_PATH=/srv/developer/events-intel/data/events.db
+Environment=EVENTSINTEL_LOCK_PATH=/srv/developer/events-intel/data/ingest.lock
+Environment=EVENTSINTEL_RATE_PER_MIN=30
+Environment=EVENTSINTEL_INGEST_DEADLINE=20m
+# The binary also takes a flock single-flight lock; the timer + lock together
+# guarantee no overlapping ingest runs.

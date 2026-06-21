@@ -1,0 +1,7 @@
+URL: derived from https://www.coex.co.kr/wp-sitemap.xml
+Captured: 2026-06-21
+Note: Trimmed variant of the real index with N=2 exhibitions POST shards (not 5)
+      to prove discovery follows the index's <loc> entries dynamically instead of
+      hardcoding shards 1..5. Includes noise shards (post, page, users) and the
+      taxonomies-exhibitions / taxonomies-exhibitions-dept decoys, which must be
+      ignored because they are NOT "wp-sitemap-posts-exhibitions-N" detail shards.

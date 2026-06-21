@@ -1,0 +1,5 @@
+url: https://www.coex.co.kr/exhibitions/%ec%9d%b8%ea%b3%b5%ec%a7%80%eb%8a%a5-%ed%8e%98%ec%8a%a4%ed%83%80-2026/
+captured_at: 2026-06-21
+fetched_with: curl, polite read-only UA "event-intelligence-bot/0.1 (+https://events.nukk.net; polite read-only)"
+note: COEX exhibition detail page (industry event, AI Festa 2026 — 전기/전자/IT). Golden fixture for Task 2.2 COEX detail parser.
+fields_present: 기간(EventDetailBoxHeader-date 2026.10.06 - 2026.10.08), 장소/홀(MainEventItemCont-place "HallC"; 관람 장소 EventPlaceItemTitle Hall C), 주최(과학기술정보통신부), 주관(한국인공지능•소프트웨어산업협회, AI페스타 조직위원회), 홈페이지(EventDetailThumbLink-link url https://www.aifesta.kr/), 문의/담당자(김동욱, dwkim@zdnet.co.kr, 02-330-0171), category(EventDetailBoxHeader-cate 전기/전자/IT)

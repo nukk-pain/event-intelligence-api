@@ -1,0 +1,7 @@
+URL: https://www.coex.co.kr/wp-sitemap-posts-exhibitions-1.xml
+Captured: 2026-06-21
+Note: First 6 <url> entries of the real exhibitions shard 1 (the real shard holds
+      2000 entries). Trimmed for fixture size. <loc> values are verbatim
+      (percent-encoded Korean slugs); one ASCII slug (2002-fira-congres) is kept
+      as a decode-stable assertion anchor. Real shard entries contain only <loc>
+      (no <lastmod>).

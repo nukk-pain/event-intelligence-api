@@ -1,0 +1,10 @@
+source: COEX exhibition detail page (real, read-only curl, polite UA)
+url: https://www.coex.co.kr/exhibitions/글로벌헬스케어&메디컬코리아-2011/
+encoded_url: https://www.coex.co.kr/exhibitions/%ea%b8%80%eb%a1%9c%eb%b2%8c%ed%97%ac%ec%8a%a4%ec%bc%80%ec%96%b4%eb%a9%94%eb%94%94%ec%bb%ac%ec%bd%94%eb%a6%ac%ec%95%84-2011/
+captured: 2026-06-21
+purpose: Golden fixture for internal/normalize. Parsed by the COEX adapter into a
+  sources.ParsedEvent, then normalized to a model.Event; the test asserts the
+  full normalized struct (dates parsed to ISO, classification, missing_fields,
+  templated summary). Chosen because it is a real industry event (digital-health)
+  with a complete When/Where/주최/homepage set and absent action fields, so it
+  exercises both the happy path and the actions.* missing_fields honesty rule.

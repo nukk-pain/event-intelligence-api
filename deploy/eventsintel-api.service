@@ -1,0 +1,20 @@
+[Unit]
+Description=eventsintel read-only API (events.nukk.net)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/srv/developer/events-intel
+ExecStart=/srv/developer/events-intel/eventsintel serve
+Environment=EVENTSINTEL_HTTP_ADDR=127.0.0.1:3005
+Environment=EVENTSINTEL_DB_PATH=/srv/developer/events-intel/data/events.db
+Restart=on-failure
+RestartSec=3
+# Read-only API: hardening
+ProtectSystem=full
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

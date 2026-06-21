@@ -1,0 +1,19 @@
+url: https://www.kintex.com/web/ko/event/view.do?seq=26060201
+captured_at: 2026-06-21
+endpoint: view.do?seq= (KINTEX detail page — Task 2.4 golden fixture)
+notes: |
+  Real KINTEX detail page fetched 2026-06-21 over plain HTTP with a polite UA
+  (HTTP 200, ~59 KB, text/html;charset=utf-8). Field layout:
+    - <h3> holds the event name: "2026고양가구박람회".
+    - <ul class="view-info-list"> rows: each <li> has <div class="title"> /
+      <div class="info">. Observed titles (spaces inside the label, e.g.
+      "기 간"): 기간, 주최, 장소, 관람시간, 입장료. Period is one cell
+      "2026-06-18 ~ 2026-06-21" (ISO dashes). 장소 carries hall text
+      ("전시홀 7 , 전시홀 8") plus a "위치안내" location button that must be
+      stripped.
+    - <div class="read-table"><table> with <th scope="row"> rows: 주관사(host),
+      후원사, 전화번호, 팩스번호, 홈페이지, 담당자, E-mail, 행사목적, 행사품목,
+      행사내용. Homepage is an <a href> ("http://고양가구박람회.com").
+  og:* meta tags are placeholders ("KINTEX") — not used. 주관사 is empty here.
+  Parser keeps RAW strings; date splitting on "~" yields start/end raw, the
+  normalize stage owns ISO validation.

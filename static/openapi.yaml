@@ -1,0 +1,413 @@
+openapi: 3.0.3
+info:
+  title: AI Industry Event Intelligence API
+  description: >-
+    Cache-first, read-only API for COEX/KINTEX (and future) AI, humanoid
+    robotics, bio, medical-device, and digital-health event data. JSON is the
+    canonical wire format; a Markdown rendering is available via
+    Accept: text/markdown or ?format=md. No live LLM generation on reads.
+  version: "0.1"
+servers:
+  - url: https://events.nukk.net
+    description: Production
+paths:
+  /api/v1:
+    get:
+      operationId: getMetaIndex
+      summary: API meta index
+      description: >-
+        Version, schema version, endpoint map, keyless quota, and controlled
+        vocabularies (categories, venues, update_state, status).
+      responses:
+        "200":
+          description: Meta index document.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaIndex"
+  /api/v1/schema:
+    get:
+      operationId: getSchema
+      summary: v0.1 schema descriptor
+      description: The v0.1 event schema descriptor and list of supported versions.
+      responses:
+        "200":
+          description: Schema descriptor.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchemaDescriptor"
+  /api/v1/openapi.yaml:
+    get:
+      operationId: getOpenAPI
+      summary: This OpenAPI document
+      responses:
+        "200":
+          description: The OpenAPI 3.x specification for this API.
+          content:
+            application/yaml:
+              schema:
+                type: string
+  /api/v1/events:
+    get:
+      operationId: listEvents
+      summary: List events
+      description: >-
+        Keyset-paginated, filterable event listing. Excluded (non-industry)
+        events are omitted by default.
+      parameters:
+        - name: limit
+          in: query
+          description: Page size, default 20, clamped to [1, 100].
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          description: Opaque continuation token from a previous page.
+          schema:
+            type: string
+        - name: updated_since
+          in: query
+          description: RFC3339 timestamp; only events updated at/after this time.
+          schema:
+            type: string
+            format: date-time
+        - name: changed_since
+          in: query
+          description: RFC3339 timestamp; only events with a change at/after this time.
+          schema:
+            type: string
+            format: date-time
+        - name: category
+          in: query
+          description: Taxonomy category slug.
+          schema:
+            type: string
+        - name: venue
+          in: query
+          description: Venue id slug (e.g. coex, kintex).
+          schema:
+            type: string
+        - name: format
+          in: query
+          description: Response encoding override; md returns a Markdown rendering.
+          schema:
+            type: string
+            enum: [json, md]
+      responses:
+        "200":
+          description: A page of events.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventEnvelope"
+            text/markdown:
+              schema:
+                type: string
+        "400":
+          description: Invalid cursor or parameter.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/events/changes:
+    get:
+      operationId: listChanges
+      summary: Field-level change feed
+      description: >-
+        Ordered (changed_at, id) feed of field-level changes for agent polling.
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: since
+          in: query
+          description: RFC3339 timestamp; only changes at/after this time.
+          schema:
+            type: string
+            format: date-time
+        - name: event_id
+          in: query
+          description: Restrict the feed to a single event.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: A page of change records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChangeEnvelope"
+  /api/v1/events/{event_id}:
+    get:
+      operationId: getEvent
+      summary: Event detail
+      description: A single event including its source provenance.
+      parameters:
+        - name: event_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The event.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+            text/markdown:
+              schema:
+                type: string
+        "404":
+          description: No such event.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/events/{event_id}/sources:
+    get:
+      operationId: listEventSources
+      summary: Event source provenance
+      description: The provenance entries (>=1) for an event.
+      parameters:
+        - name: event_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The event's sources.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Source"
+        "404":
+          description: No such event.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  schemas:
+    PageInfo:
+      type: object
+      properties:
+        next_cursor:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
+        limit:
+          type: integer
+      required: [next_cursor, has_more, limit]
+    EventEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required: [data, page]
+    ChangeEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Change"
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required: [data, page]
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum: [not_found, rate_limited, bad_request, invalid_cursor]
+            message:
+              type: string
+            retry_after_s:
+              type: integer
+              nullable: true
+          required: [code, message]
+      required: [error]
+    SchemaDescriptor:
+      type: object
+      properties:
+        schema_version:
+          type: string
+        supported_versions:
+          type: array
+          items:
+            type: string
+        fields:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldDescriptor"
+      required: [schema_version, supported_versions, fields]
+    FieldDescriptor:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        nullable:
+          type: boolean
+        required:
+          type: boolean
+      required: [name, type, nullable]
+    MetaIndex:
+      type: object
+      properties:
+        version:
+          type: string
+        schema_version:
+          type: string
+        endpoints:
+          type: object
+          additionalProperties:
+            type: string
+        quota:
+          type: object
+        vocabularies:
+          type: object
+      required: [version, schema_version, endpoints, quota, vocabularies]
+    Source:
+      type: object
+      properties:
+        url:
+          type: string
+        type:
+          type: string
+          enum: [venue, organizer, association, press, social, aggregator]
+        publisher:
+          type: string
+        retrieved_at:
+          type: string
+          format: date-time
+      required: [url, type, publisher, retrieved_at]
+    Change:
+      type: object
+      properties:
+        event_id:
+          type: string
+        field:
+          type: string
+        old:
+          type: string
+          nullable: true
+        new:
+          type: string
+          nullable: true
+        update_state:
+          type: string
+        changed_at:
+          type: string
+          format: date-time
+      required: [event_id, field, changed_at]
+    Venue:
+      type: object
+      properties:
+        venue_id:
+          type: string
+          nullable: true
+        name:
+          type: string
+        hall:
+          type: string
+          nullable: true
+        city:
+          type: string
+      required: [name, city]
+    Event:
+      type: object
+      properties:
+        schema_version:
+          type: string
+        event_id:
+          type: string
+        name:
+          type: string
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        end_date:
+          type: string
+          format: date
+          nullable: true
+        date_confidence:
+          type: string
+          enum: [high, medium, low]
+        status:
+          type: string
+          enum: [scheduled, tentative, postponed, cancelled, ended]
+        format:
+          type: string
+          enum: [onsite, hybrid, online]
+        venue:
+          $ref: "#/components/schemas/Venue"
+        country:
+          type: string
+        categories:
+          type: array
+          items:
+            type: string
+        audience:
+          type: array
+          items:
+            type: string
+        cost_hint:
+          type: string
+          enum: [free, paid, mixed, unknown]
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/Source"
+        last_checked_at:
+          type: string
+          format: date-time
+        update_state:
+          type: string
+          enum: [new, unchanged, updated, conflicting]
+        confidence:
+          type: string
+          enum: [high, medium, low]
+        missing_fields:
+          type: array
+          items:
+            type: string
+        excluded:
+          type: boolean
+      required:
+        - schema_version
+        - event_id
+        - name
+        - country
+        - categories
+        - sources
+        - last_checked_at
+        - update_state
+        - confidence
+        - missing_fields

@@ -1,0 +1,21 @@
+.DS_Store
+
+# Local agent/tool state
+.claude/
+.codegraph
+.omo/
+
+# Build outputs
+bin/
+/eventsintel
+/eventsintel-*
+
+# Runtime data
+*.db
+*.db-shm
+*.db-wal
+*.lock
+
+# Test/cache artifacts
+coverage.out
+*.test

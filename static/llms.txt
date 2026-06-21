@@ -1,0 +1,56 @@
+# AI Industry Event Intelligence API
+
+> Read-only, cache-first API for AI, humanoid robotics, bio, medical-device, and
+> digital-health industry events. COEX and KINTEX (Korea) are covered first.
+> JSON is canonical; a token-cheaper Markdown rendering is available for prompt
+> ingestion. No live LLM generation runs on reads.
+
+Base URL: https://events.nukk.net
+Schema version: 0.1 (see GET /api/v1/schema for the field descriptor)
+
+## How to use
+
+- Default response is `application/json`. Each event carries explicit nullable
+  fields, a controlled-vocabulary classification, and source provenance.
+- For prompt ingestion, request a Markdown table view with `?format=md` or
+  `Accept: text/markdown`. Same fields, fewer tokens (keys are not repeated per
+  row). `?format=md` takes precedence over the Accept header.
+- Collections are keyset-paginated. Follow `page.next_cursor` (opaque) until
+  `page.has_more` is false. `limit` defaults to 20 and is clamped to 100.
+- Poll for freshness with `updated_since` / `changed_since` (RFC3339), or read
+  the field-level change feed at `/api/v1/events/changes`.
+- Every enriched claim has provenance: `GET /api/v1/events/{event_id}/sources`.
+
+## Quota (keyless, per IP)
+
+- 60 requests / minute
+- 2000 requests / day
+
+Exceeding either returns HTTP 429 with a `Retry-After` header.
+
+## Endpoints
+
+- GET /api/v1 — meta index: version, schema_version, endpoints, quota, vocabularies.
+- GET /api/v1/schema — v0.1 schema descriptor + supported_versions.
+- GET /api/v1/openapi.yaml — OpenAPI 3.x specification.
+- GET /api/v1/events — list events. Filters: updated_since, changed_since,
+  category, venue. Pagination: limit, cursor.
+- GET /api/v1/events/{event_id} — single event detail with provenance.
+- GET /api/v1/events/{event_id}/sources — source provenance entries (>=1).
+- GET /api/v1/events/changes — field-level change feed. Filters: since, event_id.
+
+## Vocabularies
+
+- categories: ai, humanoid-robotics, bio, medical-devices, digital-health
+- venues: coex, kintex
+- update_state: new, unchanged, updated, conflicting
+- status: scheduled, tentative, postponed, cancelled, ended
+
+## Notes for agents
+
+- IDs (`event_id`) are durable and stable forever; safe to store and re-fetch.
+- `missing_fields[]` lists dotted paths that are null/unknown — treat them as
+  honestly absent, not as zero/false.
+- Non-industry events are flagged `excluded` and omitted from the default list.
+- Summaries are short factual lines generated from structured fields, never
+  copied source prose.
