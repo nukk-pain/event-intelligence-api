@@ -82,6 +82,13 @@ stable and deployment-ready.
   and `go build ./cmd/eventsintel` pass. Local Chrome/Selenium against a seeded
   temp DB verified desktop/mobile copy, no old visible slop terms, no horizontal
   overflow, all-period cards, and modal open/close.
+- Copy cleanup deployment verification (2026-06-21): deployed binary SHA256
+  `0973a3224bc91bfdef23dbfd470eb30d056047a3ef7b303736893055c3e7a5c6`;
+  `eventsintel-api` restarted on `developer-vps` at `2026-06-21 14:53:56 UTC`.
+  Public smoke returned 200 for `/`, `/healthz`, `/llms.txt`, `/api/v1`,
+  `/api/v1/schema`, `/api/v1/openapi.yaml`, and `/api/v1/events`; public
+  Chrome/Selenium verified desktop/mobile copy, no old visible slop terms, no
+  horizontal overflow, and modal open/close with percent-encoded event IDs.
 
 ## Validation Notes
 
@@ -97,8 +104,8 @@ No product validation has been run yet. Current evidence level is Low.
 
 ## Next Action
 
-Commit the current project baseline, redeploy the copy cleanup to
-`events.nukk.net`, then continue source-verified dataset expansion.
+Continue source-verified dataset expansion, starting with fresher COEX/KINTEX
+event discovery.
 
 ## Decision Needed
 
