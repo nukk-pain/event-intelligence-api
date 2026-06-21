@@ -352,15 +352,15 @@ func truncateRunes(s string, max int) string {
 
 // Validate enforces the v0.1 manual-dataset-schema validation rules:
 //
-//	1. required fields present & non-null (event_id, schema_version, name,
-//	   country, categories>=1, sources>=1, last_checked_at, update_state*,
-//	   confidence, missing_fields). *update_state is set by store/diff after
-//	   normalize, so it is NOT required here.
-//	2. (missing_fields completeness is produced by Normalize, not re-derived here)
-//	3. end_date >= start_date when both present.
-//	4. every category exists in the taxonomy (classify.IsCategory).
-//	5. >=1 sources[] entry with an http(s) url + enum type + publisher +
-//	   retrieved_at.
+//  1. required fields present & non-null (event_id, schema_version, name,
+//     country, categories>=1, sources>=1, last_checked_at, update_state*,
+//     confidence, missing_fields). *update_state is set by store/diff after
+//     normalize, so it is NOT required here.
+//  2. (missing_fields completeness is produced by Normalize, not re-derived here)
+//  3. end_date >= start_date when both present.
+//  4. every category exists in the taxonomy (classify.IsCategory).
+//  5. >=1 sources[] entry with an http(s) url + enum type + publisher +
+//     retrieved_at.
 //
 // A failing record must be rejected by the caller and not persisted.
 func Validate(e *model.Event) error {
@@ -393,8 +393,8 @@ func Validate(e *model.Event) error {
 	// rule 1 + 4: categories required (>=1) and each in taxonomy.
 	// An excluded event is, by definition, outside our taxonomy (a non-industry
 	// event the classifier declined to categorize). It is still PERSISTED — with
-	// excluded=true and zero categories — and merely hidden from the default
-	// listing (AC-6). Only non-excluded events must carry >=1 category.
+	// excluded=true and zero categories — and still visible in venue/date lists.
+	// Only non-excluded events must carry >=1 category.
 	if !e.Excluded && len(e.Categories) == 0 {
 		return fmt.Errorf("rule1: categories required (>=1) for non-excluded event")
 	}

@@ -51,6 +51,7 @@ Exceeding either returns HTTP 429 with a `Retry-After` header.
 - IDs (`event_id`) are durable and stable forever; safe to store and re-fetch.
 - `missing_fields[]` lists dotted paths that are null/unknown — treat them as
   honestly absent, not as zero/false.
-- Non-industry events are flagged `excluded` and omitted from the default list.
+- Non-taxonomy events stay visible and carry `excluded: true`; do not treat the
+  flag as a reason to hide venue schedules.
 - Summaries are short factual lines generated from structured fields, never
   copied source prose.

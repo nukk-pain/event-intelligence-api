@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/smpain/event-intelligence-api/internal/fetch"
 	"github.com/smpain/event-intelligence-api/internal/sources"
@@ -33,6 +34,7 @@ const exhibitionsShardMarker = "wp-sitemap-posts-exhibitions-"
 // Source is the COEX venue adapter. It implements sources.Source.
 type Source struct {
 	baseURL string
+	now     func() time.Time
 }
 
 // Option configures a Source.
@@ -44,9 +46,19 @@ func WithBaseURL(u string) Option {
 	return func(s *Source) { s.baseURL = strings.TrimRight(u, "/") }
 }
 
+// WithClock overrides the clock used to build COEX date-range schedule URLs.
+// Intended for deterministic discovery tests.
+func WithClock(now func() time.Time) Option {
+	return func(s *Source) {
+		if now != nil {
+			s.now = now
+		}
+	}
+}
+
 // New builds a COEX Source. By default it targets the live COEX origin.
 func New(opts ...Option) *Source {
-	s := &Source{baseURL: DefaultBaseURL}
+	s := &Source{baseURL: DefaultBaseURL, now: time.Now}
 	for _, o := range opts {
 		o(s)
 	}
@@ -63,6 +75,10 @@ func (s *Source) ID() string { return "coex" }
 // skipped (secondary fallback) so a single missing shard never aborts the run;
 // only an index fetch/parse failure or zero discovered shards is fatal.
 func (s *Source) Discover(ctx context.Context, f *fetch.Fetcher) ([]sources.Ref, error) {
+	var refs []sources.Ref
+	seen := make(map[string]struct{})
+	scheduleRefs := s.discoverScheduleRefs(ctx, f)
+
 	idxRes, err := f.Fetch(ctx, s.baseURL+sitemapIndexPath, fetch.Conditional{})
 	if err != nil {
 		return nil, fmt.Errorf("coex: fetch sitemap index: %w", err)
@@ -78,9 +94,6 @@ func (s *Source) Discover(ctx context.Context, f *fetch.Fetcher) ([]sources.Ref,
 	if len(shardLocs) == 0 {
 		return nil, fmt.Errorf("coex: no exhibitions shards in sitemap index")
 	}
-
-	var refs []sources.Ref
-	seen := make(map[string]struct{})
 
 	for _, shardLoc := range shardLocs {
 		shardURL, perr := s.rebase(shardLoc)
@@ -107,16 +120,22 @@ func (s *Source) Discover(ctx context.Context, f *fetch.Fetcher) ([]sources.Ref,
 			if serr != nil || slug == "" {
 				continue
 			}
-			id := "coex-" + slug
-			if _, dup := seen[id]; dup {
-				continue
-			}
-			seen[id] = struct{}{}
-			refs = append(refs, sources.Ref{EventID: id, URL: detailURL})
+			appendRefs(&refs, seen, []sources.Ref{{EventID: "coex-" + slug, URL: detailURL}})
 		}
 	}
 
+	appendRefs(&refs, seen, scheduleRefs)
 	return refs, nil
+}
+
+func appendRefs(dst *[]sources.Ref, seen map[string]struct{}, refs []sources.Ref) {
+	for _, ref := range refs {
+		if _, dup := seen[ref.EventID]; dup {
+			continue
+		}
+		seen[ref.EventID] = struct{}{}
+		*dst = append(*dst, ref)
+	}
 }
 
 // Parse is implemented in parse.go (Task 2.2): it turns one fetched COEX detail

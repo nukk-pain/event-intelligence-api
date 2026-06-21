@@ -53,8 +53,8 @@ paths:
       operationId: listEvents
       summary: List events
       description: >-
-        Keyset-paginated, filterable event listing. Excluded (non-industry)
-        events are omitted by default.
+        Keyset-paginated, filterable event listing. Venue/date lists include all
+        discovered COEX/KINTEX events; non-taxonomy events keep excluded=true.
       parameters:
         - name: limit
           in: query

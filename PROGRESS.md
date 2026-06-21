@@ -6,7 +6,7 @@
 - Current Stage: Shape
 - Owner: smpain
 - Started: 2026-06-21
-- Last Updated: 2026-06-21
+- Last Updated: 2026-06-22
 
 ## Current Focus
 
@@ -39,6 +39,13 @@ stable and deployment-ready.
 - [x] Removed developer/AI-first frontend copy from the public UI. The homepage
   now leads with event discovery language, Korean controls/status text, and
   human-readable support links while keeping API/document URLs intact.
+- [x] Changed event browsing policy so COEX/KINTEX venue/date lists show all
+  discovered events; non-taxonomy events remain visible with `excluded=true`.
+- [x] Added COEX current schedule discovery using a 180-day date range and
+  schedule pagination so future pages such as August 2026 are not missed.
+- [x] Updated the public UI copy and client ordering to show COEX/KINTEX
+  schedules as a date-first event browser instead of a narrow industry-only
+  filter.
 
 ## In Progress
 
@@ -89,6 +96,15 @@ stable and deployment-ready.
   `/api/v1/schema`, `/api/v1/openapi.yaml`, and `/api/v1/events`; public
   Chrome/Selenium verified desktop/mobile copy, no old visible slop terms, no
   horizontal overflow, and modal open/close with percent-encoded event IDs.
+- Event display policy verification (2026-06-22): `go test ./...`,
+  `go vet ./...`, and `go build ./cmd/eventsintel` pass. Temp live ingest with
+  `EVENTSINTEL_MAX_DISCOVER=160` discovered COEX raw=2090 and stored=160;
+  local API returned 15 COEX events for `since=2026-08-01&before=2026-08-31`,
+  including `AI서밋서울앤엑스포`, `2026 국제 병원의료산업 박람회`,
+  `세계 제약ㆍ바이오ㆍ건강기능 산업 전시회 2026`, `2026 자율주행모빌리티산업전`,
+  and `EV·피지컬 AI를 위한 배터리 안전성 및 충전 인프라 구축 방안 세미나`.
+  Chrome/Selenium verified desktop search, 375px mobile layout, date-ordered
+  cards, and no horizontal overflow.
 
 ## Validation Notes
 
@@ -104,8 +120,8 @@ No product validation has been run yet. Current evidence level is Low.
 
 ## Next Action
 
-Continue source-verified dataset expansion, starting with fresher COEX/KINTEX
-event discovery.
+Deploy the event display policy fix to `events.nukk.net`, then run a public
+ingest and smoke test for August 2026 COEX events.
 
 ## Decision Needed
 

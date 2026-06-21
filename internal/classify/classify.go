@@ -7,7 +7,7 @@
 //   - one or more taxonomy categories matched   → industry event (excluded=false)
 //   - nothing matched (an explicit non-industry signal, OR simply no industry
 //     keyword) → excluded=true, no categories, confidence "low". Such events are
-//     PRESERVED (stored + hidden from the default listing), never dropped.
+//     PRESERVED and still listed with the flag, never dropped.
 //
 // DEFERRED (later PLAN): a cheap-model fallback for ambiguous titles. v1 deliberately
 // returns confidence "low" instead of calling any model, per PLAN Task 2.5 and the
@@ -63,7 +63,7 @@ var categoryRules = []rule{
 			"generative", "생성형", "딥러닝", "deep learning", "머신러닝",
 			"machine learning", "llm", "챗봇", "데이터 사이언스",
 		},
-	},	{
+	}, {
 		category: CategoryHumanoidRobotics,
 		keywords: []string{
 			"로봇", "robot", "휴머노이드", "humanoid", "로보", "robo",
@@ -113,8 +113,7 @@ var nonIndustryKeywords = []string{
 //
 // Returns:
 //   - categories: matched taxonomy slugs (always a subset of Categories; possibly nil)
-//   - excluded:   true for non-industry events (preserved but filtered out of the
-//     default API listing); when excluded, categories is always nil
+//   - excluded:   true for non-industry events; when excluded, categories is always nil
 //   - confidence: "high" when at least one category matched, "low" when nothing
 //     matched / the title is ambiguous. (No "medium" yet; the cheap-model fallback
 //     that would refine ambiguous cases is DEFERRED — see package doc.)
@@ -146,8 +145,8 @@ func Classify(text string) (categories []string, excluded bool, confidence strin
 	if len(categories) == 0 {
 		// No industry keyword matched → the event is outside our taxonomy wedge
 		// (ai/robotics/bio/medical-devices/digital-health). It is EXCLUDED:
-		// preserved with excluded=true (stored, hidden from the default listing,
-		// never dropped) rather than rejected by normalize's rule-1 category
+		// preserved with excluded=true (stored and listed with the flag, never
+		// dropped) rather than rejected by normalize's rule-1 category
 		// requirement. confidence "low" flags it for the DEFERRED cheap-model
 		// recall pass — a real industry event whose title lacks our keywords lands
 		// here and can be reclassified later without data loss.

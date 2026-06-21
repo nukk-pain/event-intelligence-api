@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="COEX와 KINTEX의 AI, 로봇, 바이오, 의료기기 산업 행사를 한 곳에서 확인하세요.">
-<title>COEX·KINTEX 산업 행사 모아보기</title>
+<meta name="description" content="COEX와 KINTEX 공개 행사 일정을 한 곳에서 날짜순으로 확인하세요.">
+<title>COEX·KINTEX 행사 모아보기</title>
 <style>
   :root {
     --bg: #faf8f4;
@@ -28,6 +28,8 @@
     --chip-med-bg: #f0e4d6;
     --chip-health: #7a4a6a;
     --chip-health-bg: #ecdde6;
+    --chip-other: #5a554d;
+    --chip-other-bg: #e8e2d8;
     --status-tentative: #b58524;
     --status-tentative-bg: #fbf0d4;
     --status-postponed: #b55a2a;
@@ -67,6 +69,8 @@
       --chip-med: #c89070;
       --chip-health-bg: #352a35;
       --chip-health: #b888a8;
+      --chip-other-bg: #302c27;
+      --chip-other: #b0aa9e;
       --status-tentative-bg: #3a3020;
       --status-tentative: #e8b84a;
       --status-postponed-bg: #3a2820;
@@ -287,6 +291,7 @@
   .chip.cat-bio { background: var(--chip-bio-bg); color: var(--chip-bio); }
   .chip.cat-medical-devices { background: var(--chip-med-bg); color: var(--chip-med); }
   .chip.cat-digital-health { background: var(--chip-health-bg); color: var(--chip-health); }
+  .chip.cat-other { background: var(--chip-other-bg); color: var(--chip-other); }
 
   .chip.status-tentative { background: var(--status-tentative-bg); color: var(--status-tentative); }
   .chip.status-postponed { background: var(--status-postponed-bg); color: var(--status-postponed); }
@@ -454,8 +459,8 @@
 
 <header class="site">
   <div class="site-inner">
-    <h1 class="site-title">COEX·KINTEX 산업 행사 모아보기<span class="accent-dot">.</span></h1>
-    <p class="site-desc">AI, 로봇, 바이오, 의료기기 분야 행사를 빠르게 훑고 다음에 갈 곳을 고르세요.</p>
+    <h1 class="site-title">COEX·KINTEX 행사 모아보기<span class="accent-dot">.</span></h1>
+    <p class="site-desc">장소와 기간만 고르고, 예정된 행사를 날짜순으로 훑어보세요.</p>
     <nav class="site-links" aria-label="관련 정보">
       <a href="/api/v1">서비스 정보</a>
       <a href="/api/v1/schema">데이터 항목</a>
@@ -498,7 +503,7 @@
 </main>
 
 <footer class="site">
-  <span>COEX와 KINTEX의 공개 행사 정보를 정리해 보여줍니다.</span>
+  <span>COEX와 KINTEX의 공개 행사 일정을 정리해 보여줍니다.</span>
 </footer>
 
 <div id="modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title"></div>
@@ -580,6 +585,11 @@
     return '<span class="chip cost-' + e.cost_hint + '">' + (COST_LABELS[e.cost_hint] || e.cost_hint) + '</span>';
   }
 
+  function otherChip(e) {
+    if (e.excluded || !(e.categories || []).length) return '<span class="chip cat-other">기타</span>';
+    return "";
+  }
+
   function venueLine(e) {
     if (!e.venue) return "";
     var v = e.venue;
@@ -594,6 +604,7 @@
     var badges = (e.categories || []).map(chipFor).join("");
     var st = statusChip(e);
     var co = costChip(e);
+    var other = otherChip(e);
     var summary = e.summary
       ? '<p class="card-summary">' + escapeHtml(e.summary) + '</p>'
       : "";
@@ -605,7 +616,7 @@
         '<div class="card-name">' + escapeHtml(e.name) + '</div>' +
         (venueLine(e) ? '<div class="card-venue">' + venueLine(e) + '</div>' : "") +
         summary +
-        '<div class="card-badges">' + badges + st + co + '</div>' +
+        '<div class="card-badges">' + badges + other + st + co + '</div>' +
       '</button>'
     );
   }
@@ -617,6 +628,18 @@
       var name = (e.name || "").toLowerCase();
       var summary = (e.summary || "").toLowerCase();
       return name.indexOf(q) !== -1 || summary.indexOf(q) !== -1;
+    });
+  }
+
+  function eventDateKey(e) {
+    return e.start_date || "9999-12-31";
+  }
+
+  function sortEvents(events) {
+    return events.slice().sort(function(a, b) {
+      var byDate = eventDateKey(a).localeCompare(eventDateKey(b));
+      if (byDate) return byDate;
+      return (a.name || "").localeCompare(b.name || "", "ko");
     });
   }
 
@@ -677,7 +700,7 @@
     el.loadMore.disabled = true;
     el.loadMore.textContent = "불러오는 중...";
 
-    var url = "/api/v1/events?limit=20";
+    var url = "/api/v1/events?limit=100";
     var today = new Date().toISOString().slice(0, 10);
     if (state.period === "upcoming") url += "&since=" + today;
     else if (state.period === "past") url += "&before=" + today;
@@ -689,6 +712,7 @@
       var data = d.data || [];
       if (append) state.events = state.events.concat(data);
       else state.events = data;
+      state.events = sortEvents(state.events);
       state.cursor = d.page && d.page.next_cursor;
       state.hasMore = !!(d.page && d.page.has_more);
       state.loading = false;
@@ -744,7 +768,7 @@
   }
 
   function renderModal(e, sources) {
-    var badges = (e.categories || []).map(chipFor).join("") + statusChip(e) + costChip(e);
+    var badges = (e.categories || []).map(chipFor).join("") + otherChip(e) + statusChip(e) + costChip(e);
     var dt = [];
 
     function row(label, val) {

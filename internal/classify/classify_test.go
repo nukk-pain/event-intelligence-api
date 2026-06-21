@@ -80,8 +80,8 @@ func TestClassify_LabeledCases(t *testing.T) {
 			excluded:  true,
 		},
 		// --- no industry keyword: excluded (out of wedge), low confidence ---
-		// A non-matching event is preserved as excluded=true (stored + hidden),
-		// never dropped — its 0 categories must not trip normalize rule-1.
+		// A non-matching event is preserved as excluded=true, never dropped;
+		// its 0 categories must not trip normalize rule-1.
 		{
 			name:       "no_industry_keyword_excluded",
 			text:       "제12회 정기 총회 및 네트워킹 행사",

@@ -18,7 +18,7 @@ import (
 // reused by Task 3.2.
 
 // EventFilter narrows and paginates a ListEvents call. The zero value lists the
-// first page of all non-excluded events ordered by (updated_at, event_id).
+// first page of all events ordered by (updated_at, event_id).
 type EventFilter struct {
 	// UpdatedSince keeps only events whose updated_at is >= this RFC3339 value.
 	UpdatedSince string
@@ -42,9 +42,6 @@ type EventFilter struct {
 	// Cursor is the keyset position (last row already returned). Empty starts at
 	// the beginning.
 	Cursor EventCursor
-	// IncludeExcluded lists excluded=1 rows too. Default (false) hides them, per
-	// the API contract that the default list excludes non-industry events.
-	IncludeExcluded bool
 }
 
 // EventCursor is the keyset position used by ListEvents. It mirrors the API
@@ -73,8 +70,7 @@ const eventColumns = `
 
 // ListEvents returns one keyset page of events matching filter, ordered by
 // (updated_at, event_id) ascending, plus the cursor for the NEXT page. The
-// returned *EventCursor is nil when there are no further rows. Excluded events
-// are hidden unless filter.IncludeExcluded is set.
+// returned *EventCursor is nil when there are no further rows.
 //
 // Pagination is stable across concurrent inserts: the order key is a unique
 // total order, so a page returns rows strictly greater than the cursor and the
@@ -90,9 +86,6 @@ func ListEvents(ctx context.Context, db *sql.DB, filter EventFilter) ([]model.Ev
 		args  []any
 	)
 
-	if !filter.IncludeExcluded {
-		where = append(where, "e.excluded = 0")
-	}
 	if filter.UpdatedSince != "" {
 		where = append(where, "e.updated_at >= ?")
 		args = append(args, filter.UpdatedSince)

@@ -84,3 +84,30 @@ the "complete a 30-day manual dataset before implementation" gate is replaced by
 an automation-first approach. The validated v0.1 schema
 (`prototype/manual-dataset-schema.md`) is retained as the data contract, and the
 authoritative execution plan is `.tasks/260621-coex-kintex-ingestion/PLAN.md`.
+
+---
+
+## Decision: Show All COEX/KINTEX Venue Events In Date Browsing
+
+- Status: accepted
+- Date: 2026-06-22
+- Decision Maker: smpain
+
+### Context
+
+The v0.1 implementation originally used `excluded=true` as both a taxonomy flag
+and a default-list hiding rule. That made the browser and API miss COEX events
+that users expected to see, including upcoming August 2026 events.
+
+### Decision
+
+Venue/date browsing must show all discovered COEX/KINTEX events. The
+`excluded` field remains in the schema as a taxonomy-confidence flag, but it is
+not a default visibility filter.
+
+### Consequences
+
+- `GET /api/v1/events` no longer excludes `excluded=true` rows by default.
+- The public UI is a schedule browser first; category filters are optional.
+- COEX discovery must include current schedule pages and pagination, not only
+  WordPress sitemap shards.

@@ -194,23 +194,22 @@ func TestListEvents_DefaultLimitEcho(t *testing.T) {
 	}
 }
 
-// TestListEvents_ExcludedHidden asserts excluded=true rows are absent from the
-// default list (AC-6 read side).
-func TestListEvents_ExcludedHidden(t *testing.T) {
+func TestListEvents_DefaultIncludesExcluded(t *testing.T) {
 	events := []model.Event{
 		seedEvent("ev-keep", "coex", "ai", false),
-		seedEvent("ev-hidden", "coex", "ai", true),
+		seedEvent("ev-excluded", "coex", "ai", true),
 	}
 	srv := newServer(t, events)
 
 	env, _ := getEnvelope(t, srv.URL+"/api/v1/events?limit=100")
-	for _, e := range env.Data {
-		if e.EventID == "ev-hidden" {
-			t.Fatalf("excluded event ev-hidden present in default list")
-		}
+	got := map[string]bool{}
+	for _, event := range env.Data {
+		got[event.EventID] = true
 	}
-	if len(env.Data) != 1 || env.Data[0].EventID != "ev-keep" {
-		t.Fatalf("got %d events, want only ev-keep", len(env.Data))
+	for _, want := range []string{"ev-keep", "ev-excluded"} {
+		if !got[want] {
+			t.Fatalf("default list missing %s; got %v", want, got)
+		}
 	}
 }
 
