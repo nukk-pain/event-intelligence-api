@@ -713,9 +713,10 @@
     document.body.style.overflow = "hidden";
     var prevFocus = document.activeElement;
 
+    var detailID = encodeURIComponent(id);
     Promise.all([
-      fetchJSON("/api/v1/events/" + id),
-      fetchJSON("/api/v1/events/" + id + "/sources")
+      fetchJSON("/api/v1/events/" + detailID),
+      fetchJSON("/api/v1/events/" + detailID + "/sources")
     ]).then(function(res) {
       var event = (res[0] && res[0].data) || res[0] || {};
       var sources = (res[1] && res[1].data) || res[1] || [];
