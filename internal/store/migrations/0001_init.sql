@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS events (
     registration_deadline TEXT,                   -- ISO date or NULL
     exhibitor_deadline    TEXT,
     cost_hint             TEXT,                   -- free|paid|mixed|unknown
+    summary               TEXT,
 
     -- Provenance & freshness
     sources               TEXT NOT NULL,          -- JSON array of {url,type,publisher,retrieved_at} (>=1)

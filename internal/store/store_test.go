@@ -83,6 +83,74 @@ func TestOpenReadSucceedsAfterFreshMigration(t *testing.T) {
 	defer rdb.Close()
 }
 
+func TestMigrateCanRunRepeatedlyWithSummaryColumn(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "repeatable.db")
+
+	db, err := store.OpenWrite(path)
+	if err != nil {
+		t.Fatalf("OpenWrite: %v", err)
+	}
+	defer db.Close()
+
+	// Given
+	if err := store.Migrate(db); err != nil {
+		t.Fatalf("first Migrate: %v", err)
+	}
+
+	// When
+	err = store.Migrate(db)
+
+	// Then
+	if err != nil {
+		t.Fatalf("second Migrate: %v", err)
+	}
+	var summaryType string
+	if err := db.QueryRow(`SELECT type FROM pragma_table_info('events') WHERE name='summary'`).Scan(&summaryType); err != nil {
+		t.Fatalf("read summary column: %v", err)
+	}
+	if summaryType != "TEXT" {
+		t.Fatalf("summary type = %q, want TEXT", summaryType)
+	}
+}
+
+func TestMigrateAddsSummaryToExistingEventsTable(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "old.db")
+
+	db, err := store.OpenWrite(path)
+	if err != nil {
+		t.Fatalf("OpenWrite: %v", err)
+	}
+	defer db.Close()
+
+	// Given
+	if _, err := db.Exec(`
+CREATE TABLE events (
+    event_id TEXT PRIMARY KEY,
+    updated_at TEXT,
+    venue_id TEXT,
+    excluded INTEGER NOT NULL DEFAULT 0
+)`); err != nil {
+		t.Fatalf("create old events table: %v", err)
+	}
+
+	// When
+	err = store.Migrate(db)
+
+	// Then
+	if err != nil {
+		t.Fatalf("Migrate: %v", err)
+	}
+	var summaryType string
+	if err := db.QueryRow(`SELECT type FROM pragma_table_info('events') WHERE name='summary'`).Scan(&summaryType); err != nil {
+		t.Fatalf("read summary column: %v", err)
+	}
+	if summaryType != "TEXT" {
+		t.Fatalf("summary type = %q, want TEXT", summaryType)
+	}
+}
+
 // TestContentHashStableUnderFreshnessChange proves requirement (a): two builds
 // of the same event differing ONLY in freshness/operational fields produce a
 // byte-identical content_hash.
@@ -166,6 +234,7 @@ func TestUpsertEventInsertsAndUpdates(t *testing.T) {
 	ctx := context.Background()
 
 	e := newEvent()
+	e.Summary = strptr("AI EXPO KOREA — 2026-05-12~2026-05-14 @ COEX")
 	snap := &model.RawSnapshot{
 		EventID:     e.EventID,
 		SourceID:    strptr("coex"),
@@ -216,6 +285,29 @@ func TestUpsertEventInsertsAndUpdates(t *testing.T) {
 	}
 	if lca != "2026-06-22T10:00:00Z" {
 		t.Fatalf("last_checked_at = %q, want 2026-06-22T10:00:00Z", lca)
+	}
+}
+
+func TestUpsertEventPersistsSummary(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+
+	// Given
+	e := newEvent()
+	e.Summary = strptr("AI EXPO KOREA — 2026-05-12~2026-05-14 @ COEX")
+
+	// When
+	if err := store.UpsertEvent(ctx, db, e, nil, nil); err != nil {
+		t.Fatalf("UpsertEvent: %v", err)
+	}
+
+	// Then
+	var got sql.NullString
+	if err := db.QueryRow(`SELECT summary FROM events WHERE event_id=?`, e.EventID).Scan(&got); err != nil {
+		t.Fatalf("read summary: %v", err)
+	}
+	if !got.Valid || got.String != *e.Summary {
+		t.Fatalf("summary = %q valid=%v, want %q", got.String, got.Valid, *e.Summary)
 	}
 }
 

@@ -65,7 +65,7 @@ const eventColumns = `
     venue, venue_id, country,
     categories, audience, scale,
     actions, register_url, exhibit_url, registration_deadline, exhibitor_deadline, cost_hint,
-    sources, homepage_url, last_checked_at, update_state, confidence, missing_fields, ambiguity_notes,
+    summary, sources, homepage_url, last_checked_at, update_state, confidence, missing_fields, ambiguity_notes,
     curated_by, created_at, updated_at, content_hash, excluded`
 
 // ListEvents returns one keyset page of events matching filter, ordered by
@@ -301,7 +301,7 @@ func scanEvent(row rowScanner) (model.Event, error) {
 		&venueJSON, &venueID, &e.Country,
 		&categoriesJSON, &audienceJSON, &scaleJSON,
 		&actionsJSON, &e.RegisterURL, &e.ExhibitURL, &e.RegistrationDeadline, &e.ExhibitorDeadline, &e.CostHint,
-		&sourcesJSON, &e.HomepageURL, &e.LastCheckedAt, &e.UpdateState, &e.Confidence, &missingJSON, &e.AmbiguityNotes,
+		&e.Summary, &sourcesJSON, &e.HomepageURL, &e.LastCheckedAt, &e.UpdateState, &e.Confidence, &missingJSON, &e.AmbiguityNotes,
 		&curatedBy, &e.CreatedAt, &e.UpdatedAt, &e.ContentHash, &excluded,
 	)
 	if err != nil {

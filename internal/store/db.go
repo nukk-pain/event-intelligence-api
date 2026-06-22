@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"net/url"
 	"sort"
+	"strings"
 
 	_ "modernc.org/sqlite" // driver name: "sqlite"
 )
@@ -103,8 +104,15 @@ func Migrate(db *sql.DB) error {
 			return fmt.Errorf("read embedded migration %s: %w", name, err)
 		}
 		if _, err := db.Exec(string(sqlBytes)); err != nil {
+			if isAlreadyAppliedMigration(err) {
+				continue
+			}
 			return fmt.Errorf("apply migration %s: %w", name, err)
 		}
 	}
 	return nil
+}
+
+func isAlreadyAppliedMigration(err error) bool {
+	return strings.Contains(err.Error(), "duplicate column name: summary")
 }

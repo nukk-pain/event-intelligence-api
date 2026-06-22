@@ -104,7 +104,9 @@ func seedServerWithChanges(t *testing.T, events []model.Event, changes map[strin
 
 // TestGetEvent_OK returns the event JSON with its provenance (sources) included.
 func TestGetEvent_OK(t *testing.T) {
-	srv := newServer(t, []model.Event{seedEvent("ev-001", "coex", "ai", false)})
+	event := seedEvent("ev-001", "coex", "ai", false)
+	event.Summary = strptr("Event ev-001 — 2026-06-21 @ Venue")
+	srv := newServer(t, []model.Event{event})
 
 	var got detailResp
 	resp := getJSON(t, srv.URL+"/api/v1/events/ev-001", &got)
@@ -117,6 +119,9 @@ func TestGetEvent_OK(t *testing.T) {
 	// Detail MUST carry provenance.
 	if len(got.Data.Sources) < 1 {
 		t.Fatalf("detail returned %d sources, want >= 1", len(got.Data.Sources))
+	}
+	if got.Data.Summary == nil || *got.Data.Summary != *event.Summary {
+		t.Fatalf("summary = %v, want %q", got.Data.Summary, *event.Summary)
 	}
 }
 
