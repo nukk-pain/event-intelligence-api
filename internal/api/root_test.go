@@ -119,13 +119,14 @@ func TestRootIndexHTMLUsesHumanFriendlyCopy(t *testing.T) {
 		"전체 기간",
 		"accent-dot",
 		"COEX·KINTEX 행사 모아보기<span",
+		"<title>COEX·KINTEX 행사 모아보기</title>",
 	} {
 		if strings.Contains(body, slop) {
 			t.Fatalf("root HTML still contains developer/AI slop copy %q", slop)
 		}
 	}
 	for _, want := range []string{
-		"COEX·KINTEX 행사 모아보기",
+		"행사 모아보기",
 		"주요 분야",
 		"모든 행사 보기",
 		"행사명이나 설명 검색",
