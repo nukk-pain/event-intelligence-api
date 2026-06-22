@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/smpain/event-intelligence-api/internal/api"
@@ -93,13 +94,21 @@ func runIngest(cfg config.Config) error {
 	sources.Register(coex.New())
 	sources.Register(kintex.New())
 
-	srcs := make([]sources.Source, 0, len(sources.All()))
-	for _, s := range sources.All() {
-		srcs = append(srcs, s)
+	registeredSources := sources.All()
+	sourceIDs := make([]string, 0, len(registeredSources))
+	for id := range registeredSources {
+		sourceIDs = append(sourceIDs, id)
+	}
+	sort.Strings(sourceIDs)
+	srcs := make([]sources.Source, 0, len(sourceIDs))
+	for _, id := range sourceIDs {
+		srcs = append(srcs, registeredSources[id])
 	}
 
 	batchID := fmt.Sprintf("batch-%s", time.Now().UTC().Format("20060102T150405Z"))
-	p := pipeline.New(batchID).WithMaxDiscover(cfg.MaxDiscoverPerSource)
+	p := pipeline.New(batchID).
+		WithMaxDiscover(cfg.MaxDiscoverPerSource).
+		WithSourceConcurrency(cfg.SourceConcurrency)
 
 	// WALL-CLOCK DEADLINE: cap the whole crawl so a hung Discover or a slow
 	// cumulative detail fetch can never let one run exceed the cron interval.
@@ -107,9 +116,6 @@ func runIngest(cfg config.Config) error {
 	// run is silently skipped indefinitely. The pipeline checks ctx between
 	// items/sources and marks the run truncated (it will NOT poison the
 	// discovery floor by recording a cut-short Discovered count as the baseline).
-	// (Discovery concurrency bound is deliberately deferred: refs are fetched
-	// sequentially, which is functionally safe under the deadline + per-host rate
-	// limiter; bounded parallelism can be added later without changing this API.)
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.IngestDeadline)
 	defer cancel()
 
