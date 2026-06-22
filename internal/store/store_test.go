@@ -128,6 +128,10 @@ func TestMigrateAddsSummaryToExistingEventsTable(t *testing.T) {
 	if _, err := db.Exec(`
 CREATE TABLE events (
     event_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    start_date TEXT,
+    end_date TEXT,
+    venue TEXT,
     updated_at TEXT,
     venue_id TEXT,
     excluded INTEGER NOT NULL DEFAULT 0
@@ -148,6 +152,54 @@ CREATE TABLE events (
 	}
 	if summaryType != "TEXT" {
 		t.Fatalf("summary type = %q, want TEXT", summaryType)
+	}
+}
+
+func TestMigrateBackfillsNullSummaryForExistingEvents(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "backfill.db")
+
+	db, err := store.OpenWrite(path)
+	if err != nil {
+		t.Fatalf("OpenWrite: %v", err)
+	}
+	defer db.Close()
+
+	// Given
+	if _, err := db.Exec(`
+CREATE TABLE events (
+    event_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    start_date TEXT,
+    end_date TEXT,
+    venue TEXT,
+    summary TEXT,
+    updated_at TEXT,
+    venue_id TEXT,
+    excluded INTEGER NOT NULL DEFAULT 0
+)`); err != nil {
+		t.Fatalf("create existing events table: %v", err)
+	}
+	if _, err := db.Exec(
+		`INSERT INTO events (event_id, name, start_date, end_date, venue, summary) VALUES (?, ?, ?, ?, ?, NULL)`,
+		"coex-old", "Old Event", "2026-06-22", "2026-06-23", `{"name":"COEX"}`,
+	); err != nil {
+		t.Fatalf("seed old event: %v", err)
+	}
+
+	// When
+	err = store.Migrate(db)
+
+	// Then
+	if err != nil {
+		t.Fatalf("Migrate: %v", err)
+	}
+	var summary string
+	if err := db.QueryRow(`SELECT summary FROM events WHERE event_id='coex-old'`).Scan(&summary); err != nil {
+		t.Fatalf("read summary: %v", err)
+	}
+	if summary != "Old Event — 2026-06-22~2026-06-23 @ COEX" {
+		t.Fatalf("summary = %q", summary)
 	}
 }
 
