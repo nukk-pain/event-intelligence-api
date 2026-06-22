@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/smpain/event-intelligence-api/internal/model"
@@ -132,6 +133,7 @@ CREATE TABLE events (
     start_date TEXT,
     end_date TEXT,
     venue TEXT,
+    missing_fields TEXT,
     updated_at TEXT,
     venue_id TEXT,
     excluded INTEGER NOT NULL DEFAULT 0
@@ -174,6 +176,7 @@ CREATE TABLE events (
     end_date TEXT,
     venue TEXT,
     summary TEXT,
+    missing_fields TEXT,
     updated_at TEXT,
     venue_id TEXT,
     excluded INTEGER NOT NULL DEFAULT 0
@@ -181,9 +184,9 @@ CREATE TABLE events (
 		t.Fatalf("create existing events table: %v", err)
 	}
 	if _, err := db.Exec(
-		`INSERT INTO events (event_id, name, start_date, end_date, venue, summary) VALUES (?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO events (event_id, name, start_date, end_date, venue, summary, missing_fields) VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		"coex-old", "Old Event", "2026-06-22", "2026-06-23", `{"name":"COEX"}`,
-		"Old Event — 2026-06-22~2026-06-23 @ COEX",
+		"Old Event — 2026-06-22~2026-06-23 @ COEX", `["name_ko"]`,
 	); err != nil {
 		t.Fatalf("seed old event: %v", err)
 	}
@@ -201,6 +204,13 @@ CREATE TABLE events (
 	}
 	if summary.Valid {
 		t.Fatalf("summary = %q, want NULL for generated template", summary.String)
+	}
+	var missing string
+	if err := db.QueryRow(`SELECT missing_fields FROM events WHERE event_id='coex-old'`).Scan(&missing); err != nil {
+		t.Fatalf("read missing_fields: %v", err)
+	}
+	if !strings.Contains(missing, `"summary"`) {
+		t.Fatalf("missing_fields = %s, want summary", missing)
 	}
 }
 
