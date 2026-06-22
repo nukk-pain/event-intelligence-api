@@ -43,6 +43,7 @@ func Router(db *sql.DB, cfg MiddlewareConfig) (http.Handler, error) {
 	r.Get("/assets/list.css", staticAsset("text/css; charset=utf-8", static.ListCSS))
 	r.Get("/assets/detail.css", staticAsset("text/css; charset=utf-8", static.DetailCSS))
 	r.Get("/assets/ui.js", staticAsset("application/javascript; charset=utf-8", static.UIJS))
+	r.Get("/assets/events.js", staticAsset("application/javascript; charset=utf-8", static.EventsJS))
 	r.Get("/assets/detail.js", staticAsset("application/javascript; charset=utf-8", static.DetailJS))
 	r.Get("/assets/app.js", staticAsset("application/javascript; charset=utf-8", static.AppJS))
 	r.Get("/healthz", handleHealthz)

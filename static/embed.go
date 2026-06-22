@@ -40,6 +40,9 @@ var DetailCSS string
 //go:embed ui.js
 var UIJS string
 
+//go:embed events.js
+var EventsJS string
+
 //go:embed detail.js
 var DetailJS string
 

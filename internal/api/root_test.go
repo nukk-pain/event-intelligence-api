@@ -134,6 +134,7 @@ func TestRootIndexHTMLUsesHumanFriendlyCopy(t *testing.T) {
 		"더 보기",
 		"공개 예정 일정을 정리해 보여줍니다",
 		`href="/assets/index.css"`,
+		`src="/assets/events.js"`,
 		`src="/assets/app.js"`,
 	} {
 		if !strings.Contains(body, want) {
@@ -154,6 +155,7 @@ func TestRootIndexServesSplitFrontendAssets(t *testing.T) {
 		{path: "/assets/list.css", contentType: "text/css", want: ".load-more"},
 		{path: "/assets/detail.css", contentType: "text/css", want: ".detail-hero"},
 		{path: "/assets/ui.js", contentType: "application/javascript", want: "EventIntelUI"},
+		{path: "/assets/events.js", contentType: "application/javascript", want: "EventIntelEvents"},
 		{path: "/assets/detail.js", contentType: "application/javascript", want: "EventIntelDetail"},
 		{path: "/assets/app.js", contentType: "application/javascript", want: "loadEvents"},
 	} {

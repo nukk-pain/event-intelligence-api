@@ -213,6 +213,21 @@ stable and deployment-ready.
   visitor-facing `행사 정보`, `참가 정보`, and `공식 페이지` copy without the
   removed developer-facing detail sections. Public `app.js` includes final dialog
   close focus and venue comma-spacing normalization.
+- Load-more duplicate perception fix (2026-06-22): public API page-walk evidence
+  showed no duplicate `event_id` values across raw pages, but the homepage
+  fetched raw pages, filtered to categorized events client-side, and then
+  re-sorted by event date. That made "더 보기" often leave the same visible cards
+  at the top while adding little or no visible content. The frontend now merges
+  pages by unique `event_id`, keeps sorting/filtering helpers in `events.js`, and
+  the default categorized load-more path looks ahead through bounded additional
+  pages until new visible events are added or the feed ends. Local gates passed:
+  `go test ./internal/api -run 'TestRootIndex|TestListEvents_FullIterationNoGapsNoDupes' -count=1`,
+  `go test ./...`, `go vet ./...`, `go build ./cmd/eventsintel`, `node --check`
+  for `static/events.js` and `static/app.js`, JS helper smoke tests, and
+  `git diff --check`. Local Chrome/CDP against a temp ingest DB verified default
+  cards increased from 22 to 32 after clicking "더 보기", with 10 new IDs and
+  duplicate IDs `[]`. Desktop 1440x900 and mobile 390x844 screenshots after the
+  click show 32 cards, no horizontal overflow, and readable Korean wrapping.
 
 ## Validation Notes
 

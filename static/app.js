@@ -2,6 +2,7 @@
   "use strict";
 
   var ui = window.EventIntelUI;
+  var events = window.EventIntelEvents;
 
   var state = {
     events: [],
@@ -57,23 +58,8 @@
     );
   }
 
-  function eventDateKey(e) { return e.start_date || "9999-12-31"; }
-  function sortEvents(events) {
-    return events.slice().sort(function(a, b) {
-      var byDate = eventDateKey(a).localeCompare(eventDateKey(b));
-      if (byDate) return byDate;
-      return (a.name || "").localeCompare(b.name || "", "ko");
-    });
-  }
   function todayKST() {
     return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  }
-  function hasCategory(e) {
-    return !e.excluded && (e.categories || []).length > 0;
-  }
-  function scopedEvents(events) {
-    if (state.scope === "all") return events;
-    return events.filter(hasCategory);
   }
   function visibleEvents() {
     if (!state.search) return state.events;
@@ -122,22 +108,41 @@
     });
   }
 
+  function eventsURL(cursor) {
+    var url = "/api/v1/events?limit=100&since=" + todayKST();
+    if (state.category) url += "&category=" + encodeURIComponent(state.category);
+    if (state.venue) url += "&venue=" + encodeURIComponent(state.venue);
+    if (cursor) url += "&cursor=" + encodeURIComponent(cursor);
+    return url;
+  }
+
+  function applyPage(d, append) {
+    var data = events.scoped(d.data || [], state.scope);
+    var merged = append ? events.mergeUnique(state.events, data) : { events: data, added: data.length };
+    state.events = events.sort(merged.events);
+    state.cursor = d.page && d.page.next_cursor;
+    state.hasMore = !!(d.page && d.page.has_more);
+    return merged.added;
+  }
+
+  function loadPageBatch(append, pagesLeft, added) {
+    return fetchJSON(eventsURL(append ? state.cursor : null)).then(function(d) {
+      var nextAdded = added + applyPage(d, append);
+      var shouldLookAhead = append && state.scope === "categorized" && !state.category && !state.search;
+      if (shouldLookAhead && state.hasMore && pagesLeft > 1 && nextAdded < 24) {
+        return loadPageBatch(true, pagesLeft - 1, nextAdded);
+      }
+      return nextAdded;
+    });
+  }
+
   function loadEvents(append) {
     if (state.loading) return Promise.resolve();
     state.loading = true;
     if (!append) showSkeletons(6);
     el.loadMore.disabled = true;
     el.loadMore.textContent = "불러오는 중...";
-    var url = "/api/v1/events?limit=100&since=" + todayKST();
-    if (state.category) url += "&category=" + encodeURIComponent(state.category);
-    if (state.venue) url += "&venue=" + encodeURIComponent(state.venue);
-    if (append && state.cursor) url += "&cursor=" + encodeURIComponent(state.cursor);
-    return fetchJSON(url).then(function(d) {
-      var data = scopedEvents(d.data || []);
-      state.events = append ? state.events.concat(data) : data;
-      state.events = sortEvents(state.events);
-      state.cursor = d.page && d.page.next_cursor;
-      state.hasMore = !!(d.page && d.page.has_more);
+    return loadPageBatch(append, 5, 0).then(function() {
       state.loading = false;
       if (state.events.length === 0 && !state.search) showState("조건에 맞는 행사가 없습니다.", false);
       else renderList();
