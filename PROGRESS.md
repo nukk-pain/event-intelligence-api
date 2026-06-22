@@ -175,6 +175,21 @@ stable and deployment-ready.
   KINTEX rows for `since=2026-06-22&before=2027-06-22`, spanning `2026-06-25`
   to `2026-11-27`; public Playwright verified loaded 1280x900 and 375x812
   screens.
+- Ingest concurrency local verification (2026-06-22): after Todo 6, deterministic
+  fake-latency proof in `.omo/evidence/task-6-deterministic-verbose.txt`
+  reported sequential elapsed `990.443584ms`, concurrent elapsed `195.499917ms`,
+  `80.3%` improvement, and equal stored counts (`stored_sequential=8`,
+  `stored_concurrent=8`). Live temp ingest smoke/count evidence in
+  `.omo/evidence/task-6-live-ingest.txt` used matching
+  `EVENTSINTEL_MAX_DISCOVER=80`, `EVENTSINTEL_RATE_PER_MIN=240`, and
+  `EVENTSINTEL_INGEST_DEADLINE=5m`; sequential mode (`SOURCE_CONCURRENCY=1`,
+  `DETAIL_WORKERS=1`) stored COEX=80 and KINTEX=36 in `real 46.34`, while
+  concurrent mode (`SOURCE_CONCURRENCY=2`, `DETAIL_WORKERS=4`) stored COEX=80
+  and KINTEX=36 in `real 36.50`. Todo 7 did not deploy or touch production;
+  deployment was not requested. Final local gates were captured in
+  `.omo/evidence/task-7-green.txt`, `.omo/evidence/task-7-diffcheck.txt`,
+  `.omo/evidence/task-7-lsp.txt`, `.omo/evidence/task-7-manual.txt`, and
+  `.omo/evidence/task-7-code-review.md`.
 
 ## Validation Notes
 
