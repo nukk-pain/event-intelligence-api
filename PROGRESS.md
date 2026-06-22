@@ -262,7 +262,7 @@ stable and deployment-ready.
   record; linux/amd64 binary SHA256
   `31e2b9cb0cdf2971a08a3029bb186c0b2fe98c0cb7d9fcb8c5722cd6e6f5414c` matched
   remote `/srv/developer/events-intel/eventsintel`, and `eventsintel-api`
-  restarted active at `2026-06-22 06:53:02 UTC`. Public smoke returned 200 for
+  restarted active after the final deploy. Public smoke returned 200 for
   `/`, `/healthz`, `/llms.txt`, `/api/v1`, `/api/v1/schema`,
   `/api/v1/openapi.yaml`, `/api/v1/events`, `/assets/events.js`, and
   `/assets/app.js`. Public HTML references `/assets/app.js?v=20260622-hide-more`,
