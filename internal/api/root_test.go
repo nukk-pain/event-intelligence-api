@@ -135,7 +135,7 @@ func TestRootIndexHTMLUsesHumanFriendlyCopy(t *testing.T) {
 		"공개 예정 일정을 정리해 보여줍니다",
 		`href="/assets/index.css"`,
 		`src="/assets/events.js"`,
-		`src="/assets/app.js"`,
+		`src="/assets/app.js?v=`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("root HTML missing human-friendly copy %q", want)
