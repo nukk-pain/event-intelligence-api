@@ -95,11 +95,11 @@ All spacing derives from a base of **4px**.
 
 ### Site Header
 
-- **Structure**: title and one-sentence description.
+- **Structure**: title only.
 - **Variants**: light/dark only.
 - **Spacing**: `28px 24px 22px` desktop, `16px` horizontal on mobile.
 - **States**: none beyond text rendering.
-- **Accessibility**: concise text heading and description.
+- **Accessibility**: concise text heading.
 - **Motion**: none.
 
 ### Filter Bar

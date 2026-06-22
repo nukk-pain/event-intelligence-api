@@ -49,6 +49,8 @@ stable and deployment-ready.
 - [x] Changed the homepage default to upcoming categorized events, removed past
   event controls, added a `모든 행사 보기` scope option, and moved integration
   links from the header to the footer.
+- [x] Removed the homepage subtitle copy under the title so the browsing
+  controls become the first visible instruction.
 
 ## In Progress
 
@@ -136,6 +138,13 @@ stable and deployment-ready.
   Public Chrome/Selenium verified header links=0, footer links=`연동 안내` and
   `요약 문서`, default `31개 주요 행사` with no `기타` badge, `모든 행사 보기`
   shows `98개 행사` with `기타`, and 375px mobile has no horizontal overflow.
+- Homepage subtitle removal verification (2026-06-22): requested copy
+  `장소와 기간만 고르고, 예정된 행사를 날짜순으로 훑어보세요.` removed from
+  `static/index.html`; `go test ./internal/api -run
+  'TestRootIndex|TestRootIndexServesInteractiveHTML_whenBrowserAcceptsHTML|TestRootIndexHTMLUsesHumanFriendlyCopy'
+  -count=1`, `go test ./...`, `go vet ./...`, and `go build ./cmd/eventsintel`
+  pass. Local Chrome/Selenium verified subtitle element count=0, default
+  `31개 주요 행사`, and no 375/1280px horizontal overflow.
 
 ## Validation Notes
 
@@ -151,8 +160,8 @@ No product validation has been run yet. Current evidence level is Low.
 
 ## Next Action
 
-Continue source coverage and UI review with the homepage defaulting to upcoming
-categorized events.
+Deploy the homepage subtitle removal to `events.nukk.net` and verify the public
+browser surface.
 
 ## Decision Needed
 
