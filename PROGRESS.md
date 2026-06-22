@@ -269,6 +269,15 @@ stable and deployment-ready.
   and that versioned asset contains the bounded scan fix. Production Chrome/CDP
   verified desktop and mobile default views load 33 cards, 33 unique IDs, count
   `33개 주요 행사`, hidden "더 보기", and no horizontal overflow.
+- Homepage title redeployment verification (2026-06-22): committed
+  `5583f5c fix(frontend): simplify homepage title`; deployed with
+  `go build -buildvcs=false` to `developer-vps`. Remote binary SHA256 matched
+  `293fd32e0f6f8648494f6eebfc54d73a9bc1cda83d131c4ffdd4d3dd984ad576`, and
+  `eventsintel-api` restarted active. Public smoke returned 200 for `/`,
+  `/healthz`, `/llms.txt`, `/api/v1`, `/api/v1/schema`,
+  `/api/v1/openapi.yaml`, `/api/v1/events`, and `/assets/app.js`. Public HTML
+  and production Chrome/CDP verified both browser title and visible H1 are
+  `행사 모아보기`, with no mobile horizontal overflow.
 
 ## Validation Notes
 
