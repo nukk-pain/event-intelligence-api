@@ -293,21 +293,37 @@ stable and deployment-ready.
   `/api/v1/events?limit=20&since=2026-06-22` returned 20 rows and 20 non-null
   summaries. Public smoke returned 200 for `/`, `/healthz`, `/llms.txt`,
   `/api/v1`, `/api/v1/schema`, `/api/v1/openapi.yaml`, and `/api/v1/events`.
-- Source-derived summary policy update in progress (2026-06-22): list cards no
+- Source-derived summary policy deployment verification (2026-06-22): committed
+  `60769f4 fix(summary): use source-derived event descriptions`,
+  `ab60b4a fix(store): mark missing cleared summaries`, and
+  `c88f01b fix(frontend): bust source summary asset cache`. List cards no
   longer render or search hidden `summary` text. COEX summaries now come from
   venue detail content such as `행사 소개`; KINTEX summaries now come from
   `행사내용`, then `행사목적`, then `행사품목`. Normalize no longer fabricates
   summaries from name/date/venue/organizer; absent source description stays
   null and records `summary` in `missing_fields`. The previous template summary
-  migration is disabled and a cleanup migration clears existing template-shaped
-  summaries. Local gates passed: `go test ./...`, `go vet ./...`,
-  `go build ./cmd/eventsintel`, `node --check static/app.js`,
+  migration is disabled, existing template-shaped summaries are cleared, and
+  null summaries are marked missing. Local gates passed: `go test ./...`,
+  `go vet ./...`, `go build ./cmd/eventsintel`, `node --check static/app.js`,
   `node --check static/detail.js`, and `git diff --check`. A temporary live
   ingest DB stored 16/16 source-derived summaries and 0 template-shaped
   summaries; local Chrome/Selenium verified list cards render 0 `.card-summary`
   elements, search placeholder is `행사명 검색`, and the detail modal still shows
-  `행사 설명` from source text. LSP diagnostics could not run because the LSP
-  transport closed.
+  `행사 설명` from source text. Deployed final linux/amd64 binary SHA256
+  `abb3e8ef1d57ea10d545b8121e8d8a26b3317fdafab24f4ddf4fa27f443b2103` to
+  `developer-vps`; remote `/srv/developer/events-intel/eventsintel` matched and
+  `eventsintel-api` restarted active at `2026-06-22 09:41:11 UTC`. Production
+  ingest completed at `2026-06-22 09:37:02 UTC` with COEX discovered/stored
+  `400/400` and KINTEX discovered/stored `38/38`. A copied production SQLite
+  snapshot verified `531` rows total, `409` non-null source-derived summaries,
+  `0` template-shaped summaries, and `0` null-summary rows missing
+  `missing_fields=["summary"]`. Public smoke returned 200 for `/`, `/healthz`,
+  `/llms.txt`, `/api/v1`, `/api/v1/schema`, `/api/v1/openapi.yaml`,
+  `/api/v1/events?limit=5`, and `/assets/app.js?v=20260622-source-summary`.
+  Production Chrome/Selenium verified list cards render 0 `.card-summary`
+  elements, cards do not contain the summary excerpt, and the detail modal for
+  `kintex-26041303` renders `행사 설명` with the source summary excerpt. LSP
+  diagnostics could not run because the LSP transport closed.
 
 ## Validation Notes
 
@@ -323,8 +339,7 @@ No product validation has been run yet. Current evidence level is Low.
 
 ## Next Action
 
-Finish source-derived summary deployment and production verification for
-COEX/KINTEX rows.
+Continue source coverage and event-summary quality review for COEX/KINTEX rows.
 
 ## Decision Needed
 

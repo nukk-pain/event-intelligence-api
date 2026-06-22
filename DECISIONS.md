@@ -195,3 +195,30 @@ updated ingest systemd unit with `EVENTSINTEL_SOURCE_CONCURRENCY=2`,
   implementation.
 - No frontend, schema, taxonomy, or public API contract change is part of this
   deployment.
+
+---
+
+## Decision: Use Source-Derived Event Summaries Only
+
+- Status: accepted
+- Date: 2026-06-22
+- Decision Maker: smpain
+
+### Context
+
+The previous `summary` implementation generated a deterministic line from
+event name, dates, venue, and organizer. That made the field look filled, but it
+did not describe what the exhibition or event was actually about.
+
+### Decision
+
+Do not render `summary` in list cards. Persist `summary` only when the venue
+detail page exposes real descriptive content: COEX `행사 소개`-style fields, or
+KINTEX `행사내용`/`행사목적`/`행사품목`. If no source description exists, keep
+`summary` null and record it in `missing_fields`.
+
+### Consequences
+
+- Summary is useful in the detail/API surface without making list cards noisy.
+- Rows without real event description content remain honest nulls.
+- Existing generated template summaries are cleared and not regenerated.
