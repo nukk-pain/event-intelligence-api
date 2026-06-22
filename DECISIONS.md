@@ -111,3 +111,30 @@ not a default visibility filter.
 - The public UI is a schedule browser first; category filters are optional.
 - COEX discovery must include current schedule pages and pagination, not only
   WordPress sitemap shards.
+
+---
+
+## Decision: Default Homepage To Upcoming Categorized Events
+
+- Status: accepted
+- Date: 2026-06-22
+- Decision Maker: smpain
+
+### Context
+
+The homepage is for quick human scanning. Showing past events and uncategorized
+venue listings first made the useful events harder to see.
+
+### Decision
+
+The homepage defaults to upcoming events that have taxonomy categories. Users
+can switch the event-scope dropdown to `모든 행사 보기` when they want the full
+upcoming COEX/KINTEX venue schedule.
+
+### Consequences
+
+- Past events are not exposed in the homepage controls.
+- The public API remains unchanged; this is a browser default and filtering
+  policy.
+- Developer/API links are moved out of the header. Only essential integration
+  links remain in the footer.

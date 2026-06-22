@@ -46,6 +46,9 @@ stable and deployment-ready.
 - [x] Updated the public UI copy and client ordering to show COEX/KINTEX
   schedules as a date-first event browser instead of a narrow industry-only
   filter.
+- [x] Changed the homepage default to upcoming categorized events, removed past
+  event controls, added a `모든 행사 보기` scope option, and moved integration
+  links from the header to the footer.
 
 ## In Progress
 
@@ -117,6 +120,13 @@ stable and deployment-ready.
   including `AI서밋서울앤엑스포` and `2026 국제 병원의료산업 박람회`; public
   Chrome/Selenium verified the new root HTML, date-first event list, search for
   `AI서밋`, and no 375px horizontal overflow.
+- Homepage scope verification (2026-06-22): `go test ./internal/api -run
+  'TestRootIndex|TestRootIndexServesInteractiveHTML_whenBrowserAcceptsHTML|TestRootIndexHTMLUsesHumanFriendlyCopy'
+  -count=1`, `go test ./...`, `go vet ./...`, and `go build ./cmd/eventsintel`
+  pass. Local Chrome/Selenium with production DB copy verified default
+  `31개 주요 행사`, no `기타` badge in default cards, `모든 행사 보기` shows
+  `98개 행사`, header has 0 links, footer has `연동 안내` and `요약 문서`, search
+  finds `AI서밋서울앤엑스포`, and 375/768px layouts have no horizontal overflow.
 
 ## Validation Notes
 
@@ -132,8 +142,8 @@ No product validation has been run yet. Current evidence level is Low.
 
 ## Next Action
 
-Continue source coverage and UI review with the updated policy that venue/date
-lists show all discovered COEX/KINTEX events.
+Deploy the homepage scope UX change to `events.nukk.net` and verify the public
+browser surface.
 
 ## Decision Needed
 

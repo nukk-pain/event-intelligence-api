@@ -1,8 +1,8 @@
-# COEX·KINTEX 산업 행사 모아보기 Design System
+# COEX·KINTEX 행사 모아보기 Design System
 
 ## 1. Atmosphere & Identity
 
-A quiet event finder for people comparing industry events. The interface should feel factual, restrained, and fast rather than promotional. The signature is a warm paper-like base with teal operational accents and compact event cards that prioritize dates, venue, category, and source clarity over decoration.
+A quiet event finder for people comparing upcoming COEX/KINTEX events. The interface should feel factual, restrained, and fast rather than promotional. The signature is a warm paper-like base with teal operational accents and compact event cards that prioritize dates, venue, category, and source clarity over decoration.
 
 ## 2. Color
 
@@ -95,16 +95,16 @@ All spacing derives from a base of **4px**.
 
 ### Site Header
 
-- **Structure**: title, one-sentence description, related-information links.
+- **Structure**: title and one-sentence description.
 - **Variants**: light/dark only.
 - **Spacing**: `28px 24px 22px` desktop, `16px` horizontal on mobile.
-- **States**: nav links use dotted underline and accent hover.
-- **Accessibility**: nav has an explicit `aria-label`.
+- **States**: none beyond text rendering.
+- **Accessibility**: concise text heading and description.
 - **Motion**: none.
 
 ### Filter Bar
 
-- **Structure**: period select, category select, venue select, search input, live count.
+- **Structure**: event-scope select, category select, venue select, search input, live count.
 - **Variants**: sticky desktop/mobile wrapping layout.
 - **Spacing**: `12px` row gap, `24px` desktop horizontal padding, `16px` mobile.
 - **States**: focus uses accent outline; load count updates through `aria-live`.
@@ -127,6 +127,14 @@ All spacing derives from a base of **4px**.
 - **Spacing**: `28px 32px 24px` desktop, `22px 20px` mobile.
 - **States**: overlay click, Escape, and close button all dismiss.
 - **Accessibility**: dialog uses `role="dialog"`, `aria-modal`, `aria-labelledby`, and restores focus on close.
+- **Motion**: none.
+
+### Footer Links
+
+- **Structure**: one factual service sentence and compact secondary links.
+- **Variants**: only essential integration/help links belong here; avoid top-level API navigation.
+- **States**: links use dotted underline and accent hover.
+- **Accessibility**: nav has an explicit `aria-label`.
 - **Motion**: none.
 
 ## 6. Motion & Interaction

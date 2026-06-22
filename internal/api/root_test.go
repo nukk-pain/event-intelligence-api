@@ -113,19 +113,25 @@ func TestRootIndexHTMLUsesHumanFriendlyCopy(t *testing.T) {
 		"Close dialog",
 		"Search loaded events",
 		"Data sourced from COEX and KINTEX. API:",
+		"서비스 정보",
+		"데이터 항목",
+		"지난 행사",
+		"전체 기간",
 	} {
 		if strings.Contains(body, slop) {
 			t.Fatalf("root HTML still contains developer/AI slop copy %q", slop)
 		}
 	}
 	for _, want := range []string{
-		"COEX·KINTEX 산업 행사 모아보기",
+		"COEX·KINTEX 행사 모아보기",
+		"주요 분야",
+		"모든 행사 보기",
 		"행사명이나 설명 검색",
 		"연동 안내",
 		"요약 문서",
 		"더 보기",
 		"불러오는 중",
-		"공개 행사 정보를 정리해 보여줍니다",
+		"공개 예정 일정을 정리해 보여줍니다",
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("root HTML missing human-friendly copy %q", want)
