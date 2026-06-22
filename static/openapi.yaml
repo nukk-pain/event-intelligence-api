@@ -313,6 +313,25 @@ components:
           type: string
           format: date-time
       required: [url, type, publisher, retrieved_at]
+    Actions:
+      type: object
+      properties:
+        can_register:
+          type: boolean
+        can_exhibit:
+          type: boolean
+        can_sponsor:
+          type: boolean
+        has_matchmaking:
+          type: boolean
+        has_startup_program:
+          type: boolean
+      required:
+        - can_register
+        - can_exhibit
+        - can_sponsor
+        - has_matchmaking
+        - has_startup_program
     Change:
       type: object
       properties:
@@ -384,13 +403,38 @@ components:
           type: array
           items:
             type: string
+        actions:
+          $ref: "#/components/schemas/Actions"
+        register_url:
+          type: string
+          nullable: true
+          format: uri
+        exhibit_url:
+          type: string
+          nullable: true
+          format: uri
+        registration_deadline:
+          type: string
+          format: date
+          nullable: true
+        exhibitor_deadline:
+          type: string
+          format: date
+          nullable: true
         cost_hint:
           type: string
           enum: [free, paid, mixed, unknown]
+        summary:
+          type: string
+          nullable: true
         sources:
           type: array
           items:
             $ref: "#/components/schemas/Source"
+        homepage_url:
+          type: string
+          nullable: true
+          format: uri
         last_checked_at:
           type: string
           format: date-time

@@ -41,14 +41,42 @@ type ParsedEvent struct {
 	Organizer *string // 주최
 	Host      *string // 주관
 
-	HomepageURL *string // event homepage link, if present
-	SummaryText *string
+	HomepageURL  *string // event homepage link, if present
+	SummaryText  *string
+	Actions      ActionSignals
+	ExtraSources []ParsedSource
 
 	// ClassifyText is title + organizer concatenated, fed to the keyword
 	// classifier. Adapters build this so the classify stage stays source-agnostic.
 	ClassifyText string
 
 	RetrievedAt string // RFC3339 timestamp of the fetch
+}
+
+// ActionSignals are optional second-hop fields parsed from an official event or
+// organizer page. Nil booleans mean "unknown"; true/false values mean the
+// source page supplied a signal.
+type ActionSignals struct {
+	CanRegister       *bool
+	CanExhibit        *bool
+	CanSponsor        *bool
+	HasMatchmaking    *bool
+	HasStartupProgram *bool
+
+	RegisterURL          *string
+	ExhibitURL           *string
+	RegistrationDeadline *string
+	ExhibitorDeadline    *string
+	CostHint             *string
+}
+
+// ParsedSource is provenance discovered outside the venue detail page, such as
+// an official/organizer homepage used for action-field enrichment.
+type ParsedSource struct {
+	URL         string
+	Type        string
+	Publisher   string
+	RetrievedAt string
 }
 
 // Source is implemented by each venue adapter. Discover lists detail references

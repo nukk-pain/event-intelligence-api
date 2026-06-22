@@ -20,6 +20,9 @@ Schema version: 0.1 (see GET /api/v1/schema for the field descriptor)
 - Poll for freshness with `updated_since` / `changed_since` (RFC3339), or read
   the field-level change feed at `/api/v1/events/changes`.
 - Every enriched claim has provenance: `GET /api/v1/events/{event_id}/sources`.
+- Action fields are intended for operational planning. `actions.*` booleans
+  default to false when unknown, so check `missing_fields[]` before treating a
+  false value as a source-backed absence.
 
 ## Quota (keyless, per IP)
 
@@ -56,3 +59,6 @@ Exceeding either returns HTTP 429 with a `Retry-After` header.
 - Summaries are short source-derived event descriptions from venue detail pages
   when available; absent source descriptions stay null and are listed in
   missing_fields.
+- `register_url`, `exhibit_url`, `registration_deadline`,
+  `exhibitor_deadline`, and `cost_hint` may come from linked organizer pages;
+  use `sources[]` to distinguish organizer-backed facts from venue-only records.

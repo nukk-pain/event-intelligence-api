@@ -47,6 +47,9 @@ func WithAllowedHosts(hosts ...string) Option {
 	}
 }
 
+// WithAnyPublicHost permits arbitrary http(s) hosts after the SSRF IP guard.
+func WithAnyPublicHost(v bool) Option { return func(f *Fetcher) { f.allowAnyHost = v } }
+
 // WithAllowLoopback permits loopback destination IPs. Intended for httptest
 // only; link-local/metadata addresses remain blocked regardless.
 func WithAllowLoopback(v bool) Option { return func(f *Fetcher) { f.allowLoopopt = v } }

@@ -89,6 +89,14 @@ func runIngest(cfg config.Config) error {
 	if err != nil {
 		return err
 	}
+	officialFetcher, err := fetch.NewFetcher(
+		fetch.WithUserAgent(cfg.UserAgent),
+		fetch.WithPerMinute(cfg.RateLimitPerMinute),
+		fetch.WithAnyPublicHost(true),
+	)
+	if err != nil {
+		return err
+	}
 
 	// Register the venue adapters (single registration point).
 	sources.Register(coex.New())
@@ -109,7 +117,8 @@ func runIngest(cfg config.Config) error {
 	p := pipeline.New(batchID).
 		WithMaxDiscover(cfg.MaxDiscoverPerSource).
 		WithSourceConcurrency(cfg.SourceConcurrency).
-		WithDetailWorkers(cfg.DetailWorkers)
+		WithDetailWorkers(cfg.DetailWorkers).
+		WithOfficialFetcher(officialFetcher)
 
 	// WALL-CLOCK DEADLINE: cap the whole crawl so a hung Discover or a slow
 	// cumulative detail fetch can never let one run exceed the cron interval.

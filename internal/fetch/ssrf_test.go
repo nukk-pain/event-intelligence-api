@@ -80,6 +80,25 @@ func TestFetchHostAllowlist(t *testing.T) {
 	}
 }
 
+func TestFetchAnyPublicHostStillRejectsMetadata(t *testing.T) {
+	f, err := NewFetcher(
+		WithUserAgent("t"),
+		WithPerMinute(6000),
+		WithAnyPublicHost(true),
+		WithMaxRetries(0),
+	)
+	if err != nil {
+		t.Fatalf("NewFetcher: %v", err)
+	}
+	_, err = f.Fetch(context.Background(), "http://169.254.169.254/latest/meta-data/", Conditional{})
+	if err == nil {
+		t.Fatalf("expected link-local rejection, got nil")
+	}
+	if !errors.Is(err, ErrBlockedAddress) {
+		t.Fatalf("expected ErrBlockedAddress, got %v", err)
+	}
+}
+
 // isBlockedIP unit checks for the SSRF guard's address classifier.
 func TestIsBlockedIP(t *testing.T) {
 	blocked := []string{

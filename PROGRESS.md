@@ -51,6 +51,15 @@ stable and deployment-ready.
   links from the header to the footer.
 - [x] Removed the homepage subtitle copy under the title so the browsing
   controls become the first visible instruction.
+- [x] Documented the gap between the original repo plan and current implemented
+  product in `docs/original-plan-gap.md`.
+- [x] Added the first action-oriented enrichment slice: optional official-page
+  second-hop fetches can now populate registration/exhibit links, action
+  booleans, registration/exhibitor deadlines, cost hints, and organizer
+  provenance while preserving missing-field honesty when no signal is available.
+- [x] Updated the event detail modal to show extracted cost hints and action
+  signal chips such as 참가 가능, 부스 문의 가능, 후원 문의 가능, 비즈니스 상담,
+  and 스타트업 프로그램 when those signals are source-backed.
 
 ## In Progress
 
@@ -269,6 +278,54 @@ stable and deployment-ready.
   and that versioned asset contains the bounded scan fix. Production Chrome/CDP
   verified desktop and mobile default views load 33 cards, 33 unique IDs, count
   `33개 주요 행사`, hidden "더 보기", and no horizontal overflow.
+- Action-field enrichment local verification (2026-06-22): `go test ./...`,
+  `go vet ./...`, `go build ./cmd/eventsintel`, `node --check static/detail.js`,
+  `node --check static/app.js`, `node --check static/events.js`, and
+  `git diff --check` pass. `internal/pipeline`
+  `TestRun_EnrichesActionFieldsFromOfficialPage` drives a venue detail through
+  optional official-page fetch, extraction, normalization, SQLite storage, and
+  the `/api/v1/events/{event_id}` read API, proving `register_url`,
+  `exhibit_url`, `registration_deadline`, `exhibitor_deadline`, `cost_hint`,
+  action booleans, and organizer source provenance are observable through the
+  public contract.
+- Action detail UI local verification (2026-06-22): detail modal assets now
+  render source-backed cost and action signal chips in the `참가 정보` section.
+  `go test ./internal/api -run TestRootIndexServesSplitFrontendAssets -count=1`
+  verifies the split CSS asset exposes `.detail-signals`; `node --check
+  static/detail.js`, `node --check static/app.js`, and `node --check
+  static/events.js` pass. A Node render smoke verified the modal contains cost,
+  registration/exhibit deadlines, action chips, and official/register/exhibit
+  links for an action-enriched event. Playwright captured a local screenshot at
+  `/tmp/events-action-modal.png`, and visual inspection confirmed the new chips
+  and links render without overlap at 1024px width. Full gates also pass:
+  `go test ./...`, `go vet ./...`, `go build ./cmd/eventsintel`, and
+  `git diff --check`. LSP diagnostics could not run because the transport
+  closed.
+- Action intelligence contract/live verification (2026-06-22): embedded
+  `static/openapi.yaml` now documents the `Actions` object plus `register_url`,
+  `exhibit_url`, `registration_deadline`, `exhibitor_deadline`, `homepage_url`,
+  and `summary`; `static/llms.txt` tells agents to check `missing_fields[]`
+  before treating false action booleans as source-backed absence. Added
+  `TestOpenAPIEventSchemaDocumentsActionFields` to prevent contract drift.
+  Bounded live ingest to `/tmp/events-action-live.db` with
+  `EVENTSINTEL_MAX_DISCOVER=25`, `EVENTSINTEL_RATE_PER_MIN=240`,
+  `EVENTSINTEL_SOURCE_CONCURRENCY=2`, `EVENTSINTEL_DETAIL_WORKERS=4`, and
+  `EVENTSINTEL_INGEST_DEADLINE=4m` stored COEX 25/25 and KINTEX 25/25. The
+  temp DB had 21 register links, 27 exhibit links, 22 non-unknown cost hints, 3
+  sponsor signals, 2 matchmaking signals, and 1 startup-program signal; no
+  deadline signal appeared in that bounded live sample, so deadline fields
+  remained in `missing_fields[]`. Local API smoke against the temp DB proved
+  `GET /api/v1/events/kintex-26042904` returns action booleans, register/exhibit
+  links, `cost_hint=free`, two provenance sources including an organizer source,
+  and missing-field honesty for absent deadlines. Playwright screenshots from
+  served API data and served `detail.js`/`detail.css` were captured at
+  `/tmp/events-action-modal-live-1280.png` and
+  `/tmp/events-action-modal-live-375.png`; visual inspection confirmed action
+  chips and links render without overlap on desktop and mobile. Final gates
+  passed: `go test ./...`, `go vet ./...`, `go build ./cmd/eventsintel`,
+  `node --check static/detail.js && node --check static/app.js && node --check
+  static/events.js`, and `git diff --check`. LSP diagnostics could not run
+  because the transport closed.
 - Homepage title redeployment verification (2026-06-22): committed
   `5583f5c fix(frontend): simplify homepage title`; deployed with
   `go build -buildvcs=false` to `developer-vps`. Remote binary SHA256 matched

@@ -154,7 +154,7 @@ func TestRootIndexServesSplitFrontendAssets(t *testing.T) {
 		{path: "/assets/theme.css", contentType: "text/css", want: "--bg"},
 		{path: "/assets/index.css", contentType: "text/css", want: ".card"},
 		{path: "/assets/list.css", contentType: "text/css", want: ".load-more"},
-		{path: "/assets/detail.css", contentType: "text/css", want: ".detail-hero"},
+		{path: "/assets/detail.css", contentType: "text/css", want: ".detail-signals"},
 		{path: "/assets/ui.js", contentType: "application/javascript", want: "EventIntelUI"},
 		{path: "/assets/events.js", contentType: "application/javascript", want: "EventIntelEvents"},
 		{path: "/assets/detail.js", contentType: "application/javascript", want: "EventIntelDetail"},

@@ -28,7 +28,7 @@ import (
 // Order is irrelevant (each layout is unambiguous). Parsing is strict — a string
 // that matches no layout is treated as unparseable (null + missing_fields),
 // never coerced.
-var dateLayouts = []string{"2006.01.02", "2006-01-02"}
+var dateLayouts = []string{"2006.01.02", "2006.1.2", "2006-01-02", "2006-1-2"}
 
 // parseDate returns the ISO (YYYY-MM-DD) form of a raw date string, or ("",
 // false) when it matches no known layout. It does not fabricate or guess.
@@ -199,23 +199,7 @@ func Normalize(p *sources.ParsedEvent, now string) (*model.Event, error) {
 	mf.add("scale.visitors")
 	mf.add("scale.exhibitors")
 
-	// --- action fields (all unknown on a venue page -> false + missing_fields) ---
-	// Actions default to the zero value (all false); each key is recorded.
-	for _, k := range []string{
-		"actions.can_register", "actions.can_exhibit", "actions.can_sponsor",
-		"actions.has_matchmaking", "actions.has_startup_program",
-	} {
-		mf.add(k)
-	}
-	// register/exhibit urls + deadlines are not on venue pages in v1.
-	e.RegisterURL = nil
-	e.ExhibitURL = nil
-	e.RegistrationDeadline = nil
-	e.ExhibitorDeadline = nil
-	for _, k := range []string{"register_url", "exhibit_url", "registration_deadline", "exhibitor_deadline"} {
-		mf.add(k)
-	}
-	mf.add("cost_hint") // unknown -> recorded
+	applyActionSignals(e, p, mf)
 
 	// --- homepage (validated URL) ---
 	if hp := validURL(p.HomepageURL); hp != nil {
@@ -277,164 +261,6 @@ func buildVenue(p *sources.ParsedEvent, mf *missingFields) *model.Venue {
 		mf.add("venue.hall")
 	}
 	return v
-}
-
-// buildSources turns the detail URL into the single venue provenance entry.
-// retrieved_at falls back to now when the parser left it empty. An invalid /
-// non-http(s) URL yields no source (Validate then rejects via rule 5).
-func buildSources(p *sources.ParsedEvent, now string) []model.Source {
-	u := validURL(&p.URL)
-	if u == nil {
-		return nil
-	}
-	retrieved := strings.TrimSpace(p.RetrievedAt)
-	if retrieved == "" {
-		retrieved = now
-	}
-	publisher := derefTrim(p.VenueName)
-	if publisher == "" {
-		publisher = p.SourceID
-	}
-	return []model.Source{{
-		URL:         *u,
-		Type:        sourceType,
-		Publisher:   publisher,
-		RetrievedAt: retrieved,
-	}}
-}
-
-// buildSummary returns short descriptive content copied from a venue detail
-// field such as "행사 소개" or "행사내용". It never fabricates a line from
-// name/date/venue facts; absent source text yields "".
-func buildSummary(p *sources.ParsedEvent) string {
-	if p == nil {
-		return ""
-	}
-	return truncateRunes(strings.Join(strings.Fields(derefTrim(p.SummaryText)), " "), summaryMaxRunes)
-}
-
-// truncateRunes caps s to max runes without splitting a multi-byte glyph.
-func truncateRunes(s string, max int) string {
-	r := []rune(s)
-	if len(r) <= max {
-		return s
-	}
-	return string(r[:max])
-}
-
-// ---------------------------------------------------------------------------
-// validation (schema rules 1-5)
-// ---------------------------------------------------------------------------
-
-// Validate enforces the v0.1 manual-dataset-schema validation rules:
-//
-//  1. required fields present & non-null (event_id, schema_version, name,
-//     country, categories>=1, sources>=1, last_checked_at, update_state*,
-//     confidence, missing_fields). *update_state is set by store/diff after
-//     normalize, so it is NOT required here.
-//  2. (missing_fields completeness is produced by Normalize, not re-derived here)
-//  3. end_date >= start_date when both present.
-//  4. every category exists in the taxonomy (classify.IsCategory).
-//  5. >=1 sources[] entry with an http(s) url + enum type + publisher +
-//     retrieved_at.
-//
-// A failing record must be rejected by the caller and not persisted.
-func Validate(e *model.Event) error {
-	if e == nil {
-		return fmt.Errorf("nil event")
-	}
-	// rule 1: required scalars
-	if strings.TrimSpace(e.EventID) == "" {
-		return fmt.Errorf("rule1: event_id required")
-	}
-	if e.SchemaVersion == "" {
-		return fmt.Errorf("rule1: schema_version required")
-	}
-	if strings.TrimSpace(e.Name) == "" {
-		return fmt.Errorf("rule1: name required")
-	}
-	if strings.TrimSpace(e.Country) == "" {
-		return fmt.Errorf("rule1: country required")
-	}
-	if e.Confidence == "" {
-		return fmt.Errorf("rule1: confidence required")
-	}
-	if e.MissingFields == nil {
-		return fmt.Errorf("rule1: missing_fields required (use empty slice, not nil)")
-	}
-	if e.LastCheckedAt == "" {
-		return fmt.Errorf("rule1: last_checked_at required")
-	}
-
-	// rule 1 + 4: categories required (>=1) and each in taxonomy.
-	// An excluded event is, by definition, outside our taxonomy (a non-industry
-	// event the classifier declined to categorize). It is still PERSISTED — with
-	// excluded=true and zero categories — and still visible in venue/date lists.
-	// Only non-excluded events must carry >=1 category.
-	if !e.Excluded && len(e.Categories) == 0 {
-		return fmt.Errorf("rule1: categories required (>=1) for non-excluded event")
-	}
-	for _, c := range e.Categories {
-		if !classify.IsCategory(c) {
-			return fmt.Errorf("rule4: category %q not in taxonomy", c)
-		}
-	}
-
-	// rule 3: end >= start when both present
-	if e.StartDate != nil && e.EndDate != nil && *e.EndDate < *e.StartDate {
-		return fmt.Errorf("rule3: end_date %q before start_date %q", *e.EndDate, *e.StartDate)
-	}
-
-	// rule 5: >=1 source, each with valid url/type/publisher/retrieved_at
-	if len(e.Sources) == 0 {
-		return fmt.Errorf("rule5: at least one source required")
-	}
-	for i, s := range e.Sources {
-		if !isHTTPURL(s.URL) {
-			return fmt.Errorf("rule5: source[%d] url %q not http(s)", i, s.URL)
-		}
-		if _, ok := validSourceTypes[s.Type]; !ok {
-			return fmt.Errorf("rule5: source[%d] type %q not in enum", i, s.Type)
-		}
-		if strings.TrimSpace(s.Publisher) == "" {
-			return fmt.Errorf("rule5: source[%d] publisher required", i)
-		}
-		if strings.TrimSpace(s.RetrievedAt) == "" {
-			return fmt.Errorf("rule5: source[%d] retrieved_at required", i)
-		}
-	}
-	return nil
-}
-
-// ---------------------------------------------------------------------------
-// URL validation
-// ---------------------------------------------------------------------------
-
-// validURL returns a cleaned *string when p holds an http(s) URL, else nil.
-// javascript:/data:/file:/mailto: and other schemes are rejected so they are
-// never stored.
-func validURL(p *string) *string {
-	if p == nil {
-		return nil
-	}
-	s := strings.TrimSpace(*p)
-	if !isHTTPURL(s) {
-		return nil
-	}
-	return &s
-}
-
-// isHTTPURL reports whether s is a syntactically http:// or https:// URL. It does
-// NOT fetch; this is a scheme/shape guard, not a liveness check.
-func isHTTPURL(s string) bool {
-	s = strings.TrimSpace(s)
-	low := strings.ToLower(s)
-	if !strings.HasPrefix(low, "http://") && !strings.HasPrefix(low, "https://") {
-		return false
-	}
-	// require a host after the scheme
-	rest := s[strings.Index(s, "://")+3:]
-	return strings.TrimSpace(rest) != ""
 }
 
 // ---------------------------------------------------------------------------

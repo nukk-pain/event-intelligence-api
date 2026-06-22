@@ -101,7 +101,8 @@ type Fetcher struct {
 	limiters  map[string]*rate.Limiter
 
 	allowed      map[string]struct{} // host allowlist (lowercased)
-	allowLoopopt bool                // allow loopback IPs (tests only)
+	allowAnyHost bool
+	allowLoopopt bool // allow loopback IPs (tests only)
 
 	robotsTTL      time.Duration
 	robotsMu       sync.Mutex
@@ -150,6 +151,9 @@ func NewFetcher(opts ...Option) (*Fetcher, error) {
 
 // hostAllowed reports whether host is on the allowlist.
 func (f *Fetcher) hostAllowed(host string) bool {
+	if f.allowAnyHost {
+		return true
+	}
 	_, ok := f.allowed[strings.ToLower(host)]
 	return ok
 }

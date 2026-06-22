@@ -122,7 +122,7 @@ All spacing derives from a base of **4px**.
 
 ### Modal
 
-- **Structure**: fixed overlay, detail panel, close button, title, category chips, visitor-facing event facts, action links, and a concise official-page reminder.
+- **Structure**: fixed overlay, detail panel, close button, title, category chips, visitor-facing event facts, cost/deadline facts, action-signal chips, action links, and a concise official-page reminder.
 - **Variants**: loading, success, error.
 - **Spacing**: `28px 32px 24px` desktop, `22px 20px` mobile.
 - **States**: overlay click, Escape, and close button all dismiss.

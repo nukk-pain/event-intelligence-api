@@ -23,6 +23,8 @@ package pipeline
 
 import (
 	"time"
+
+	"github.com/smpain/event-intelligence-api/internal/fetch"
 )
 
 // BreakerConfig tunes the per-source circuit breaker. The zero value is valid
@@ -66,6 +68,7 @@ type Pipeline struct {
 	// sourceConcurrency caps how many independent sources can run at once.
 	sourceConcurrency int
 	detailWorkers     int
+	officialFetcher   *fetch.Fetcher
 	// now returns the batch verification timestamp (ISO8601). Overridable in
 	// tests for determinism; defaults to time.Now in RFC3339.
 	now func() string
@@ -97,6 +100,11 @@ func (p *Pipeline) WithDetailWorkers(n int) *Pipeline {
 	if n > 0 {
 		p.detailWorkers = n
 	}
+	return p
+}
+
+func (p *Pipeline) WithOfficialFetcher(f *fetch.Fetcher) *Pipeline {
+	p.officialFetcher = f
 	return p
 }
 

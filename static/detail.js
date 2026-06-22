@@ -62,18 +62,40 @@
     return '<div class="detail-item"><span>' + escapeHtml(label) + '</span><strong>' + value + '</strong></div>';
   }
 
+  function costText(e) {
+    var labels = { free: "무료", paid: "유료", mixed: "무료+유료" };
+    return labels[e.cost_hint] || "";
+  }
+
+  function actionSignals(e) {
+    var actions = e.actions || {};
+    var labels = [];
+    if (actions.can_register) labels.push("참가 가능");
+    if (actions.can_exhibit) labels.push("부스 문의 가능");
+    if (actions.can_sponsor) labels.push("후원 문의 가능");
+    if (actions.has_matchmaking) labels.push("비즈니스 상담");
+    if (actions.has_startup_program) labels.push("스타트업 프로그램");
+    if (!labels.length) return "";
+    return '<div class="detail-signals">' + labels.map(function(label) {
+      return '<span>' + escapeHtml(label) + '</span>';
+    }).join("") + '</div>';
+  }
+
   function renderModal(e, badgeHTML) {
     var hero = [
       detailItem("일정", '<span class="num">' + escapeHtml(fmtDateRange(e.start_date, e.end_date)) + '</span>'),
       detailItem("장소", escapeHtml(venueText(e))),
+      detailItem("비용", escapeHtml(costText(e))),
       detailItem("참가 신청 마감", '<span class="num">' + escapeHtml(fmtDate(e.registration_deadline)) + '</span>'),
       detailItem("부스 신청 마감", '<span class="num">' + escapeHtml(fmtDate(e.exhibitor_deadline)) + '</span>')
     ].join("");
     var summary = e.summary
       ? '<section class="detail-section"><h3>행사 설명</h3><p>' + escapeHtml(e.summary) + '</p></section>'
       : "";
-    var actions = actionLinks(e)
-      ? '<section class="detail-section"><h3>참가 정보</h3>' + actionLinks(e) + '</section>'
+    var signalHTML = actionSignals(e);
+    var linkHTML = actionLinks(e);
+    var actions = signalHTML || linkHTML
+      ? '<section class="detail-section"><h3>참가 정보</h3>' + signalHTML + linkHTML + '</section>'
       : "";
     var note = firstSourceURL(e)
       ? '<p class="detail-note">일정과 신청 조건은 주최 측 공식 페이지에서 다시 확인하세요.</p>'

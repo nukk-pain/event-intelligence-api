@@ -170,6 +170,28 @@ func TestOpenAPIServed(t *testing.T) {
 	}
 }
 
+func TestOpenAPIEventSchemaDocumentsActionFields(t *testing.T) {
+	doc := api.OpenAPISpec()
+	for _, want := range []string{
+		"actions:",
+		"can_register:",
+		"can_exhibit:",
+		"can_sponsor:",
+		"has_matchmaking:",
+		"has_startup_program:",
+		"register_url:",
+		"exhibit_url:",
+		"registration_deadline:",
+		"exhibitor_deadline:",
+		"homepage_url:",
+		"summary:",
+	} {
+		if !strings.Contains(doc, want) {
+			t.Errorf("openapi.yaml missing Event schema field %q", want)
+		}
+	}
+}
+
 // TestLLMsTxtServed asserts GET /llms.txt returns a non-empty text summary.
 func TestLLMsTxtServed(t *testing.T) {
 	base := metaServer(t)
