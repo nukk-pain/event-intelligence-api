@@ -253,6 +253,21 @@ stable and deployment-ready.
   `git diff --check`. Local Chrome/CDP with a temp live ingest DB verified
   desktop and mobile default views had 32 cards, 32 unique IDs, count
   `32개 주요 행사`, no horizontal overflow, and hidden "더 보기".
+- Exhausted load-more redeployment verification (2026-06-22): committed
+  `533934f fix(frontend): hide exhausted load more`, then found Cloudflare was
+  still serving stale `/assets/app.js` from its four-hour asset cache. Committed
+  `e5e00ae fix(frontend): bust cached app asset` so browser HTML requests
+  `/assets/app.js?v=20260622-hide-more`. Deployed current `main` HEAD
+  `e5e00ae` to `developer-vps`; linux/amd64 binary SHA256
+  `2e29b7106d728a7a1adbf47faabd82c57799907ccc701ec0639934edca9cefc9` matched
+  remote `/srv/developer/events-intel/eventsintel`, and `eventsintel-api`
+  restarted active at `2026-06-22 06:50:36 UTC`. Public smoke returned 200 for
+  `/`, `/healthz`, `/llms.txt`, `/api/v1`, `/api/v1/schema`,
+  `/api/v1/openapi.yaml`, `/api/v1/events`, `/assets/events.js`, and
+  `/assets/app.js`. Public HTML references `/assets/app.js?v=20260622-hide-more`,
+  and that versioned asset contains the bounded scan fix. Production Chrome/CDP
+  verified desktop and mobile default views load 33 cards, 33 unique IDs, count
+  `33개 주요 행사`, hidden "더 보기", and no horizontal overflow.
 
 ## Validation Notes
 
