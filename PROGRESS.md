@@ -10,8 +10,8 @@
 
 ## Current Focus
 
-Tighten the public event browsing experience while keeping the read-only API
-stable and deployment-ready.
+Define the founder/operator opportunity radar layer on top of the deployed
+COEX/KINTEX schedule browser, without expanding into a generic event portal.
 
 ## Completed
 
@@ -60,19 +60,21 @@ stable and deployment-ready.
 - [x] Updated the event detail modal to show extracted cost hints and action
   signal chips such as 참가 가능, 부스 문의 가능, 후원 문의 가능, 비즈니스 상담,
   and 스타트업 프로그램 when those signals are source-backed.
+- [x] Defined the founder/operator opportunity radar scope and benchmark source
+  set in `docs/founder-operator-opportunity-radar.md`.
 
 ## In Progress
 
 - [x] COEX/KINTEX ingestion feasibility check (`prototype/coex-kintex-feasibility.md`)
   — both static-HTML, field-rich, HTTP-parseable; no headless browser needed.
 - [ ] `/plan` the COEX/KINTEX ingestion backend + ADR superseding manual-first.
-- [ ] (Deferred) Choose 20-30 international benchmark sources.
+- [x] Choose 20-30 international benchmark sources.
 
 ## Blockers
 
 | Blocker | Impact | Owner | Resolution Needed |
 |---|---|---|---|
-| International benchmark source list is undefined | Medium | smpain | Choose 20-30 benchmark events or source families |
+| None | - | - | - |
 
 ## Evidence Collected
 
@@ -435,6 +437,12 @@ stable and deployment-ready.
   matchmaking signal. Sample event `kintex-26051208` returns register and
   exhibit URLs, two provenance sources including an organizer source, and
   missing-field honesty for unknown deadline/cost/sponsor/program fields.
+- Opportunity radar planning (2026-06-23): `docs/founder-operator-opportunity-radar.md`
+  defines the founder/operator workflow, a 25-source benchmark set across AI,
+  robotics, bio, digital health, and medtech, source-quality/completeness
+  criteria, candidate API filters, homepage shortlist scope, and a first
+  implementation slice. `docs/original-plan-gap.md` now points to this artifact
+  as the current plan for filling the next product gap.
 
 ## Validation Notes
 
@@ -450,7 +458,9 @@ No product validation has been run yet. Current evidence level is Low.
 
 ## Next Action
 
-Continue source coverage and event-summary quality review for COEX/KINTEX rows.
+Implement the first opportunity-radar slice: deterministic opportunity-quality
+scoring over existing events, API filters for shortlist/actionability, and a
+homepage `기회 shortlist` scope.
 
 ## Decision Needed
 
