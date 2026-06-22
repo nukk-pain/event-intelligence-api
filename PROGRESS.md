@@ -127,6 +127,15 @@ stable and deployment-ready.
   `31개 주요 행사`, no `기타` badge in default cards, `모든 행사 보기` shows
   `98개 행사`, header has 0 links, footer has `연동 안내` and `요약 문서`, search
   finds `AI서밋서울앤엑스포`, and 375/768px layouts have no horizontal overflow.
+- Homepage scope deployment verification (2026-06-22): committed
+  `a174c0d Refine homepage event scope`; deployed linux/amd64 binary SHA256
+  `ef48bba078b0ff1cd3e0e7d4ddc0e382ee92759d95a30f1c95dadbd8f566b27e`;
+  `eventsintel-api` restarted active on `developer-vps` at
+  `2026-06-22 00:29:06 UTC`. Public smoke returned 200 for `/`, `/healthz`,
+  `/llms.txt`, `/api/v1`, `/api/v1/openapi.yaml`, and `/api/v1/events`.
+  Public Chrome/Selenium verified header links=0, footer links=`연동 안내` and
+  `요약 문서`, default `31개 주요 행사` with no `기타` badge, `모든 행사 보기`
+  shows `98개 행사` with `기타`, and 375px mobile has no horizontal overflow.
 
 ## Validation Notes
 
@@ -142,8 +151,8 @@ No product validation has been run yet. Current evidence level is Low.
 
 ## Next Action
 
-Deploy the homepage scope UX change to `events.nukk.net` and verify the public
-browser surface.
+Continue source coverage and UI review with the homepage defaulting to upcoming
+categorized events.
 
 ## Decision Needed
 
