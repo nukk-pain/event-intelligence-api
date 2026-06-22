@@ -145,6 +145,14 @@ stable and deployment-ready.
   -count=1`, `go test ./...`, `go vet ./...`, and `go build ./cmd/eventsintel`
   pass. Local Chrome/Selenium verified subtitle element count=0, default
   `31개 주요 행사`, and no 375/1280px horizontal overflow.
+- Homepage subtitle removal deployment verification (2026-06-22): committed
+  `954fe0d Remove homepage subtitle`; deployed linux/amd64 binary SHA256
+  `202fd3a4f20a2359b982f9ef0f909f03fb38a5e26071269e295c8b840456360b`;
+  `eventsintel-api` restarted active on `developer-vps` at
+  `2026-06-22 00:37:40 UTC`. Public smoke returned 200 for `/`, `/healthz`,
+  and `/api/v1/events`; public HTML no longer contains the removed copy or
+  `site-desc`; public Chrome/Selenium verified subtitle element count=0,
+  default `31개 주요 행사`, and no 375/1280px horizontal overflow.
 
 ## Validation Notes
 
@@ -160,8 +168,7 @@ No product validation has been run yet. Current evidence level is Low.
 
 ## Next Action
 
-Deploy the homepage subtitle removal to `events.nukk.net` and verify the public
-browser surface.
+Continue source coverage and UI review with the homepage title-only header.
 
 ## Decision Needed
 
