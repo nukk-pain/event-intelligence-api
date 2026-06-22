@@ -240,6 +240,19 @@ stable and deployment-ready.
   `/assets/events.js`, that asset exposes `EventIntelEvents.mergeUnique`, and
   production Chrome/CDP verified clicking "더 보기" changed visible cards from
   32 to 33 with one new ID and duplicate IDs `[]`.
+- Exhausted load-more button fix (2026-06-22): production page walk showed
+  public raw pages had 124 future rows but only 33 displayable major events
+  (32 on the first raw page, 1 on the second, then no more). Because the visible
+  list is date-sorted, the extra one-item load still looked like copied content
+  to users. The default categorized frontend path now scans bounded remaining
+  pages during initial load and hides "더 보기" when no additional displayable
+  major events remain. Local gates passed: `go test ./internal/api -run
+  'TestRootIndex|TestListEvents_FullIterationNoGapsNoDupes' -count=1`,
+  `go test ./...`, `go vet ./...`, `go build ./cmd/eventsintel`,
+  `node --check static/app.js`, `node --check static/events.js`, and
+  `git diff --check`. Local Chrome/CDP with a temp live ingest DB verified
+  desktop and mobile default views had 32 cards, 32 unique IDs, count
+  `32개 주요 행사`, no horizontal overflow, and hidden "더 보기".
 
 ## Validation Notes
 

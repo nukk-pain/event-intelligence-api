@@ -128,8 +128,8 @@
   function loadPageBatch(append, pagesLeft, added) {
     return fetchJSON(eventsURL(append ? state.cursor : null)).then(function(d) {
       var nextAdded = added + applyPage(d, append);
-      var shouldLookAhead = append && state.scope === "categorized" && !state.category && !state.search;
-      if (shouldLookAhead && state.hasMore && pagesLeft > 1 && nextAdded < 24) {
+      var shouldLookAhead = state.scope === "categorized" && !state.category && !state.search;
+      if (shouldLookAhead && state.hasMore && pagesLeft > 1) {
         return loadPageBatch(true, pagesLeft - 1, nextAdded);
       }
       return nextAdded;
@@ -142,7 +142,7 @@
     if (!append) showSkeletons(6);
     el.loadMore.disabled = true;
     el.loadMore.textContent = "불러오는 중...";
-    return loadPageBatch(append, 5, 0).then(function() {
+    return loadPageBatch(append, 20, 0).then(function() {
       state.loading = false;
       if (state.events.length === 0 && !state.search) showState("조건에 맞는 행사가 없습니다.", false);
       else renderList();
