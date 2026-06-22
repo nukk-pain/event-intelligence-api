@@ -21,6 +21,13 @@ type sourceRun struct {
 	writeMu *sync.Mutex
 }
 
+type refResult struct {
+	event   *model.Event
+	stage   string
+	err     error
+	started bool
+}
+
 func (p *Pipeline) runSource(ctx context.Context, run sourceRun) SourceReport {
 	db := run.db
 	s := run.source
@@ -49,38 +56,49 @@ func (p *Pipeline) runSource(ctx context.Context, run sourceRun) SourceReport {
 	sr.Discovered = len(refs)
 
 	now := p.now()
+	results, cancelled := p.processRefs(ctx, s, f, refs, now)
 	events := make([]model.Event, 0, len(refs))
 	ingestErrors := make([]store.IngestError, 0)
-	for _, ref := range refs {
-		if ctx.Err() != nil {
-			sr.Cancelled = true
-			sr.AbortReason = "deadline/cancelled mid-source; baseline not updated"
-			break
+	for i := range results {
+		result := results[i]
+		if !result.started {
+			continue
 		}
-		ev, stage, perr := p.processRef(ctx, s, f, ref, now)
-		if perr != nil {
+		ref := refs[i]
+		if result.err != nil {
 			sr.Skipped++
 			ingestErrors = append(ingestErrors, store.IngestError{
-				EventID: ref.EventID, Source: s.ID(), Stage: stage,
-				Message: perr.Error(), BatchID: p.batchID,
+				EventID: ref.EventID, Source: s.ID(), Stage: result.stage,
+				Message: result.err.Error(), BatchID: p.batchID,
 			})
 			continue
 		}
-		events = append(events, *ev)
+		events = append(events, *result.event)
+	}
+	if cancelled {
+		sr.Cancelled = true
+		sr.AbortReason = "deadline/cancelled mid-source; baseline not updated"
 	}
 	sr.Parsed = len(events)
 
 	run.writeMu.Lock()
 	defer run.writeMu.Unlock()
+	writeCtx := ctx
+	if sr.Cancelled {
+		writeCtx = context.WithoutCancel(ctx)
+	}
 	for _, ingestErr := range ingestErrors {
-		_ = store.RecordIngestError(ctx, db, ingestErr)
+		_ = store.RecordIngestError(writeCtx, db, ingestErr)
+	}
+	if sr.Cancelled {
+		return sr
 	}
 
-	if reason, tripped := p.shouldTrip(ctx, db, s.ID(), sr.Discovered, events); tripped {
+	if reason, tripped := p.shouldTrip(writeCtx, db, s.ID(), sr.Discovered, events); tripped {
 		sr.Aborted = true
 		sr.AbortReason = reason
-		prev, _, _ := store.LoadBatchStats(ctx, db, s.ID())
-		_ = store.RecordFetchAnomaly(ctx, db, store.FetchAnomaly{
+		prev, _, _ := store.LoadBatchStats(writeCtx, db, s.ID())
+		_ = store.RecordFetchAnomaly(writeCtx, db, store.FetchAnomaly{
 			Source: s.ID(), Reason: reason,
 			Discovered: sr.Discovered, Parsed: sr.Parsed, PrevStored: prev.Stored,
 			BatchID: p.batchID,
@@ -88,10 +106,10 @@ func (p *Pipeline) runSource(ctx context.Context, run sourceRun) SourceReport {
 		return sr
 	}
 
-	if err := store.ApplyBatch(ctx, db, events, p.batchID); err != nil {
+	if err := store.ApplyBatch(writeCtx, db, events, p.batchID); err != nil {
 		sr.Err = err
 		sr.AbortReason = fmt.Sprintf("apply error: %v", err)
-		_ = store.RecordFetchAnomaly(ctx, db, store.FetchAnomaly{
+		_ = store.RecordFetchAnomaly(writeCtx, db, store.FetchAnomaly{
 			Source: s.ID(), Reason: sr.AbortReason,
 			Discovered: sr.Discovered, Parsed: sr.Parsed, BatchID: p.batchID,
 		})
@@ -99,13 +117,65 @@ func (p *Pipeline) runSource(ctx context.Context, run sourceRun) SourceReport {
 	}
 	sr.Stored = len(events)
 
-	if !sr.Cancelled {
-		_ = store.SaveBatchStats(ctx, db, store.BatchStats{
-			Source: s.ID(), Discovered: sr.Discovered, Parsed: sr.Parsed,
-			Stored: sr.Stored, BatchID: p.batchID,
-		})
-	}
+	_ = store.SaveBatchStats(writeCtx, db, store.BatchStats{
+		Source: s.ID(), Discovered: sr.Discovered, Parsed: sr.Parsed,
+		Stored: sr.Stored, BatchID: p.batchID,
+	})
 	return sr
+}
+
+func (p *Pipeline) processRefs(ctx context.Context, s sources.Source, f *fetch.Fetcher, refs []sources.Ref, now string) ([]refResult, bool) {
+	results := make([]refResult, len(refs))
+	if len(refs) == 0 {
+		return results, ctx.Err() != nil
+	}
+
+	workers := p.detailWorkers
+	if workers < 1 {
+		workers = 1
+	}
+	if workers > len(refs) {
+		workers = len(refs)
+	}
+
+	jobs := make(chan int)
+	var wg sync.WaitGroup
+	wg.Add(workers)
+	for range workers {
+		go func() {
+			defer wg.Done()
+			for idx := range jobs {
+				ev, stage, err := p.processRef(ctx, s, f, refs[idx], now)
+				results[idx] = refResult{
+					event:   ev,
+					stage:   stage,
+					err:     err,
+					started: true,
+				}
+			}
+		}()
+	}
+
+	cancelled := false
+queueRefs:
+	for i := range refs {
+		if ctx.Err() != nil {
+			cancelled = true
+			break
+		}
+		select {
+		case jobs <- i:
+		case <-ctx.Done():
+			cancelled = true
+			break queueRefs
+		}
+	}
+	close(jobs)
+	wg.Wait()
+	if ctx.Err() != nil {
+		cancelled = true
+	}
+	return results, cancelled
 }
 
 func (p *Pipeline) processRef(ctx context.Context, s sources.Source, f *fetch.Fetcher, ref sources.Ref, now string) (ev *model.Event, stage string, err error) {

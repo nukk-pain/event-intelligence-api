@@ -67,6 +67,7 @@ type Pipeline struct {
 	maxDiscover int
 	// sourceConcurrency caps how many independent sources can run at once.
 	sourceConcurrency int
+	detailWorkers     int
 	// now returns the batch verification timestamp (ISO8601). Overridable in
 	// tests for determinism; defaults to time.Now in RFC3339.
 	now func() string
@@ -78,6 +79,7 @@ func New(batchID string) *Pipeline {
 		batchID:           batchID,
 		breaker:           DefaultBreaker(),
 		sourceConcurrency: 1,
+		detailWorkers:     1,
 		now:               func() string { return time.Now().UTC().Format(time.RFC3339) },
 	}
 }
@@ -90,6 +92,15 @@ func (p *Pipeline) WithMaxDiscover(n int) *Pipeline { p.maxDiscover = n; return 
 
 // WithClock overrides the batch timestamp source (tests).
 func (p *Pipeline) WithClock(now func() string) *Pipeline { p.now = now; return p }
+
+// WithDetailWorkers caps detail refs processed per source. Non-positive values
+// keep the current setting.
+func (p *Pipeline) WithDetailWorkers(n int) *Pipeline {
+	if n > 0 {
+		p.detailWorkers = n
+	}
+	return p
+}
 
 // BatchID returns the batch identifier this pipeline stamps onto change_log /
 // ingest_error / fetch_anomaly rows.
