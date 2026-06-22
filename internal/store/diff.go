@@ -124,11 +124,11 @@ func ApplyBatch(ctx context.Context, db *sql.DB, events []model.Event, batchID s
 
 		case newHash == prevHash:
 			// No semantic change. Settle update_state to "unchanged" and refresh
-			// ONLY last_checked_at, leaving updated_at (and thus the
-			// (updated_at,event_id) change-feed cursor) untouched. Do not
+			// last_checked_at plus generated summary, leaving updated_at (and thus
+			// the (updated_at,event_id) change-feed cursor) untouched. Do not
 			// re-upsert (that would bump updated_at and rewrite content_hash).
 			// Re-running an already-"unchanged" event is then a true fixed point.
-			if err := markUnchanged(ctx, db, e.EventID, e.LastCheckedAt); err != nil {
+			if err := markUnchanged(ctx, db, e.EventID, e.LastCheckedAt, e.Summary); err != nil {
 				return fmt.Errorf("mark unchanged %s: %w", e.EventID, err)
 			}
 
@@ -162,20 +162,21 @@ func changeTimestamp(e model.Event) string {
 	return e.UpdatedAt
 }
 
-// markUnchanged settles update_state to "unchanged" and advances last_checked_at,
-// deliberately NOT touching updated_at or content_hash, so a no-op run does not
-// reorder the (updated_at,event_id) change-feed cursor nor perturb the hash. If
-// lastChecked is empty, last_checked_at is left as-is but update_state still
-// settles to "unchanged".
-func markUnchanged(ctx context.Context, db *sql.DB, eventID, lastChecked string) error {
+// markUnchanged settles update_state to "unchanged" and refreshes freshness plus
+// generated summary, deliberately NOT touching updated_at or content_hash, so a
+// no-op run does not reorder the (updated_at,event_id) change-feed cursor nor
+// perturb the hash. If lastChecked is empty, last_checked_at is left as-is but
+// update_state still settles to "unchanged".
+func markUnchanged(ctx context.Context, db *sql.DB, eventID, lastChecked string, summary *string) error {
 	if lastChecked == "" {
 		_, err := db.ExecContext(ctx,
-			`UPDATE events SET update_state='unchanged' WHERE event_id=?`, eventID)
+			`UPDATE events SET update_state='unchanged', summary=? WHERE event_id=?`,
+			ptrArg(summary), eventID)
 		return err
 	}
 	_, err := db.ExecContext(ctx,
-		`UPDATE events SET update_state='unchanged', last_checked_at=? WHERE event_id=?`,
-		lastChecked, eventID)
+		`UPDATE events SET update_state='unchanged', last_checked_at=?, summary=? WHERE event_id=?`,
+		lastChecked, ptrArg(summary), eventID)
 	return err
 }
 

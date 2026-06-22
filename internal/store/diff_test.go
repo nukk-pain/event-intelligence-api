@@ -322,8 +322,8 @@ func TestDiffSourceKeyPipeCollision(t *testing.T) {
 
 func rowSnapshot(t *testing.T, db *sql.DB, id string) map[string]sql.NullString {
 	t.Helper()
-	cols := []string{"status", "update_state", "last_checked_at", "content_hash", "updated_at", "name"}
-	row := db.QueryRow(`SELECT status, update_state, last_checked_at, content_hash, updated_at, name FROM events WHERE event_id=?`, id)
+	cols := []string{"status", "update_state", "last_checked_at", "content_hash", "updated_at", "name", "summary"}
+	row := db.QueryRow(`SELECT status, update_state, last_checked_at, content_hash, updated_at, name, summary FROM events WHERE event_id=?`, id)
 	vals := make([]sql.NullString, len(cols))
 	ptrs := make([]any, len(cols))
 	for i := range vals {
@@ -404,6 +404,44 @@ func TestApplyBatchIdempotentNoOp(t *testing.T) {
 	// last_checked_at SHOULD advance (freshness) even on no-op.
 	if after["last_checked_at"].String != "2026-06-22T11:00:00Z" {
 		t.Fatalf("last_checked_at = %q, want advanced to 2026-06-22T11:00:00Z", after["last_checked_at"].String)
+	}
+}
+
+func TestApplyBatchBackfillsSummaryOnUnchangedEvent(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+
+	// Given
+	e := newEvent()
+	if err := store.ApplyBatch(ctx, db, []model.Event{e}, "batch-001"); err != nil {
+		t.Fatalf("ApplyBatch run1: %v", err)
+	}
+	if _, err := db.Exec(`UPDATE events SET summary=NULL WHERE event_id=?`, e.EventID); err != nil {
+		t.Fatalf("clear summary: %v", err)
+	}
+	before := rowSnapshot(t, db, e.EventID)
+
+	// When
+	e2 := newEvent()
+	e2.Summary = strptr("AI EXPO KOREA — 2026-05-12~2026-05-14 @ COEX")
+	e2.LastCheckedAt = "2026-06-22T11:00:00Z"
+	if err := store.ApplyBatch(ctx, db, []model.Event{e2}, "batch-002"); err != nil {
+		t.Fatalf("ApplyBatch run2: %v", err)
+	}
+
+	// Then
+	after := rowSnapshot(t, db, e.EventID)
+	if !after["summary"].Valid || after["summary"].String != *e2.Summary {
+		t.Fatalf("summary = %q valid=%v, want %q", after["summary"].String, after["summary"].Valid, *e2.Summary)
+	}
+	if after["updated_at"].String != before["updated_at"].String {
+		t.Fatalf("updated_at changed on summary backfill: %q -> %q", before["updated_at"].String, after["updated_at"].String)
+	}
+	if after["content_hash"].String != before["content_hash"].String {
+		t.Fatalf("content_hash changed on summary backfill: %q -> %q", before["content_hash"].String, after["content_hash"].String)
+	}
+	if countChanges(t, db, e.EventID) != 0 {
+		t.Fatalf("summary backfill produced %d change rows, want 0", countChanges(t, db, e.EventID))
 	}
 }
 
