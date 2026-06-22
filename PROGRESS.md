@@ -153,6 +153,16 @@ stable and deployment-ready.
   and `/api/v1/events`; public HTML no longer contains the removed copy or
   `site-desc`; public Chrome/Selenium verified subtitle element count=0,
   default `31개 주요 행사`, and no 375/1280px horizontal overflow.
+- KINTEX lookahead verification (2026-06-22): removed the homepage title accent
+  dot and expanded KINTEX discovery to request `searchStartDt`, `searchEndDt`,
+  and every advertised `pageIndex` through the next 365 days. `go test ./...`,
+  `go vet ./...`, and `go build ./cmd/eventsintel` pass. Local live ingest with
+  `EVENTSINTEL_MAX_DISCOVER=80` discovered KINTEX raw=35, stored=35, with future
+  dates from `2026-06-25` through `2026-11-27`; the public-style API query for
+  `venue=kintex&since=2026-06-22&before=2027-06-22&limit=100` returned 35 rows.
+  Playwright screenshots at 1280x900 and 375x812 verified the title renders as
+  `COEX·KINTEX 행사 모아보기` without a trailing dot and default cards remain
+  readable with no horizontal overflow.
 
 ## Validation Notes
 

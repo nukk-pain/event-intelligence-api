@@ -117,6 +117,8 @@ func TestRootIndexHTMLUsesHumanFriendlyCopy(t *testing.T) {
 		"데이터 항목",
 		"지난 행사",
 		"전체 기간",
+		"accent-dot",
+		"COEX·KINTEX 행사 모아보기<span",
 	} {
 		if strings.Contains(body, slop) {
 			t.Fatalf("root HTML still contains developer/AI slop copy %q", slop)

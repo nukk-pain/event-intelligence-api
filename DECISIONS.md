@@ -138,3 +138,30 @@ upcoming COEX/KINTEX venue schedule.
   policy.
 - Developer/API links are moved out of the header. Only essential integration
   links remain in the footer.
+
+---
+
+## Decision: Use One-Year KINTEX Listing Discovery
+
+- Status: accepted
+- Date: 2026-06-22
+- Decision Maker: smpain
+
+### Context
+
+KINTEX `list.do` defaults to roughly one month of events and paginates the
+result. Reading only the first default page caused the service to miss future
+events that users expected to see, including August 2026 schedules.
+
+### Decision
+
+KINTEX discovery requests a rolling 365-day date range from the current Korean
+date and follows every advertised listing page within that range.
+
+### Consequences
+
+- KINTEX event coverage increases from the short default page to the full
+  upcoming public listing range.
+- Discovery still uses the browser-free `list.do` HTML and durable `seq` detail
+  IDs.
+- The date range moves daily with the KST clock.

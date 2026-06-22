@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/smpain/event-intelligence-api/internal/fetch"
 	"github.com/smpain/event-intelligence-api/internal/sources"
@@ -203,5 +204,67 @@ func TestDiscover200ParsesListing(t *testing.T) {
 	}
 	if len(refs) != 9 {
 		t.Fatalf("Discover on 200 returned %d refs, want 9: %+v", len(refs), refs)
+	}
+}
+
+func TestDiscoverUsesOneYearRangeAndFollowsPages(t *testing.T) {
+	var requested []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/robots.txt" {
+			_, _ = w.Write([]byte("User-agent: *\nAllow: /\n"))
+			return
+		}
+		requested = append(requested, r.URL.RawQuery)
+		if r.URL.Query().Get("searchStartDt") != "2026-06-22" {
+			t.Errorf("searchStartDt = %q, want 2026-06-22", r.URL.Query().Get("searchStartDt"))
+		}
+		if r.URL.Query().Get("searchEndDt") != "2027-06-22" {
+			t.Errorf("searchEndDt = %q, want 2027-06-22", r.URL.Query().Get("searchEndDt"))
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=UTF-8")
+		switch r.URL.Query().Get("pageIndex") {
+		case "1":
+			_, _ = w.Write([]byte(`<a href="javascript:fnView('./view.do', 111);">a</a><a href="javascript:fnPaging('2')">2</a>`))
+		case "2":
+			_, _ = w.Write([]byte(`<a href="javascript:fnView('./view.do', 222);">b</a><a href="javascript:fnPaging('1')">1</a>`))
+		default:
+			t.Fatalf("unexpected pageIndex %q", r.URL.Query().Get("pageIndex"))
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	s := New(
+		WithListURL(srv.URL),
+		WithClock(func() time.Time { return time.Date(2026, 6, 22, 9, 0, 0, 0, time.UTC) }),
+	)
+	f := testFetcher(t, srv)
+
+	refs, err := s.Discover(context.Background(), f)
+	if err != nil {
+		t.Fatalf("Discover: %v", err)
+	}
+	if len(requested) != 2 {
+		t.Fatalf("got %d page requests, want 2: %v", len(requested), requested)
+	}
+	if len(refs) != 2 {
+		t.Fatalf("got %d refs, want 2: %+v", len(refs), refs)
+	}
+	if refs[0].EventID != "kintex-111" || refs[1].EventID != "kintex-222" {
+		t.Fatalf("refs = %+v, want page-order kintex-111 then kintex-222", refs)
+	}
+}
+
+func TestParseListingPageNumbers(t *testing.T) {
+	body := []byte(`<a href="javascript:fnPaging('3')">3</a><a href="javascript:fnPaging('2')">2</a><a href="javascript:fnPaging('3')">3</a>`)
+	got := parseListingPageNumbers(body)
+	want := []int{2, 3}
+	if len(got) != len(want) {
+		t.Fatalf("pages = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("pages = %v, want %v", got, want)
+		}
 	}
 }
