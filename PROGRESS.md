@@ -163,6 +163,18 @@ stable and deployment-ready.
   Playwright screenshots at 1280x900 and 375x812 verified the title renders as
   `COEX·KINTEX 행사 모아보기` without a trailing dot and default cards remain
   readable with no horizontal overflow.
+- KINTEX lookahead deployment verification (2026-06-22): committed
+  `07eb976 Expand KINTEX future discovery`; deployed linux/amd64 binary SHA256
+  `7e4f44fc6450918ca11ead825f66358232fe5a00ddf2d1ca8d7aaab53deafbed`;
+  `eventsintel-api` restarted active on `developer-vps` at
+  `2026-06-22 00:49:14 UTC`. Public smoke returned 200 for `/`, `/healthz`,
+  `/llms.txt`, `/api/v1`, `/api/v1/schema`, `/api/v1/openapi.yaml`, and
+  `/api/v1/events`; public HTML has `COEX·KINTEX 행사 모아보기` without
+  `accent-dot`. Production ingest completed at `2026-06-22 01:04:54 UTC` with
+  KINTEX raw=35/stored=35 and COEX raw=2090/stored=400. Public API returned 35
+  KINTEX rows for `since=2026-06-22&before=2027-06-22`, spanning `2026-06-25`
+  to `2026-11-27`; public Playwright verified loaded 1280x900 and 375x812
+  screens.
 
 ## Validation Notes
 
