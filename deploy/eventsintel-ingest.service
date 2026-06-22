@@ -11,6 +11,8 @@ ExecStart=/srv/developer/events-intel/eventsintel ingest
 Environment=EVENTSINTEL_DB_PATH=/srv/developer/events-intel/data/events.db
 Environment=EVENTSINTEL_LOCK_PATH=/srv/developer/events-intel/data/ingest.lock
 Environment=EVENTSINTEL_RATE_PER_MIN=30
+Environment=EVENTSINTEL_SOURCE_CONCURRENCY=2
+Environment=EVENTSINTEL_DETAIL_WORKERS=4
 Environment=EVENTSINTEL_INGEST_DEADLINE=20m
 # The binary also takes a flock single-flight lock; the timer + lock together
 # guarantee no overlapping ingest runs.

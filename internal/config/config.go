@@ -38,6 +38,12 @@ type Config struct {
 	// RateLimitPerMinute caps outbound fetches per minute per host.
 	RateLimitPerMinute int `json:"rate_limit_per_minute"`
 
+	// SourceConcurrency caps how many sources run at once.
+	SourceConcurrency int `json:"source_concurrency"`
+
+	// DetailWorkers caps per-source detail fetch/parse workers.
+	DetailWorkers int `json:"detail_workers"`
+
 	// DBPath is the SQLite file path.
 	DBPath string `json:"db_path"`
 
@@ -66,6 +72,8 @@ func Default() Config {
 		IngestDeadline:       30 * time.Minute,
 		UserAgent:            "eventsintel/0.1 (+https://events.nukk.net)",
 		RateLimitPerMinute:   30,
+		SourceConcurrency:    2,
+		DetailWorkers:        4,
 		DBPath:               "eventsintel.db",
 		LockPath:             "eventsintel.lock",
 		HTTPAddr:             ":8080",
@@ -94,6 +102,16 @@ func FromEnv() Config {
 	if v := os.Getenv("EVENTSINTEL_RATE_PER_MIN"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			c.RateLimitPerMinute = n
+		}
+	}
+	if v := os.Getenv("EVENTSINTEL_SOURCE_CONCURRENCY"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			c.SourceConcurrency = n
+		}
+	}
+	if v := os.Getenv("EVENTSINTEL_DETAIL_WORKERS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			c.DetailWorkers = n
 		}
 	}
 	if v := os.Getenv("EVENTSINTEL_INGEST_DEADLINE"); v != "" {
