@@ -278,6 +278,21 @@ stable and deployment-ready.
   `/api/v1/openapi.yaml`, `/api/v1/events`, and `/assets/app.js`. Public HTML
   and production Chrome/CDP verified both browser title and visible H1 are
   `행사 모아보기`, with no mobile horizontal overflow.
+- Event summary persistence and backfill deployment verification (2026-06-22):
+  committed `fe51f48 fix(store): persist event summaries`,
+  `81e9878 fix(store): backfill summaries for unchanged events`, and
+  `7f357f6 fix(store): backfill existing event summaries`. Deployed
+  linux/amd64 binary SHA256
+  `1c90e050738e7cdd6e83ff3281e30ff29d6f82f738f97e684685fc78414058a8` to
+  `developer-vps`; remote `/srv/developer/events-intel/eventsintel` matched the
+  same SHA and `eventsintel-api` restarted active at
+  `2026-06-22 08:35:56 UTC`. Manual production ingest completed at
+  `2026-06-22 08:50:04 UTC` with COEX discovered/stored `400/400` and KINTEX
+  discovered/stored `38/38`. A copied production SQLite snapshot verified
+  `531/531` rows have non-null `summary`; public
+  `/api/v1/events?limit=20&since=2026-06-22` returned 20 rows and 20 non-null
+  summaries. Public smoke returned 200 for `/`, `/healthz`, `/llms.txt`,
+  `/api/v1`, `/api/v1/schema`, `/api/v1/openapi.yaml`, and `/api/v1/events`.
 
 ## Validation Notes
 
@@ -293,7 +308,7 @@ No product validation has been run yet. Current evidence level is Low.
 
 ## Next Action
 
-Continue source coverage and UI review with the homepage title-only header.
+Continue source coverage and event-summary quality review for COEX/KINTEX rows.
 
 ## Decision Needed
 
