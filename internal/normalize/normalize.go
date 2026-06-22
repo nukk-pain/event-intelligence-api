@@ -1,7 +1,7 @@
 // Package normalize converts a raw sources.ParsedEvent into the canonical v0.1
 // model.Event: it parses dates to ISO, classifies against the taxonomy SSOT,
-// records every null/unknown field in missing_fields, builds a templated
-// summary from facts only (never copied from a source body), validates stored
+// records every null/unknown field in missing_fields, accepts a short
+// source-derived summary when the venue detail page provides one, validates stored
 // URLs, and enforces the v0.1 schema validation rules (1-5). A record that
 // fails validation is rejected with an error and is NOT persisted, so the
 // caller preserves any existing good row.
@@ -93,8 +93,9 @@ func normalizeDates(startRaw, endRaw *string, mf *missingFields) (start, end *st
 // are Korean). It is a deterministic fact about the source, not a guess.
 const country = "KR"
 
-// summaryMaxRunes caps the templated summary length (schema convention: <=240
-// chars). Measured in runes so multi-byte Korean text is not truncated mid-glyph.
+// summaryMaxRunes caps the source-derived summary length (schema convention:
+// <=240 chars). Measured in runes so multi-byte Korean text is not truncated
+// mid-glyph.
 const summaryMaxRunes = 240
 
 // sourceType is the provenance type for a venue detail page (schema enum:
@@ -125,8 +126,8 @@ var venueIDForSource = map[string]string{
 //     fabricated or reordered.
 //   - Every null field and every unknown actions.* key is recorded in
 //     missing_fields (honesty rule).
-//   - summary is a template over factual fields only, <=240 chars; null +
-//     missing_fields when not producible. NEVER copied from a source body.
+//   - summary is source-derived venue detail text, <=240 chars; null +
+//     missing_fields when absent. It is not fabricated from date/venue facts.
 //   - Stored URLs must be http(s); javascript:/data:/file: etc. are dropped.
 //   - The result is validated against schema rules 1-5; on failure an error is
 //     returned and nothing is persisted.
@@ -227,8 +228,8 @@ func Normalize(p *sources.ParsedEvent, now string) (*model.Event, error) {
 	// --- provenance: one venue source from the detail URL ---
 	e.Sources = buildSources(p, now)
 
-	// --- summary (template from facts only; never copied from body) ---
-	if sum := buildSummary(e, p); sum != "" {
+	// --- summary (source-derived detail text only) ---
+	if sum := buildSummary(p); sum != "" {
 		e.Summary = &sum
 	} else {
 		e.Summary = nil
@@ -302,39 +303,14 @@ func buildSources(p *sources.ParsedEvent, now string) []model.Source {
 	}}
 }
 
-// buildSummary renders the factual template "{name} — {start}~{end} @ {venue},
-// 주최 {organizer}", omitting parts whose facts are absent, and truncates to
-// summaryMaxRunes. It returns "" when no name is available (then the caller
-// records summary in missing_fields). It NEVER reads any source body text.
-func buildSummary(e *model.Event, p *sources.ParsedEvent) string {
-	name := e.Name
-	if name == "" {
+// buildSummary returns short descriptive content copied from a venue detail
+// field such as "행사 소개" or "행사내용". It never fabricates a line from
+// name/date/venue facts; absent source text yields "".
+func buildSummary(p *sources.ParsedEvent) string {
+	if p == nil {
 		return ""
 	}
-	var b strings.Builder
-	b.WriteString(name)
-
-	if e.StartDate != nil && e.EndDate != nil {
-		b.WriteString(" — ")
-		b.WriteString(*e.StartDate)
-		b.WriteString("~")
-		b.WriteString(*e.EndDate)
-	} else if e.StartDate != nil {
-		b.WriteString(" — ")
-		b.WriteString(*e.StartDate)
-	}
-
-	if e.Venue != nil && e.Venue.Name != "" {
-		b.WriteString(" @ ")
-		b.WriteString(e.Venue.Name)
-	}
-
-	if org := derefTrim(p.Organizer); org != "" {
-		b.WriteString(", 주최 ")
-		b.WriteString(org)
-	}
-
-	return truncateRunes(b.String(), summaryMaxRunes)
+	return truncateRunes(strings.Join(strings.Fields(derefTrim(p.SummaryText)), " "), summaryMaxRunes)
 }
 
 // truncateRunes caps s to max runes without splitting a multi-byte glyph.

@@ -65,6 +65,7 @@ func TestParseGoldenAIFesta(t *testing.T) {
 		Organizer:   strptr("과학기술정보통신부"),
 		Host:        strptr("한국인공지능•소프트웨어산업협회, AI페스타 조직위원회"),
 		HomepageURL: strptr("https://www.aifesta.kr/"),
+		SummaryText: strptr("AI Festa는 과학기술정보통신부 인공지능주간 공식 행사입니다.인공지능 혁신 생태계의 최접점에 위치한 국내 최대 규모 '비즈니스 플랫폼’ 으로, 'AI 핵심 리더'들과 함께 AI 기술의 실제 비즈니스 적용 사례를 공유합니다."),
 	}
 
 	if got.SourceID != want.SourceID {
@@ -103,6 +104,9 @@ func TestParseGoldenAIFesta(t *testing.T) {
 	if derefOr(got.HomepageURL) != derefOr(want.HomepageURL) {
 		t.Errorf("HomepageURL = %q, want %q", derefOr(got.HomepageURL), derefOr(want.HomepageURL))
 	}
+	if derefOr(got.SummaryText) != derefOr(want.SummaryText) {
+		t.Errorf("SummaryText = %q, want %q", derefOr(got.SummaryText), derefOr(want.SummaryText))
+	}
 
 	// ClassifyText must carry title + organizer/host so the classify stage stays
 	// source-agnostic. Assert it is non-empty and contains the title + organizer.
@@ -114,6 +118,9 @@ func TestParseGoldenAIFesta(t *testing.T) {
 	}
 	if !contains(got.ClassifyText, "과학기술정보통신부") {
 		t.Errorf("ClassifyText %q does not contain organizer", got.ClassifyText)
+	}
+	if !contains(got.ClassifyText, "AI 기술의 실제 비즈니스 적용 사례") {
+		t.Errorf("ClassifyText %q does not contain source summary text", got.ClassifyText)
 	}
 
 	// RetrievedAt is stamped by the pipeline/caller (the fetch.Result carries no

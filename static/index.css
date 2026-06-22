@@ -144,15 +144,6 @@ main {
 }
 .card-venue { font-size: 13px; color: var(--ink-2); }
 .card-venue .hall { color: var(--ink-3); }
-.card-summary {
-  font-size: 13px;
-  color: var(--ink-2);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  margin: 0;
-}
 .card-badges {
   display: flex;
   flex-wrap: wrap;

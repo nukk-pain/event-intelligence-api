@@ -46,13 +46,11 @@
   }
 
   function renderCard(e) {
-    var summary = e.summary ? '<p class="card-summary">' + ui.escapeHtml(e.summary) + '</p>' : "";
     return (
       '<button class="card" type="button" data-id="' + ui.escapeHtml(e.event_id) + '" aria-label="' + ui.escapeHtml(e.name) + ' 상세 보기">' +
         '<div class="card-date num">' + ui.escapeHtml(fmtDateRange(e.start_date, e.end_date)) + '</div>' +
         '<div class="card-name">' + ui.escapeHtml(e.name) + '</div>' +
         (venueLine(e) ? '<div class="card-venue">' + venueLine(e) + '</div>' : "") +
-        summary +
         '<div class="card-badges">' + ui.badgeHTML(e) + '</div>' +
       '</button>'
     );
@@ -65,8 +63,7 @@
     if (!state.search) return state.events;
     var q = state.search.toLowerCase();
     return state.events.filter(function(e) {
-      return (e.name || "").toLowerCase().indexOf(q) !== -1 ||
-        (e.summary || "").toLowerCase().indexOf(q) !== -1;
+      return (e.name || "").toLowerCase().indexOf(q) !== -1;
     });
   }
 

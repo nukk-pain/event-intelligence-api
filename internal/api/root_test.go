@@ -129,7 +129,7 @@ func TestRootIndexHTMLUsesHumanFriendlyCopy(t *testing.T) {
 		"행사 모아보기",
 		"주요 분야",
 		"모든 행사 보기",
-		"행사명이나 설명 검색",
+		"행사명 검색",
 		"연동 안내",
 		"요약 문서",
 		"더 보기",

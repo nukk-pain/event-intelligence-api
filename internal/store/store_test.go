@@ -155,9 +155,9 @@ CREATE TABLE events (
 	}
 }
 
-func TestMigrateBackfillsNullSummaryForExistingEvents(t *testing.T) {
+func TestMigrateClearsTemplateSummaryForExistingEvents(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "backfill.db")
+	path := filepath.Join(dir, "clear-template-summary.db")
 
 	db, err := store.OpenWrite(path)
 	if err != nil {
@@ -181,8 +181,9 @@ CREATE TABLE events (
 		t.Fatalf("create existing events table: %v", err)
 	}
 	if _, err := db.Exec(
-		`INSERT INTO events (event_id, name, start_date, end_date, venue, summary) VALUES (?, ?, ?, ?, ?, NULL)`,
+		`INSERT INTO events (event_id, name, start_date, end_date, venue, summary) VALUES (?, ?, ?, ?, ?, ?)`,
 		"coex-old", "Old Event", "2026-06-22", "2026-06-23", `{"name":"COEX"}`,
+		"Old Event — 2026-06-22~2026-06-23 @ COEX",
 	); err != nil {
 		t.Fatalf("seed old event: %v", err)
 	}
@@ -194,12 +195,12 @@ CREATE TABLE events (
 	if err != nil {
 		t.Fatalf("Migrate: %v", err)
 	}
-	var summary string
+	var summary sql.NullString
 	if err := db.QueryRow(`SELECT summary FROM events WHERE event_id='coex-old'`).Scan(&summary); err != nil {
 		t.Fatalf("read summary: %v", err)
 	}
-	if summary != "Old Event — 2026-06-22~2026-06-23 @ COEX" {
-		t.Fatalf("summary = %q", summary)
+	if summary.Valid {
+		t.Fatalf("summary = %q, want NULL for generated template", summary.String)
 	}
 }
 
@@ -286,7 +287,7 @@ func TestUpsertEventInsertsAndUpdates(t *testing.T) {
 	ctx := context.Background()
 
 	e := newEvent()
-	e.Summary = strptr("AI EXPO KOREA — 2026-05-12~2026-05-14 @ COEX")
+	e.Summary = strptr("인공지능 산업의 최신 기술과 실제 비즈니스 적용 사례를 공유하는 전문 전시회입니다.")
 	snap := &model.RawSnapshot{
 		EventID:     e.EventID,
 		SourceID:    strptr("coex"),
@@ -346,7 +347,7 @@ func TestUpsertEventPersistsSummary(t *testing.T) {
 
 	// Given
 	e := newEvent()
-	e.Summary = strptr("AI EXPO KOREA — 2026-05-12~2026-05-14 @ COEX")
+	e.Summary = strptr("인공지능 산업의 최신 기술과 실제 비즈니스 적용 사례를 공유하는 전문 전시회입니다.")
 
 	// When
 	if err := store.UpsertEvent(ctx, db, e, nil, nil); err != nil {

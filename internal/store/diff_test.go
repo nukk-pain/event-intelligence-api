@@ -423,7 +423,7 @@ func TestApplyBatchBackfillsSummaryOnUnchangedEvent(t *testing.T) {
 
 	// When
 	e2 := newEvent()
-	e2.Summary = strptr("AI EXPO KOREA — 2026-05-12~2026-05-14 @ COEX")
+	e2.Summary = strptr("인공지능 산업의 최신 기술과 실제 비즈니스 적용 사례를 공유하는 전문 전시회입니다.")
 	e2.LastCheckedAt = "2026-06-22T11:00:00Z"
 	if err := store.ApplyBatch(ctx, db, []model.Event{e2}, "batch-002"); err != nil {
 		t.Fatalf("ApplyBatch run2: %v", err)

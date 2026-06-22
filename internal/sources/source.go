@@ -42,6 +42,7 @@ type ParsedEvent struct {
 	Host      *string // 주관
 
 	HomepageURL *string // event homepage link, if present
+	SummaryText *string
 
 	// ClassifyText is title + organizer concatenated, fed to the keyword
 	// classifier. Adapters build this so the classify stage stays source-agnostic.

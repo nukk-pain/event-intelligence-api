@@ -5,6 +5,6 @@ captured: 2026-06-21
 purpose: Golden fixture for internal/normalize. Parsed by the COEX adapter into a
   sources.ParsedEvent, then normalized to a model.Event; the test asserts the
   full normalized struct (dates parsed to ISO, classification, missing_fields,
-  templated summary). Chosen because it is a real industry event (digital-health)
+  summary absence). Chosen because it is a real industry event (digital-health)
   with a complete When/Where/주최/homepage set and absent action fields, so it
   exercises both the happy path and the actions.* missing_fields honesty rule.

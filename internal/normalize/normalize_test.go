@@ -34,6 +34,7 @@ func validParsed() *sources.ParsedEvent {
 		City:         ptr("서울"),
 		Organizer:    ptr("AI산업협회"),
 		HomepageURL:  ptr("https://aiexpo.example.org"),
+		SummaryText:  ptr("인공지능 산업의 최신 기술과 실제 비즈니스 적용 사례를 공유하는 전문 전시회입니다."),
 		ClassifyText: "AI EXPO KOREA 2026 AI산업협회 인공지능",
 		RetrievedAt:  "2026-06-21T00:00:00Z",
 	}
@@ -129,17 +130,8 @@ func TestNormalize_GoldenCOEX(t *testing.T) {
 		t.Errorf("last_checked_at = %q, want %q", e.LastCheckedAt, now)
 	}
 
-	// Summary is a template built from facts, <=240 chars, NOT copied from body.
-	if e.Summary == nil {
-		t.Fatal("summary is nil; should be producible from facts")
-	}
-	if len([]rune(*e.Summary)) > 240 {
-		t.Errorf("summary > 240 chars: %q", *e.Summary)
-	}
-	for _, want := range []string{"글로벌헬스케어&메디컬코리아 2011", "2011-04-12", "2011-04-14", "코엑스", "한국보건산업진흥원"} {
-		if !strings.Contains(*e.Summary, want) {
-			t.Errorf("summary missing %q: %q", want, *e.Summary)
-		}
+	if e.Summary != nil {
+		t.Fatalf("summary = %q, want nil because the fixture has no source description field", *e.Summary)
 	}
 
 	// Sources: exactly one venue source with the 4 required sub-fields, and
@@ -172,9 +164,8 @@ func TestNormalize_GoldenCOEX(t *testing.T) {
 			t.Errorf("missing_fields should contain %q; got %v", want, e.MissingFields)
 		}
 	}
-	// Producible summary => summary NOT in missing_fields.
-	if contains(e.MissingFields, "summary") {
-		t.Errorf("summary was produced; must not be in missing_fields: %v", e.MissingFields)
+	if !contains(e.MissingFields, "summary") {
+		t.Errorf("source summary absent; missing_fields must contain summary: %v", e.MissingFields)
 	}
 
 	// The normalized record must pass the v0.1 validator (rules 1-5).
@@ -204,6 +195,43 @@ func TestNormalize_ActionsAllMissing(t *testing.T) {
 	// All action booleans default false (unknown).
 	if e.Actions != (model.Actions{}) {
 		t.Errorf("actions should all be false default, got %+v", e.Actions)
+	}
+}
+
+func TestNormalize_UsesOnlySourceSummaryText(t *testing.T) {
+	e, err := Normalize(validParsed(), now)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	if e.Summary == nil {
+		t.Fatal("summary is nil; want source summary text")
+	}
+	if got, want := *e.Summary, "인공지능 산업의 최신 기술과 실제 비즈니스 적용 사례를 공유하는 전문 전시회입니다."; got != want {
+		t.Fatalf("summary = %q, want %q", got, want)
+	}
+	for _, forbidden := range []string{"2026-05-01", "2026-05-03", " @ ", "주최"} {
+		if strings.Contains(*e.Summary, forbidden) {
+			t.Errorf("summary contains generated template part %q: %q", forbidden, *e.Summary)
+		}
+	}
+	if contains(e.MissingFields, "summary") {
+		t.Errorf("summary was produced; must not be in missing_fields: %v", e.MissingFields)
+	}
+}
+
+func TestNormalize_MissingSourceSummaryLeavesSummaryNull(t *testing.T) {
+	p := validParsed()
+	p.SummaryText = nil
+
+	e, err := Normalize(p, now)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	if e.Summary != nil {
+		t.Fatalf("summary = %q, want nil when source text is absent", *e.Summary)
+	}
+	if !contains(e.MissingFields, "summary") {
+		t.Fatalf("missing_fields = %v, want summary", e.MissingFields)
 	}
 }
 

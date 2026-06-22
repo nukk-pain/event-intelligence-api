@@ -92,6 +92,9 @@ func (s *Source) Parse(ctx context.Context, raw *fetch.Result) (*sources.ParsedE
 	if v := info["주관"]; v != "" {
 		pe.Host = ptr(v)
 	}
+	if v := summaryText(info); v != "" {
+		pe.SummaryText = ptr(v)
+	}
 
 	// Homepage: the official-site link carries the "url" class hook.
 	if href := strings.TrimSpace(doc.Find("a.EventDetailThumbLink-link.url").First().AttrOr("href", "")); href != "" {
@@ -178,6 +181,15 @@ func buildClassifyText(name string, info map[string]string) string {
 		}
 	}
 	return strings.Join(parts, " ")
+}
+
+func summaryText(info map[string]string) string {
+	for _, label := range []string{"행사 소개", "주요 프로그램", "전시품목"} {
+		if v := info[label]; v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 // firstText returns the trimmed text of the first node matching sel, or "".

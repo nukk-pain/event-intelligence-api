@@ -113,7 +113,7 @@ All spacing derives from a base of **4px**.
 
 ### Event Card
 
-- **Structure**: button card with date, event name, venue, optional summary, chips.
+- **Structure**: button card with date, event name, venue, chips.
 - **Variants**: category/status/cost chip combinations.
 - **Spacing**: `16px 18px 14px`, `9px` internal gap.
 - **States**: default, hover, focus-visible.

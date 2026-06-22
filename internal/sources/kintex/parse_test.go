@@ -60,13 +60,13 @@ func TestParseGolden(t *testing.T) {
 	// 주관사(host) is empty on this page → nil, not "".
 	gotWant(t, "Host", pe.Host, nil)
 	gotWant(t, "HomepageURL", pe.HomepageURL, strp("http://고양가구박람회.com"))
+	gotWant(t, "SummaryText", pe.SummaryText, strp("한 공간에서 브랜드별 가격·품질·디자인·서비스를 직접 비교·선택할 수 있어 합리적 소비 환경 조성 프리미엄 가구 전시를 통해 소비자에게 고품질 제품을 직접 체험할 수 있는 기회 제공 국내외 가구 트렌드와 신제품을 한자리에서 만나볼 수 있는 종합 정보 플랫폼 구현 가정·사무·주방·인테리어 등 다양한 품목의 전시로 폭넓은 볼거리와 정보 제공"))
 
 	if pe.RetrievedAt == "" {
 		t.Errorf("RetrievedAt is empty, want an RFC3339 timestamp")
 	}
 
-	// ClassifyText feeds the keyword classifier: name + organizer.
-	if want := "2026고양가구박람회 고양시가구협동조합, 경기도고양시 일산가구협동조합"; pe.ClassifyText != want {
+	if want := "2026고양가구박람회 고양시가구협동조합, 경기도고양시 일산가구협동조합 한 공간에서 브랜드별 가격·품질·디자인·서비스를 직접 비교·선택할 수 있어 합리적 소비 환경 조성 프리미엄 가구 전시를 통해 소비자에게 고품질 제품을 직접 체험할 수 있는 기회 제공 국내외 가구 트렌드와 신제품을 한자리에서 만나볼 수 있는 종합 정보 플랫폼 구현 가정·사무·주방·인테리어 등 다양한 품목의 전시로 폭넓은 볼거리와 정보 제공"; pe.ClassifyText != want {
 		t.Errorf("ClassifyText = %q, want %q", pe.ClassifyText, want)
 	}
 }

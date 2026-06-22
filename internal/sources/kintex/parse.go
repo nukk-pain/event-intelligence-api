@@ -79,19 +79,29 @@ func (s *Source) Parse(_ context.Context, raw *fetch.Result) (*sources.ParsedEve
 	})
 
 	// read-table: 주관사(host) and 홈페이지(homepage link).
+	details := map[string]string{}
 	doc.Find("div.read-table th[scope=row]").Each(func(_ int, th *goquery.Selection) {
 		td := th.Next()
-		switch squish(th.Text()) {
+		label := squish(th.Text())
+		value := squish(td.Text())
+		switch label {
 		case "주관사":
-			pe.Host = nilIfEmpty(squish(td.Text()))
+			pe.Host = nilIfEmpty(value)
 		case "홈페이지":
 			if href, ok := td.Find("a[href]").First().Attr("href"); ok {
 				pe.HomepageURL = nilIfEmpty(strings.TrimSpace(href))
 			}
+		case "행사내용", "행사목적", "행사품목":
+			if value != "" {
+				details[label] = value
+			}
 		}
 	})
+	if v := summaryText(details); v != "" {
+		pe.SummaryText = ptr(v)
+	}
 
-	pe.ClassifyText = strings.TrimSpace(pe.Name + " " + derefOr(pe.Organizer, ""))
+	pe.ClassifyText = strings.Join(nonEmpty(pe.Name, derefOr(pe.Organizer, ""), summaryText(details)), " ")
 
 	return pe, nil
 }
@@ -148,4 +158,23 @@ func derefOr(p *string, def string) string {
 		return def
 	}
 	return *p
+}
+
+func summaryText(details map[string]string) string {
+	for _, label := range []string{"행사내용", "행사목적", "행사품목"} {
+		if v := details[label]; v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+func nonEmpty(values ...string) []string {
+	out := make([]string, 0, len(values))
+	for _, v := range values {
+		if v = strings.TrimSpace(v); v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
 }
