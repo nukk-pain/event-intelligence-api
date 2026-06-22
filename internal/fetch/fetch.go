@@ -94,7 +94,6 @@ type CDPFetcher interface {
 // Fetcher performs rate-limited, SSRF-guarded HTTP GETs.
 type Fetcher struct {
 	client       *http.Client
-	limiter      *rate.Limiter
 	ua           string
 	timeout      time.Duration
 	maxBodyBytes int64
@@ -102,16 +101,21 @@ type Fetcher struct {
 	retryBackoff time.Duration
 	maxRedirects int
 
+	limiterMu sync.Mutex
+	perMinute int
+	limiters  map[string]*rate.Limiter
+
 	allowed      map[string]struct{} // host allowlist (lowercased)
 	allowLoopopt bool                // allow loopback IPs (tests only)
 
-	robotsTTL time.Duration
-	robotsMu  sync.Mutex
-	robots    map[string]*robotsCacheEntry
+	robotsTTL      time.Duration
+	robotsMu       sync.Mutex
+	robots         map[string]*robotsCacheEntry
+	robotsInflight map[string]*robotsInflight
 
 	// hostGateMu guards hostGate. Crawl-delay is enforced PER HOST so a slow
-	// venue never throttles the other; the shared limiter is the base outbound
-	// rate and is never mutated.
+	// venue never throttles the other; base request rate limiters are also
+	// host-scoped and are never mutated by Crawl-delay.
 	hostGateMu sync.Mutex
 	hostGate   map[string]*hostThrottle
 
@@ -138,7 +142,8 @@ func WithUserAgent(ua string) Option { return func(f *Fetcher) { f.ua = ua } }
 func WithPerMinute(n int) Option {
 	return func(f *Fetcher) {
 		if n > 0 {
-			f.limiter = rate.NewLimiter(rate.Every(time.Minute/time.Duration(n)), 1)
+			f.perMinute = n
+			f.limiters = map[string]*rate.Limiter{}
 		}
 	}
 }
@@ -182,7 +187,7 @@ func WithCDPFallback(c CDPFetcher) Option { return func(f *Fetcher) { f.cdp = c 
 func NewFetcher(opts ...Option) (*Fetcher, error) {
 	f := &Fetcher{
 		ua:           "eventsintel/0.1",
-		limiter:      rate.NewLimiter(rate.Every(time.Minute/time.Duration(defaultPerMinute)), 1),
+		perMinute:    defaultPerMinute,
 		timeout:      defaultTimeout,
 		maxBodyBytes: defaultMaxBodyBytes,
 		maxRetries:   defaultMaxRetries,
@@ -193,8 +198,10 @@ func NewFetcher(opts ...Option) (*Fetcher, error) {
 			"www.coex.co.kr": {},
 			"www.kintex.com": {},
 		},
-		robots:   map[string]*robotsCacheEntry{},
-		hostGate: map[string]*hostThrottle{},
+		limiters:       map[string]*rate.Limiter{},
+		robots:         map[string]*robotsCacheEntry{},
+		robotsInflight: map[string]*robotsInflight{},
+		hostGate:       map[string]*hostThrottle{},
 	}
 	for _, o := range opts {
 		o(f)
@@ -261,12 +268,19 @@ func NewFetcher(opts ...Option) (*Fetcher, error) {
 			// land on a Disallow path that the initial URL did not cover. The
 			// in-flight ctx travels on the redirected request (Go copies it from
 			// the prior request), so robots fetch/cache uses it.
-			allowed, _, err := f.robotsAllows(req.Context(), req.URL)
+			allowed, crawlDelay, err := f.robotsAllows(req.Context(), req.URL)
 			if err != nil {
 				return err
 			}
 			if !allowed {
 				return fmt.Errorf("%w: %s", ErrRobotsDisallowed, req.URL.Path)
+			}
+			f.recordCrawlDelay(req.URL.Hostname(), crawlDelay)
+			if err := f.waitHostCrawlDelay(req.Context(), req.URL.Hostname()); err != nil {
+				return err
+			}
+			if err := f.waitHostRateLimit(req.Context(), req.URL); err != nil {
+				return err
 			}
 			return nil
 		},
@@ -334,7 +348,7 @@ func (f *Fetcher) doWithRetry(ctx context.Context, u *url.URL, cond Conditional)
 			case <-time.After(backoff):
 			}
 		}
-		if err := f.limiter.Wait(ctx); err != nil {
+		if err := f.waitHostRateLimit(ctx, u); err != nil {
 			return nil, err
 		}
 		res, retryable, err := f.do(ctx, u, cond)
@@ -457,9 +471,30 @@ func toUTF8(body []byte, contentType string) ([]byte, error) {
 	return converted, nil
 }
 
+func (f *Fetcher) waitHostRateLimit(ctx context.Context, u *url.URL) error {
+	return f.limiterFor(u.Hostname()).Wait(ctx)
+}
+
+func (f *Fetcher) limiterFor(host string) *rate.Limiter {
+	key := strings.ToLower(host)
+	f.limiterMu.Lock()
+	defer f.limiterMu.Unlock()
+	limiter, ok := f.limiters[key]
+	if ok {
+		return limiter
+	}
+	perMinute := f.perMinute
+	if perMinute <= 0 {
+		perMinute = defaultPerMinute
+	}
+	limiter = rate.NewLimiter(rate.Every(time.Minute/time.Duration(perMinute)), 1)
+	f.limiters[key] = limiter
+	return limiter
+}
+
 // recordCrawlDelay stores (or refreshes) the effective Crawl-delay for host.
-// A non-positive delay clears any prior throttle for that host. The shared
-// limiter is never touched, so one host's Crawl-delay cannot bleed into others.
+// A non-positive delay clears any prior throttle for that host. Base request
+// limiters are never mutated, so one host's Crawl-delay cannot bleed into others.
 func (f *Fetcher) recordCrawlDelay(host string, d time.Duration) {
 	host = strings.ToLower(host)
 	f.hostGateMu.Lock()
@@ -560,6 +595,12 @@ type robotsCacheEntry struct {
 	fetchedAt time.Time
 }
 
+type robotsInflight struct {
+	done  chan struct{}
+	rules *robotsRules
+	err   error
+}
+
 // robotsAllows fetches+caches robots.txt for u's host and reports whether the
 // configured UA may fetch u.Path, plus any Crawl-delay.
 func (f *Fetcher) robotsAllows(ctx context.Context, u *url.URL) (bool, time.Duration, error) {
@@ -583,8 +624,46 @@ func (f *Fetcher) robotsFor(ctx context.Context, u *url.URL) (*robotsRules, erro
 		f.robotsMu.Unlock()
 		return rules, nil
 	}
+	if in, ok := f.robotsInflight[key]; ok {
+		done := in.done
+		f.robotsMu.Unlock()
+		return waitRobotsInflight(ctx, in, done)
+	}
+	in := &robotsInflight{done: make(chan struct{})}
+	f.robotsInflight[key] = in
 	f.robotsMu.Unlock()
 
+	robotsURL := *u
+	sharedCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), f.timeout)
+	go func() {
+		defer cancel()
+		rules, err := f.fetchRobots(sharedCtx, &robotsURL, key)
+		f.robotsMu.Lock()
+		if err == nil {
+			f.robots[key] = &robotsCacheEntry{rules: rules, fetchedAt: time.Now()}
+		}
+		in.rules = rules
+		in.err = err
+		delete(f.robotsInflight, key)
+		close(in.done)
+		f.robotsMu.Unlock()
+	}()
+	return waitRobotsInflight(ctx, in, in.done)
+}
+
+func waitRobotsInflight(ctx context.Context, in *robotsInflight, done <-chan struct{}) (*robotsRules, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-done:
+		return in.rules, in.err
+	}
+}
+
+func (f *Fetcher) fetchRobots(ctx context.Context, u *url.URL, key string) (*robotsRules, error) {
+	if err := f.waitHostRateLimit(ctx, u); err != nil {
+		return nil, err
+	}
 	robotsURL := key + "/robots.txt"
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, robotsURL, nil)
 	if err != nil {
@@ -607,9 +686,6 @@ func (f *Fetcher) robotsFor(ctx context.Context, u *url.URL) (*robotsRules, erro
 		rules = &robotsRules{}
 	}
 
-	f.robotsMu.Lock()
-	f.robots[key] = &robotsCacheEntry{rules: rules, fetchedAt: time.Now()}
-	f.robotsMu.Unlock()
 	return rules, nil
 }
 

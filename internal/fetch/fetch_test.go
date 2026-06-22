@@ -6,7 +6,10 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -480,6 +483,254 @@ func TestCrawlDelayIsPerHost(t *testing.T) {
 	if elapsed := time.Since(start); elapsed > 2*time.Second {
 		t.Fatalf("fast host throttled by other host's Crawl-delay: %v elapsed", elapsed)
 	}
+}
+
+func TestRequestRateLimitIsPerHost(t *testing.T) {
+	var mu sync.Mutex
+	requestTimes := map[string][]time.Time{
+		"127.0.0.1": {},
+		"localhost": {},
+	}
+	newServer := func(label string) *httptest.Server {
+		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/robots.txt" {
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte("User-agent: *\n"))
+				return
+			}
+			mu.Lock()
+			requestTimes[label] = append(requestTimes[label], time.Now())
+			mu.Unlock()
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("ok"))
+		}))
+	}
+	first := newServer("127.0.0.1")
+	defer first.Close()
+	second := newServer("localhost")
+	defer second.Close()
+
+	firstURL := rewriteURLHost(t, first.URL, "127.0.0.1")
+	secondURL := rewriteURLHost(t, second.URL, "localhost")
+	f := testFetcher(t,
+		WithAllowedHosts("127.0.0.1", "localhost"),
+		WithPerMinute(60),
+		WithMaxRetries(0),
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Second)
+	defer cancel()
+	start := make(chan struct{})
+	errs := make(chan error, 4)
+	for _, rawURL := range []string{
+		firstURL + "/event/1",
+		firstURL + "/event/2",
+		secondURL + "/event/1",
+		secondURL + "/event/2",
+	} {
+		go func() {
+			<-start
+			_, err := f.Fetch(ctx, rawURL, Conditional{})
+			errs <- err
+		}()
+	}
+
+	began := time.Now()
+	close(start)
+	for i := 0; i < 4; i++ {
+		if err := <-errs; err != nil {
+			t.Fatalf("Fetch %d: %v", i, err)
+		}
+	}
+	elapsed := time.Since(began)
+
+	mu.Lock()
+	firstTimes := append([]time.Time(nil), requestTimes["127.0.0.1"]...)
+	secondTimes := append([]time.Time(nil), requestTimes["localhost"]...)
+	mu.Unlock()
+	if len(firstTimes) != 2 || len(secondTimes) != 2 {
+		t.Fatalf("detail hits = 127.0.0.1:%d localhost:%d, want 2 each", len(firstTimes), len(secondTimes))
+	}
+	firstGap := absDuration(firstTimes[1].Sub(firstTimes[0]))
+	secondGap := absDuration(secondTimes[1].Sub(secondTimes[0]))
+	crossHostGap := absDuration(firstTimes[0].Sub(secondTimes[0]))
+	t.Logf("same-host pacing: 127.0.0.1 gap=%v localhost gap=%v", firstGap, secondGap)
+	t.Logf("cross-host overlap: first detail gap=%v total elapsed=%v", crossHostGap, elapsed)
+	if firstGap < 800*time.Millisecond || secondGap < 800*time.Millisecond {
+		t.Fatalf("same-host requests were not paced: 127.0.0.1=%v localhost=%v", firstGap, secondGap)
+	}
+	if crossHostGap > 350*time.Millisecond {
+		t.Fatalf("different hosts did not consume their allowances concurrently: first detail gap=%v", crossHostGap)
+	}
+	if elapsed > 2500*time.Millisecond {
+		t.Fatalf("different hosts shared a global request lane: elapsed=%v", elapsed)
+	}
+}
+
+func TestRobotsFetchSingleflightPerHost(t *testing.T) {
+	var robotsHits atomic.Int32
+	var detailHits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/robots.txt" {
+			robotsHits.Add(1)
+			time.Sleep(150 * time.Millisecond)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("User-agent: *\n"))
+			return
+		}
+		detailHits.Add(1)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	}))
+	defer srv.Close()
+
+	f := testFetcher(t,
+		allowHost(t, srv),
+		WithPerMinute(6000),
+		WithMaxRetries(0),
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	start := make(chan struct{})
+	errs := make(chan error, 8)
+	for i := 0; i < 8; i++ {
+		i := i
+		go func() {
+			<-start
+			_, err := f.Fetch(ctx, srv.URL+"/event/"+strconv.Itoa(i), Conditional{})
+			errs <- err
+		}()
+	}
+
+	close(start)
+	for i := 0; i < 8; i++ {
+		if err := <-errs; err != nil {
+			t.Fatalf("Fetch %d: %v", i, err)
+		}
+	}
+	t.Logf("robots requests=%d detail requests=%d", robotsHits.Load(), detailHits.Load())
+	if robotsHits.Load() != 1 {
+		t.Fatalf("robots.txt stampede: got %d requests, want 1", robotsHits.Load())
+	}
+	if detailHits.Load() != 8 {
+		t.Fatalf("detail hits = %d, want 8", detailHits.Load())
+	}
+}
+
+func TestRobotsSingleflightLeaderCancellationDoesNotAllowDisallowedPath(t *testing.T) {
+	var robotsHits atomic.Int32
+	var secretHits atomic.Int32
+	firstRobotsEntered := make(chan struct{})
+	releaseFirstRobots := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/robots.txt":
+			if robotsHits.Add(1) == 1 {
+				close(firstRobotsEntered)
+				select {
+				case <-r.Context().Done():
+					return
+				case <-releaseFirstRobots:
+				}
+			}
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("User-agent: *\nDisallow: /private/\n"))
+		case "/private/secret":
+			secretHits.Add(1)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("secret"))
+		default:
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("ok"))
+		}
+	}))
+	defer srv.Close()
+
+	f := testFetcher(t,
+		allowHost(t, srv),
+		WithPerMinute(600000),
+		WithMaxRetries(0),
+		WithTimeout(2*time.Second),
+	)
+
+	leaderCtx, cancelLeader := context.WithCancel(context.Background())
+	leaderDone := make(chan error, 1)
+	go func() {
+		_, err := f.Fetch(leaderCtx, srv.URL+"/private/secret", Conditional{})
+		leaderDone <- err
+	}()
+	<-firstRobotsEntered
+
+	const waiterCount = 20
+	startWaiters := make(chan struct{})
+	waitersStarted := make(chan struct{}, waiterCount)
+	waiterErrs := make(chan error, waiterCount)
+	for i := 0; i < waiterCount; i++ {
+		go func() {
+			<-startWaiters
+			waitersStarted <- struct{}{}
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			_, err := f.Fetch(ctx, srv.URL+"/private/secret", Conditional{})
+			waiterErrs <- err
+		}()
+	}
+
+	close(startWaiters)
+	for i := 0; i < waiterCount; i++ {
+		<-waitersStarted
+	}
+	time.Sleep(50 * time.Millisecond)
+	cancelLeader()
+
+	var leaderErr error
+	leaderReceived := false
+	select {
+	case leaderErr = <-leaderDone:
+		leaderReceived = true
+	case <-time.After(100 * time.Millisecond):
+	}
+	close(releaseFirstRobots)
+	if !leaderReceived {
+		leaderErr = <-leaderDone
+	}
+
+	var allowedErrs int
+	for i := 0; i < waiterCount; i++ {
+		err := <-waiterErrs
+		if !errors.Is(err, ErrRobotsDisallowed) {
+			allowedErrs++
+		}
+	}
+	t.Logf("leader error=%v robots requests=%d secret hits=%d healthy waiter non-disallow errors=%d", leaderErr, robotsHits.Load(), secretHits.Load(), allowedErrs)
+	if secretHits.Load() != 0 {
+		t.Fatalf("healthy waiters fetched robots-disallowed path after leader cancellation: secret hits=%d robots hits=%d", secretHits.Load(), robotsHits.Load())
+	}
+	if allowedErrs != 0 {
+		t.Fatalf("healthy waiters should all receive ErrRobotsDisallowed, got %d non-disallow errors", allowedErrs)
+	}
+}
+
+func rewriteURLHost(t *testing.T, rawURL string, host string) string {
+	t.Helper()
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		t.Fatalf("parse test URL: %v", err)
+	}
+	_, port, err := net.SplitHostPort(u.Host)
+	if err != nil {
+		t.Fatalf("split test URL host: %v", err)
+	}
+	u.Host = net.JoinHostPort(host, port)
+	return u.String()
+}
+
+func absDuration(d time.Duration) time.Duration {
+	if d < 0 {
+		return -d
+	}
+	return d
 }
 
 // A same-host redirect that lands on a robots-Disallow path must be rejected
