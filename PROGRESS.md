@@ -201,6 +201,18 @@ stable and deployment-ready.
   `EVENTSINTEL_DETAIL_WORKERS=4`. Public smoke returned 200 for `/`,
   `/healthz`, `/llms.txt`, `/api/v1`, `/api/v1/schema`,
   `/api/v1/openapi.yaml`, and `/api/v1/events`.
+- Visitor-focused event detail redeployment verification (2026-06-22): deployed
+  current `main` HEAD `fffb933` to `developer-vps`. Deployed linux/amd64 binary
+  SHA256 `d467ed766e6b6de1cfc9ec5b17b30029d7474fd6e5fc0a3a4ef6d3b2910986a2`;
+  remote `/srv/developer/events-intel/eventsintel` matched the same SHA.
+  `eventsintel-api` restarted active at `2026-06-22 06:25:20 UTC`. Public smoke
+  returned 200 for `/`, `/healthz`, `/llms.txt`, `/api/v1`, `/api/v1/schema`,
+  `/api/v1/openapi.yaml`, `/api/v1/events`, and all split frontend assets under
+  `/assets/`. Public HTML links `theme.css`, `index.css`, `list.css`,
+  `detail.css`, `ui.js`, `detail.js`, and `app.js`; public `detail.js` exposes
+  visitor-facing `행사 정보`, `참가 정보`, and `공식 페이지` copy without the
+  removed developer-facing detail sections. Public `app.js` includes final dialog
+  close focus and venue comma-spacing normalization.
 
 ## Validation Notes
 
