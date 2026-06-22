@@ -38,6 +38,13 @@ func Router(db *sql.DB, cfg MiddlewareConfig) (http.Handler, error) {
 
 	r := chi.NewRouter()
 	r.Get("/", handleRoot)
+	r.Get("/assets/theme.css", staticAsset("text/css; charset=utf-8", static.ThemeCSS))
+	r.Get("/assets/index.css", staticAsset("text/css; charset=utf-8", static.IndexCSS))
+	r.Get("/assets/list.css", staticAsset("text/css; charset=utf-8", static.ListCSS))
+	r.Get("/assets/detail.css", staticAsset("text/css; charset=utf-8", static.DetailCSS))
+	r.Get("/assets/ui.js", staticAsset("application/javascript; charset=utf-8", static.UIJS))
+	r.Get("/assets/detail.js", staticAsset("application/javascript; charset=utf-8", static.DetailJS))
+	r.Get("/assets/app.js", staticAsset("application/javascript; charset=utf-8", static.AppJS))
 	r.Get("/healthz", handleHealthz)
 	RegisterRoutes(r, db)
 
@@ -102,6 +109,15 @@ func handleRoot(w http.ResponseWriter, r *http.Request) {
 		`"docs":{"meta":"/api/v1","schema":"/api/v1/schema","openapi":"/api/v1/openapi.yaml","llms":"/llms.txt"},` +
 		`"endpoints":{"events":"/api/v1/events","event":"/api/v1/events/{event_id}","sources":"/api/v1/events/{event_id}/sources","changes":"/api/v1/events/changes"}` +
 		`}`))
+}
+
+func staticAsset(contentType, body string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", contentType)
+		w.Header().Set("Cache-Control", "public, max-age=300")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(body))
+	}
 }
 
 // prefersHTML reports whether the client's Accept header prefers HTML over

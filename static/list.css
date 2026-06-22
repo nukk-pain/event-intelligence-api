@@ -1,0 +1,45 @@
+.load-more {
+  margin: 24px auto 0;
+  display: block;
+  padding: 9px 28px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.load-more:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.load-more:disabled { color: var(--ink-3); cursor: default; }
+
+.state {
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+.state.error { color: var(--status-cancelled); }
+.state strong { color: var(--ink); font-weight: 600; display: block; margin-bottom: 4px; }
+
+.skeleton-card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 16px 18px;
+  height: 140px;
+  position: relative;
+  overflow: hidden;
+}
+.skeleton-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--surface-2), transparent);
+  animation: shimmer 1.3s infinite;
+}
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}

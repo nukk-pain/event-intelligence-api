@@ -1,0 +1,83 @@
+:root {
+  --bg: #faf8f4;
+  --surface: #ffffff;
+  --surface-2: #f2efe8;
+  --ink: #1a1815;
+  --ink-2: #5a554d;
+  --ink-3: #8a8478;
+  --rule: #e3ded3;
+  --accent: #0d5563;
+  --accent-2: #0a3f4a;
+  --link: #0d5563;
+  --badge-bg: #f0ece2;
+  --chip-ai: #c4604a;
+  --chip-ai-bg: #f4e6df;
+  --chip-robotics: #4a6a8a;
+  --chip-robotics-bg: #e2e8f0;
+  --chip-bio: #6a7d4a;
+  --chip-bio-bg: #e8eedd;
+  --chip-med: #8a5a3a;
+  --chip-med-bg: #f0e4d6;
+  --chip-health: #7a4a6a;
+  --chip-health-bg: #ecdde6;
+  --chip-other: #5a554d;
+  --chip-other-bg: #e8e2d8;
+  --status-tentative: #b58524;
+  --status-tentative-bg: #fbf0d4;
+  --status-postponed: #b55a2a;
+  --status-postponed-bg: #f7e1d0;
+  --status-cancelled: #a83232;
+  --status-cancelled-bg: #f4d9d9;
+  --status-ended: #5a554d;
+  --status-ended-bg: #e6e2d8;
+  --cost-free: #2a6a3a;
+  --cost-free-bg: #dce8d8;
+  --cost-paid: #8a5a2a;
+  --cost-paid-bg: #f0e2cc;
+  --cost-mixed: #5a4a8a;
+  --cost-mixed-bg: #e2dde8;
+  --modal-overlay: rgba(26, 24, 21, 0.55);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1d1b18;
+    --surface: #26231f;
+    --surface-2: #2e2a25;
+    --ink: #ede8df;
+    --ink-2: #b0aa9e;
+    --ink-3: #8a8478;
+    --rule: #3a352e;
+    --accent: #5fb0c2;
+    --accent-2: #4a8a9a;
+    --link: #5fb0c2;
+    --badge-bg: #2e2a25;
+    --chip-ai-bg: #3a2a24;
+    --chip-ai: #e08a72;
+    --chip-robotics-bg: #2a3540;
+    --chip-robotics: #8aa8c8;
+    --chip-bio-bg: #2e3a28;
+    --chip-bio: #a2b88a;
+    --chip-med-bg: #3a2e22;
+    --chip-med: #c89070;
+    --chip-health-bg: #352a35;
+    --chip-health: #b888a8;
+    --chip-other-bg: #302c27;
+    --chip-other: #b0aa9e;
+    --status-tentative-bg: #3a3020;
+    --status-tentative: #e8b84a;
+    --status-postponed-bg: #3a2820;
+    --status-postponed: #e89070;
+    --status-cancelled-bg: #3a2020;
+    --status-cancelled: #e88080;
+    --status-ended-bg: #2e2a25;
+    --status-ended: #b0aa9e;
+    --cost-free-bg: #283628;
+    --cost-free: #9ac890;
+    --cost-paid-bg: #3a2e1f;
+    --cost-paid: #d0a878;
+    --cost-mixed-bg: #2a243a;
+    --cost-mixed: #b0a0d0;
+    --modal-overlay: rgba(0, 0, 0, 0.72);
+  }
+}

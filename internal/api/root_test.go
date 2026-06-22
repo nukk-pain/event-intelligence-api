@@ -81,8 +81,8 @@ func TestRootIndexServesInteractiveHTML_whenBrowserAcceptsHTML(t *testing.T) {
 	if !strings.Contains(body, `id="modal-overlay"`) {
 		t.Fatalf("root HTML missing modal overlay")
 	}
-	if !strings.Contains(body, `.modal-overlay.hidden { display: none; }`) {
-		t.Fatalf("root HTML missing modal-overlay hidden override")
+	if !strings.Contains(body, `href="/assets/detail.css"`) {
+		t.Fatalf("root HTML missing detail stylesheet")
 	}
 }
 
@@ -132,11 +132,49 @@ func TestRootIndexHTMLUsesHumanFriendlyCopy(t *testing.T) {
 		"연동 안내",
 		"요약 문서",
 		"더 보기",
-		"불러오는 중",
 		"공개 예정 일정을 정리해 보여줍니다",
+		`href="/assets/index.css"`,
+		`src="/assets/app.js"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("root HTML missing human-friendly copy %q", want)
 		}
+	}
+}
+
+func TestRootIndexServesSplitFrontendAssets(t *testing.T) {
+	h := routerHandler(t)
+	for _, tc := range []struct {
+		path        string
+		contentType string
+		want        string
+	}{
+		{path: "/assets/theme.css", contentType: "text/css", want: "--bg"},
+		{path: "/assets/index.css", contentType: "text/css", want: ".card"},
+		{path: "/assets/list.css", contentType: "text/css", want: ".load-more"},
+		{path: "/assets/detail.css", contentType: "text/css", want: ".detail-hero"},
+		{path: "/assets/ui.js", contentType: "application/javascript", want: "EventIntelUI"},
+		{path: "/assets/detail.js", contentType: "application/javascript", want: "EventIntelDetail"},
+		{path: "/assets/app.js", contentType: "application/javascript", want: "loadEvents"},
+	} {
+		t.Run(tc.path, func(t *testing.T) {
+			// Given
+			req := httptest.NewRequest("GET", tc.path, nil)
+			rec := httptest.NewRecorder()
+
+			// When
+			h.ServeHTTP(rec, req)
+
+			// Then
+			if rec.Code != http.StatusOK {
+				t.Fatalf("GET %s = %d, want 200", tc.path, rec.Code)
+			}
+			if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, tc.contentType) {
+				t.Fatalf("content-type = %q, want %s", ct, tc.contentType)
+			}
+			if !strings.Contains(rec.Body.String(), tc.want) {
+				t.Fatalf("%s missing %q", tc.path, tc.want)
+			}
+		})
 	}
 }
