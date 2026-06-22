@@ -141,6 +141,74 @@ func TestRun_SourceReportsStayInputOrdered(t *testing.T) {
 	}
 }
 
+func TestRun_ConcurrentPipelineReducesElapsedTimeUnderFakeLatency(t *testing.T) {
+	// Given
+	activity := &detailActivity{}
+	srv := delayedDetailServer(t, 120*time.Millisecond, activity)
+	f := loopbackFetcher(t, srv.URL)
+	slugs := []string{"a", "b", "c", "d"}
+
+	dbSequential := testDB(t)
+	sequentialSources := []sources.Source{
+		&fakeSource{id: "coex", base: srv.URL, slugs: slugs},
+		&fakeSource{id: "kintex", base: srv.URL, slugs: slugs},
+	}
+
+	sequentialStarted := time.Now()
+	sequentialReport, err := New("b-sequential-performance").
+		WithSourceConcurrency(1).
+		WithDetailWorkers(1).
+		WithClock(fixedClock).
+		Run(context.Background(), dbSequential, sequentialSources, f)
+	sequentialElapsed := time.Since(sequentialStarted)
+	if err != nil {
+		t.Fatalf("sequential Run error: %v", err)
+	}
+
+	dbConcurrent := testDB(t)
+	concurrentSources := []sources.Source{
+		&fakeSource{id: "coex", base: srv.URL, slugs: slugs},
+		&fakeSource{id: "kintex", base: srv.URL, slugs: slugs},
+	}
+
+	// When
+	concurrentStarted := time.Now()
+	concurrentReport, err := New("b-concurrent-performance").
+		WithSourceConcurrency(2).
+		WithDetailWorkers(4).
+		WithClock(fixedClock).
+		Run(context.Background(), dbConcurrent, concurrentSources, f)
+	concurrentElapsed := time.Since(concurrentStarted)
+
+	// Then
+	if err != nil {
+		t.Fatalf("concurrent Run error: %v", err)
+	}
+	if got := countEvents(t, dbSequential); got != 8 {
+		t.Fatalf("sequential stored events = %d, want 8", got)
+	}
+	if got := countEvents(t, dbConcurrent); got != 8 {
+		t.Fatalf("concurrent stored events = %d, want 8", got)
+	}
+	for _, report := range []Report{sequentialReport, concurrentReport} {
+		if len(report.Sources) != 2 {
+			t.Fatalf("source reports = %+v, want 2 sources", report.Sources)
+		}
+		for _, sourceReport := range report.Sources {
+			if sourceReport.Stored != 4 {
+				t.Fatalf("source report = %+v, want Stored=4", sourceReport)
+			}
+		}
+	}
+
+	maxConcurrentElapsed := sequentialElapsed * 75 / 100
+	if concurrentElapsed > maxConcurrentElapsed {
+		t.Fatalf("concurrent elapsed = %s, want <= %s for at least 25%% improvement over sequential %s", concurrentElapsed, maxConcurrentElapsed, sequentialElapsed)
+	}
+	improvementPercent := 100 - (float64(concurrentElapsed)/float64(sequentialElapsed))*100
+	t.Logf("sequential_elapsed=%s concurrent_elapsed=%s improvement_percent=%.1f stored_sequential=%d stored_concurrent=%d", sequentialElapsed, concurrentElapsed, improvementPercent, countEvents(t, dbSequential), countEvents(t, dbConcurrent))
+}
+
 func waitForSourceStart(t *testing.T, started <-chan string) string {
 	t.Helper()
 	select {
