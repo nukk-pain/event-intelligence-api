@@ -259,3 +259,39 @@ from crowding current one-year schedule refs out of the ingest cap.
   page is available, with sitemap discovery retained as a fallback.
 - True cross-run conditional skipping still requires persisting detail-page
   validators such as ETag or Last-Modified.
+
+---
+
+## Decision: Enrich Events From Public Organizer Pages
+
+- Status: accepted
+- Date: 2026-06-22
+- Decision Maker: smpain
+
+### Context
+
+The original product idea emphasized that users care about actions such as
+registering, exhibiting, sponsoring, booking meetings, and tracking programs,
+not only event dates. Venue pages often expose the official event homepage but
+do not reliably include those action fields.
+
+### Decision
+
+When a COEX/KINTEX venue detail includes a public homepage URL, the ingest
+pipeline may perform one HTTP-only second-hop fetch to that official/organizer
+page. The parser extracts source-backed action signals such as registration,
+exhibit, sponsorship, matchmaking, startup-program, cost, and deadline hints.
+The read API remains cache-first and read-only; normal API reads still do not
+run live LLM generation.
+
+### Consequences
+
+- `actions`, `register_url`, `exhibit_url`, `registration_deadline`,
+  `exhibitor_deadline`, and `cost_hint` can be populated from organizer pages.
+- Organizer-page provenance is appended to `sources[]` so venue-backed and
+  organizer-backed facts remain distinguishable.
+- Unknown action fields remain false/null and are listed in `missing_fields[]`;
+  callers must check missing fields before treating false booleans as confirmed
+  absence.
+- The official-page fetcher allows arbitrary public HTTP(S) hosts but keeps the
+  existing SSRF public-IP guard, robots checks, rate limiting, and body limits.

@@ -417,6 +417,24 @@ stable and deployment-ready.
   installed timer now has `OnUnitActiveSec=24h`, and the next scheduled ingest
   is `2026-06-23 11:09:25 UTC`. Public smoke returned 200 for `/healthz` and
   `/api/v1/events`.
+- Action enrichment deployment/backfill verification (2026-06-22): committed
+  `a0c1bcb feat(ingest): enrich events with organizer actions`; deployed
+  linux/amd64 binary SHA256
+  `3f74c1a8f5ff4a29fe262d66dfc952853d1df286b06cf211168e1690b13c5a29` to
+  `developer-vps`, backing up the previous binary first. Remote
+  `/srv/developer/events-intel/eventsintel` matched the same SHA, and
+  `eventsintel-api` restarted active. Manual production backfill ran through
+  `eventsintel-ingest.service` and completed at `2026-06-22 12:57:56 UTC` with
+  COEX discovered/stored `94/94` and KINTEX discovered/stored `38/38`. Public
+  smoke returned 200 for `/`, `/healthz`, `/llms.txt`, `/api/v1`,
+  `/api/v1/schema`, `/api/v1/openapi.yaml`, `/api/v1/events`,
+  `/assets/detail.js`, and `/assets/detail.css`. Public OpenAPI exposes
+  `Actions`, `register_url`, and `homepage_url`. Public API query
+  `venue=kintex&since=2026-06-22&limit=100` returned 38 rows with 13 register
+  links, 12 exhibit links, 10 non-unknown cost hints, 1 sponsor signal, and 1
+  matchmaking signal. Sample event `kintex-26051208` returns register and
+  exhibit URLs, two provenance sources including an organizer source, and
+  missing-field honesty for unknown deadline/cost/sponsor/program fields.
 
 ## Validation Notes
 
