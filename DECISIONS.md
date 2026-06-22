@@ -165,3 +165,33 @@ date and follows every advertised listing page within that range.
 - Discovery still uses the browser-free `list.do` HTML and durable `seq` detail
   IDs.
 - The date range moves daily with the KST clock.
+
+---
+
+## Decision: Deploy Ingest Concurrency Runtime Defaults
+
+- Status: accepted
+- Date: 2026-06-22
+- Decision Maker: smpain
+
+### Context
+
+The ingest concurrency speedup was locally verified with per-host request
+limiting, bounded source concurrency, and bounded per-source detail workers.
+The production ingest unit needed the new concurrency knobs while preserving
+the existing polite request rate.
+
+### Decision
+
+Redeploy `eventsintel` from current `main` HEAD `b245fdc` and install the
+updated ingest systemd unit with `EVENTSINTEL_SOURCE_CONCURRENCY=2`,
+`EVENTSINTEL_DETAIL_WORKERS=4`, and unchanged `EVENTSINTEL_RATE_PER_MIN=30`.
+
+### Consequences
+
+- Scheduled refreshes can overlap independent COEX/KINTEX work without raising
+  the per-host request rate.
+- The API binary and ingest unit are now aligned with the committed concurrency
+  implementation.
+- No frontend, schema, taxonomy, or public API contract change is part of this
+  deployment.

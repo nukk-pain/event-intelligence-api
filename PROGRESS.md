@@ -190,6 +190,17 @@ stable and deployment-ready.
   `.omo/evidence/task-7-green.txt`, `.omo/evidence/task-7-diffcheck.txt`,
   `.omo/evidence/task-7-lsp.txt`, `.omo/evidence/task-7-manual.txt`, and
   `.omo/evidence/task-7-code-review.md`.
+- Ingest concurrency redeployment verification (2026-06-22): deployed current
+  `main` HEAD `b245fdc` to `developer-vps` after confirming no tracked local
+  changes remained to commit. Deployed linux/amd64 binary SHA256
+  `712d2ceb2814d7c6f69f058c3f046c61477157159cbfe4efa7b2ac92dc24fca2`;
+  remote `/srv/developer/events-intel/eventsintel` matched the same SHA.
+  `eventsintel-api` restarted active at `2026-06-22 05:44:51 UTC`, and
+  `eventsintel-ingest.timer` is active/waiting. The installed ingest unit now
+  has `EVENTSINTEL_RATE_PER_MIN=30`, `EVENTSINTEL_SOURCE_CONCURRENCY=2`, and
+  `EVENTSINTEL_DETAIL_WORKERS=4`. Public smoke returned 200 for `/`,
+  `/healthz`, `/llms.txt`, `/api/v1`, `/api/v1/schema`,
+  `/api/v1/openapi.yaml`, and `/api/v1/events`.
 
 ## Validation Notes
 
