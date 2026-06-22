@@ -228,6 +228,18 @@ stable and deployment-ready.
   cards increased from 22 to 32 after clicking "더 보기", with 10 new IDs and
   duplicate IDs `[]`. Desktop 1440x900 and mobile 390x844 screenshots after the
   click show 32 cards, no horizontal overflow, and readable Korean wrapping.
+- Load-more duplicate perception redeployment verification (2026-06-22):
+  committed `79cb5db fix(frontend): make load more add new events`; deployed
+  linux/amd64 binary SHA256
+  `049d05233fe06a79077ec30e4313e828c2c6ca89be3d9ec1d206df1b8ae7cdef` to
+  `developer-vps`. Remote `/srv/developer/events-intel/eventsintel` matched the
+  same SHA, and `eventsintel-api` restarted active at `2026-06-22 06:40:05 UTC`.
+  Public smoke returned 200 for `/`, `/healthz`, `/llms.txt`, `/api/v1`,
+  `/api/v1/schema`, `/api/v1/openapi.yaml`, `/api/v1/events`,
+  `/assets/events.js`, and `/assets/app.js`. Browser-style public HTML includes
+  `/assets/events.js`, that asset exposes `EventIntelEvents.mergeUnique`, and
+  production Chrome/CDP verified clicking "더 보기" changed visible cards from
+  32 to 33 with one new ID and duplicate IDs `[]`.
 
 ## Validation Notes
 
