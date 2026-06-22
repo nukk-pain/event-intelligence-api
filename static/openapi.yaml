@@ -81,6 +81,12 @@ paths:
           schema:
             type: string
             format: date-time
+        - name: since
+          in: query
+          description: Minimum start_date in YYYY-MM-DD form; useful for upcoming-event lists.
+          schema:
+            type: string
+            format: date
         - name: category
           in: query
           description: Taxonomy category slug.
