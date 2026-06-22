@@ -220,7 +220,7 @@
 
 #### Task 4.2: cron 스케줄 `[Manual]`
 - impl: `deploy/crontab`(또는 systemd timer)
-- [ ] 6h 주기 `flock -n eventsintel ingest`(중첩 skip)
+- [ ] 24h 주기 `flock -n eventsintel ingest`(중첩 skip)
 - 검증 방법: dry-run 트리거 + 중첩 호출 skip 확인
 
 #### Task 4.3: 배포 (DNS 생성 + Caddy + events.nukk.net) `[Manual]`

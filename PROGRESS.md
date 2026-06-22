@@ -41,8 +41,8 @@ stable and deployment-ready.
   human-readable support links while keeping API/document URLs intact.
 - [x] Changed event browsing policy so COEX/KINTEX venue/date lists show all
   discovered events; non-taxonomy events remain visible with `excluded=true`.
-- [x] Added COEX current schedule discovery using a 180-day date range and
-  schedule pagination so future pages such as August 2026 are not missed.
+- [x] Added COEX current schedule discovery, now using a 365-day date range and
+  schedule pagination so future pages are not missed.
 - [x] Updated the public UI copy and client ordering to show COEX/KINTEX
   schedules as a date-first event browser instead of a narrow industry-only
   filter.
@@ -324,6 +324,42 @@ stable and deployment-ready.
   elements, cards do not contain the summary excerpt, and the detail modal for
   `kintex-26041303` renders `행사 설명` with the source summary excerpt. LSP
   diagnostics could not run because the LSP transport closed.
+- Refresh/lookahead local verification (2026-06-22): set the ingest timer
+  and default crawl interval to 24h, expanded COEX current schedule
+  discovery from 180 to 365 days, increased COEX schedule page walking from 20
+  to 80 pages, and changed COEX discovery to use the current schedule as the
+  primary path with sitemap discovery retained only as fallback. Local gates
+  passed: `go test ./...`, `go vet ./...`, and `go build ./cmd/eventsintel`.
+  `gopls` diagnostics could not run because the server is not installed in this
+  environment. A temporary live ingest with `EVENTSINTEL_MAX_DISCOVER=80`,
+  `EVENTSINTEL_RATE_PER_MIN=240`, `EVENTSINTEL_SOURCE_CONCURRENCY=2`,
+  `EVENTSINTEL_DETAIL_WORKERS=4`, and `EVENTSINTEL_INGEST_DEADLINE=5m`
+  completed with COEX discovered/stored `94/94` from raw `94`, `dropped_by_cap=0`,
+  and KINTEX discovered/stored `38/38`, with zero skipped items.
+- Refresh/lookahead deployment verification (2026-06-22): deployed
+  linux/amd64 binary SHA256
+  `61a314e30dbdacb9a4d600edc7664f4a728106330985e0986492cae5ef2e4d17` to
+  `developer-vps`; remote `/srv/developer/events-intel/eventsintel` matched the
+  same SHA. `eventsintel-api` and `eventsintel-ingest.timer` are active. The
+  first production run
+  after switching COEX to schedule-primary discovery hit the expected breaker
+  once because the previous COEX baseline was sitemap-capped at `400`; the
+  verified COEX batch baseline was reset to `94/94/94`. The confirmation
+  production ingest completed at `2026-06-22 11:13:00 UTC` with COEX
+  discovered/stored `94/94` from raw `94`, `dropped_by_cap=0`, and KINTEX
+  discovered/stored `38/38`, with zero skipped items. Public smoke returned 200
+  for `/healthz` and `/api/v1/events`, and public API query
+  `venue=coex&since=2026-06-22&before=2027-06-22&limit=100` returned 94 COEX
+  rows with no next-page cursor.
+- Daily refresh deployment verification (2026-06-22): updated the deployed
+  binary and systemd timer after the user clarified the refresh interval should
+  be longer. Deployed linux/amd64 binary SHA256
+  `b39b85511151b87879b6b7dee37466101e64f1349f5b5bbf2a525c035aaeb293` to
+  `developer-vps`; remote `/srv/developer/events-intel/eventsintel` matched the
+  same SHA. `eventsintel-api` and `eventsintel-ingest.timer` are active, the
+  installed timer now has `OnUnitActiveSec=24h`, and the next scheduled ingest
+  is `2026-06-23 11:09:25 UTC`. Public smoke returned 200 for `/healthz` and
+  `/api/v1/events`.
 
 ## Validation Notes
 

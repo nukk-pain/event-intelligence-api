@@ -222,3 +222,40 @@ KINTEX `행사내용`/`행사목적`/`행사품목`. If no source description ex
 - Summary is useful in the detail/API surface without making list cards noisy.
 - Rows without real event description content remain honest nulls.
 - Existing generated template summaries are cleared and not regenerated.
+
+---
+
+## Decision: Use Daily Refresh And One-Year Venue Lookahead
+
+- Status: accepted
+- Date: 2026-06-22
+- Decision Maker: smpain
+
+### Context
+
+The service originally refreshed on a 6-hour ingest timer, briefly moved to a
+3-hour cadence while extending the venue lookahead, then the user clarified the
+refresh should be longer, such as 24 hours or 3 days. KINTEX already used a
+rolling 365-day listing range, but COEX current-schedule discovery used a
+180-day range. The target is lower crawl pressure while keeping symmetric
+one-year lookahead for COEX and KINTEX.
+
+### Decision
+
+Run scheduled ingest every 24 hours. COEX and KINTEX discovery should both cover
+a rolling 365-day future window from the current Korean date. COEX current
+schedule discovery is the primary path for the one-year public schedule; the
+WordPress sitemap is only a fallback when current schedule discovery yields no
+refs. This skips overlapping sitemap work and prevents historical sitemap rows
+from crowding current one-year schedule refs out of the ingest cap.
+
+### Consequences
+
+- Public schedule freshness improves without increasing the polite per-host
+  request rate.
+- COEX schedule discovery can walk more advertised schedule pages for the
+  one-year window.
+- COEX raw discovery now reflects the current schedule window when the schedule
+  page is available, with sitemap discovery retained as a fallback.
+- True cross-run conditional skipping still requires persisting detail-page
+  validators such as ETag or Last-Modified.

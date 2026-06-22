@@ -38,23 +38,6 @@ func testFetcher(t *testing.T, srv *httptest.Server) *fetch.Fetcher {
 	return f
 }
 
-// fixtureServer serves files from testdata/ at the paths the WordPress sitemap
-// uses (mirroring www.coex.co.kr). Unknown paths return 404 so a 404 on a
-// non-listed shard is exercised as the secondary fallback, not the primary path.
-func fixtureServer(t *testing.T, indexFixture string) *httptest.Server {
-	t.Helper()
-	mux := http.NewServeMux()
-	mux.HandleFunc("/event/full-schedules/", serveFixture(t, "full-schedules.html"))
-	mux.HandleFunc("/wp-sitemap.xml", serveFixture(t, indexFixture))
-	mux.HandleFunc("/wp-sitemap-posts-exhibitions-1.xml", serveFixture(t, "wp-sitemap-posts-exhibitions-1.xml"))
-	// exhibitions-2 deliberately reuses the same fixture body so the 2-shard
-	// index yields the union (deduped) of detail URLs across both shards.
-	mux.HandleFunc("/wp-sitemap-posts-exhibitions-2.xml", serveFixture(t, "wp-sitemap-posts-exhibitions-1.xml"))
-	srv := httptest.NewServer(mux)
-	t.Cleanup(srv.Close)
-	return srv
-}
-
 func serveFixture(t *testing.T, name string) http.HandlerFunc {
 	t.Helper()
 	body, err := os.ReadFile(filepath.Join("testdata", name))
@@ -107,7 +90,7 @@ func TestCOEXSourceID(t *testing.T) {
 var _ sources.Source = (*Source)(nil)
 
 func TestDiscoverRealIndexFiveShards(t *testing.T) {
-	srv := fixtureServer(t, "wp-sitemap-index-real.xml")
+	srv := sitemapOnlyFixtureServer(t, "wp-sitemap-index-real.xml")
 	s := New(
 		WithBaseURL(srv.URL),
 		WithClock(func() time.Time { return time.Date(2026, 6, 21, 12, 0, 0, 0, time.UTC) }),
@@ -119,12 +102,8 @@ func TestDiscoverRealIndexFiveShards(t *testing.T) {
 		t.Fatalf("Discover: %v", err)
 	}
 
-	if len(refs) != len(shardSlugs)+2 {
-		t.Fatalf("len(refs) = %d, want %d", len(refs), len(shardSlugs)+2)
-	}
-	last := refs[len(refs)-2]
-	if last.EventID != "coex-2026-%ec%84%9c%ec%9a%b8-%ed%94%84%eb%a6%ac%eb%af%b8%ec%97%84-%ed%85%8d%ec%8a%a4%ed%83%80%ec%9d%bc" {
-		t.Fatalf("first schedule ref = %q", last.EventID)
+	if len(refs) != len(shardSlugs) {
+		t.Fatalf("len(refs) = %d, want %d", len(refs), len(shardSlugs))
 	}
 
 	// The real index lists 5 exhibitions POST shards. Only shard 1 and 2 are
@@ -149,7 +128,7 @@ func TestDiscoverRealIndexFiveShards(t *testing.T) {
 func TestDiscoverIndexWithTwoShards(t *testing.T) {
 	// N != 5: prove discovery follows the index <loc> entries dynamically and
 	// ignores taxonomies-exhibitions decoys + non-exhibition shards.
-	srv := fixtureServer(t, "wp-sitemap-index-2shards.xml")
+	srv := sitemapOnlyFixtureServer(t, "wp-sitemap-index-2shards.xml")
 	s := New(
 		WithBaseURL(srv.URL),
 		WithClock(func() time.Time { return time.Date(2026, 6, 21, 12, 0, 0, 0, time.UTC) }),
@@ -161,8 +140,8 @@ func TestDiscoverIndexWithTwoShards(t *testing.T) {
 		t.Fatalf("Discover: %v", err)
 	}
 
-	if len(refs) != len(shardSlugs)+2 {
-		t.Fatalf("len(refs) = %d, want %d", len(refs), len(shardSlugs)+2)
+	if len(refs) != len(shardSlugs) {
+		t.Fatalf("len(refs) = %d, want %d", len(refs), len(shardSlugs))
 	}
 
 	gotSlugs := make([]string, 0, len(refs))
@@ -174,10 +153,7 @@ func TestDiscoverIndexWithTwoShards(t *testing.T) {
 	}
 	sort.Strings(gotSlugs)
 
-	want := append([]string{
-		"2026-%ec%84%9c%ec%9a%b8-%ed%94%84%eb%a6%ac%eb%af%b8%ec%97%84-%ed%85%8d%ec%8a%a4%ed%83%80%ec%9d%bc",
-		"2026-%ed%95%9c%ea%b5%ad%ec%88%98%ec%9e%85%eb%b0%95%eb%9e%8c%ed%9a%8c",
-	}, shardSlugs...)
+	want := append([]string{}, shardSlugs...)
 	sort.Strings(want)
 	for i := range want {
 		if gotSlugs[i] != want[i] {
@@ -205,7 +181,7 @@ func TestCurrentScheduleRefs(t *testing.T) {
 
 func TestCurrentSchedulePaths(t *testing.T) {
 	got := currentSchedulePaths(time.Date(2026, 6, 21, 12, 0, 0, 0, time.UTC))
-	want := "/event/full-schedules/?search_start_date=2026.06.21&search_end_date=2026.12.18&list_type=LIST"
+	want := "/event/full-schedules/?search_start_date=2026.06.21&search_end_date=2027.06.21&list_type=LIST"
 	if len(got) != 2 {
 		t.Fatalf("len(paths) = %d, want 2", len(got))
 	}

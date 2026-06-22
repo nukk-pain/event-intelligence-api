@@ -13,7 +13,7 @@ Greenfield Go project — no `go.mod`/`cmd/`/`internal/` exist, zero risk to exi
 | I3 | Cloudflare proxy ON → first-time Caddy TLS issuance ordering omitted | med | Task 4.3 ordered substeps: DNS-only → origin HTTPS 200 → enable proxy → Full(Strict) |
 | I4 | KINTEX `clist.do` discovery is an **unverified inference** (feasibility saw list.do return 0 links; clist.do never fetched/parsed) | med | Task 2.3 spike: curl real list.do/clist.do, commit fixture, gate 2.4; flagged in Risks |
 | I5 | robots.txt assumed, not enforced at fetch time | low | Task 1.1 robots fetch+cache gate (or documented static allowlist) |
-| I6 | 6h cron has no overlap/single-flight lock | low | Task 4.1/4.2 flock single-flight |
+| I6 | Scheduled ingest needs no-overlap/single-flight lock | low | Task 4.1/4.2 flock single-flight |
 | I7 | `docs/decisions/` absent; DECISIONS.md `Supersedes: None` needs update; two PLAN.md files coexist | info | Task 0.2 creates ADRs, updates Supersedes, repoints root PLAN |
 
 ## AC Audit
@@ -37,7 +37,7 @@ All 8 original ACs were Given/When/Then-shaped; several referenced unpinned fiel
 
 ## Constraints / Cost-efficiency (IDEA.md mandate)
 
-Plan is **strongly compliant**: read-path COGS ~0 (zero LLM on reads + AC-7a guard), cache-first (ETag/304 + conditional GET), batch-only 6h ingest, single Go binary + SQLite, keyless quota exactly matches IDEA (60/min + 2000/day), HTTP-first/CDP-fallback respected, international out of scope. Tightened:
+Plan is **strongly compliant**: read-path COGS ~0 (zero LLM on reads + AC-7a guard), cache-first (ETag/304 + conditional GET), scheduled batch-only ingest, single Go binary + SQLite, keyless quota exactly matches IDEA (60/min + 2000/day), HTTP-first/CDP-fallback respected, international out of scope. Tightened:
 
 - Daily 2000/day cap now asserted in AC-7c (was built, untested).
 - Markdown token-cheapness (single header row, no per-row keys) noted in Task 3.4 + AC-5.

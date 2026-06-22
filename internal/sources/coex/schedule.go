@@ -16,9 +16,9 @@ import (
 
 const currentSchedulePath = "/event/full-schedules/"
 
-const scheduleLookaheadDays = 180
+const scheduleLookaheadDays = 365
 
-const maxSchedulePages = 20
+const maxSchedulePages = 80
 
 func (s *Source) discoverScheduleRefs(ctx context.Context, f *fetch.Fetcher) []sources.Ref {
 	var refs []sources.Ref

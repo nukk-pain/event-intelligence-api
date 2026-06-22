@@ -1,9 +1,9 @@
 [Unit]
-Description=Run eventsintel ingest every 6 hours
+Description=Run eventsintel ingest every 24 hours
 
 [Timer]
 OnBootSec=10min
-OnUnitActiveSec=6h
+OnUnitActiveSec=24h
 Persistent=true
 
 [Install]

@@ -1,9 +1,9 @@
-// Package coex implements the COEX (www.coex.co.kr) Source adapter: WordPress
-// sitemap-driven discovery of exhibition detail pages plus a deterministic
-// static-HTML parser (parser lands in Task 2.2). COEX serves a standard
-// wp-sitemap.xml index whose "exhibitions" custom-post-type is sharded across
-// several wp-sitemap-posts-exhibitions-N.xml files. Discovery follows whatever
-// shard <loc> entries the live index lists — it never hardcodes shards 1..5.
+// Package coex implements the COEX (www.coex.co.kr) Source adapter: current
+// schedule discovery for the public one-year window, with WordPress sitemap
+// discovery retained as a fallback. COEX serves a standard wp-sitemap.xml index
+// whose "exhibitions" custom-post-type is sharded across several
+// wp-sitemap-posts-exhibitions-N.xml files. Fallback discovery follows whatever
+// shard <loc> entries the live index lists; it never hardcodes shards 1..5.
 package coex
 
 import (
@@ -68,16 +68,20 @@ func New(opts ...Option) *Source {
 // ID returns the adapter id used for registry, event_id prefix and source ids.
 func (s *Source) ID() string { return "coex" }
 
-// Discover walks the WordPress sitemap: it fetches the index, selects the
-// exhibitions POST shards dynamically, fetches each shard, and turns every
-// detail <loc> into a Ref{EventID: "coex-<slug>", URL}. Results are deduped by
-// EventID preserving first-seen order. A shard that 404s or otherwise fails is
-// skipped (secondary fallback) so a single missing shard never aborts the run;
+// Discover returns current schedule refs when COEX publishes them. If the
+// schedule path yields nothing, it falls back to the WordPress sitemap: it
+// selects the exhibitions POST shards dynamically, fetches each shard, and turns
+// every detail <loc> into a Ref{EventID: "coex-<slug>", URL}. Sitemap results
+// are deduped by EventID preserving first-seen order. A shard that 404s or
+// otherwise fails is skipped, so a single missing shard never aborts the run;
 // only an index fetch/parse failure or zero discovered shards is fatal.
 func (s *Source) Discover(ctx context.Context, f *fetch.Fetcher) ([]sources.Ref, error) {
-	var refs []sources.Ref
-	seen := make(map[string]struct{})
+	collector := newRefCollector()
 	scheduleRefs := s.discoverScheduleRefs(ctx, f)
+	if len(scheduleRefs) > 0 {
+		collector.append(scheduleRefs)
+		return collector.refs, nil
+	}
 
 	idxRes, err := f.Fetch(ctx, s.baseURL+sitemapIndexPath, fetch.Conditional{})
 	if err != nil {
@@ -120,22 +124,11 @@ func (s *Source) Discover(ctx context.Context, f *fetch.Fetcher) ([]sources.Ref,
 			if serr != nil || slug == "" {
 				continue
 			}
-			appendRefs(&refs, seen, []sources.Ref{{EventID: "coex-" + slug, URL: detailURL}})
+			collector.append([]sources.Ref{{EventID: "coex-" + slug, URL: detailURL}})
 		}
 	}
 
-	appendRefs(&refs, seen, scheduleRefs)
-	return refs, nil
-}
-
-func appendRefs(dst *[]sources.Ref, seen map[string]struct{}, refs []sources.Ref) {
-	for _, ref := range refs {
-		if _, dup := seen[ref.EventID]; dup {
-			continue
-		}
-		seen[ref.EventID] = struct{}{}
-		*dst = append(*dst, ref)
-	}
+	return collector.refs, nil
 }
 
 // Parse is implemented in parse.go (Task 2.2): it turns one fetched COEX detail

@@ -3,7 +3,18 @@ package config
 import (
 	"os"
 	"testing"
+	"time"
 )
+
+func TestDefault_UsesDailyCrawlInterval(t *testing.T) {
+	// Given / When
+	cfg := Default()
+
+	// Then
+	if cfg.CrawlInterval != 24*time.Hour {
+		t.Fatalf("CrawlInterval = %s, want 24h", cfg.CrawlInterval)
+	}
+}
 
 func TestDefault_UsesConcurrencyDefaults(t *testing.T) {
 	// Given / When

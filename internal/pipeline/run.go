@@ -59,11 +59,9 @@ type Pipeline struct {
 	batchID string
 	breaker BreakerConfig
 	// maxDiscover caps how many Refs per source are processed in one batch (0 =
-	// unbounded). Sources return Refs oldest-first, so the cap keeps the TAIL —
-	// the newest events. This bounds each run for politeness and cost (e.g. COEX's
-	// sitemap exposes ~8.7k historical exhibitions back to 2002; a freshness
-	// service only needs the recent ones). The number dropped is reported, never
-	// silently truncated.
+	// unbounded). Source adapters are responsible for ordering refs by ingest
+	// priority before this cap is applied. This bounds each run for politeness and
+	// cost; the number dropped is reported, never silently truncated.
 	maxDiscover int
 	// sourceConcurrency caps how many independent sources can run at once.
 	sourceConcurrency int

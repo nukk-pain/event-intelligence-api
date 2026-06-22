@@ -68,7 +68,7 @@ func Default() Config {
 			{ID: "coex", Name: "COEX", BaseURL: "https://www.coex.co.kr", Enabled: true},
 			{ID: "kintex", Name: "KINTEX", BaseURL: "https://www.kintex.com", Enabled: true},
 		},
-		CrawlInterval:        6 * time.Hour,
+		CrawlInterval:        24 * time.Hour,
 		IngestDeadline:       30 * time.Minute,
 		UserAgent:            "eventsintel/0.1 (+https://events.nukk.net)",
 		RateLimitPerMinute:   30,

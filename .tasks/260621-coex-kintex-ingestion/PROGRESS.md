@@ -4,7 +4,7 @@
 
 ## 배포 결과 (2026-06-21)
 - **Live**: https://events.nukk.net — Cloudflare-proxied, Caddy reverse_proxy → 127.0.0.1:3005
-- **VPS**: developer-vps(`152.42.210.34`), `/srv/developer/events-intel/`, systemd `eventsintel-api`(active) + `eventsintel-ingest.timer`(6h)
+- **VPS**: developer-vps(`152.42.210.34`), `/srv/developer/events-intel/`, systemd `eventsintel-api`(active) + `eventsintel-ingest.timer`(24h)
 - **데이터**: 산업 이벤트 58개 공개(ai 6 / robotics 8 / bio 17 / medical-devices 26 / digital-health 8), 비산업 다수 excluded(숨김). 전 엔드포인트 200.
 - **AC 12/12 머신어리 검증** (AC-1·4·5·6·7·8·9는 VPS에서 live 검증 — read-during-write 포함).
 

@@ -16,7 +16,7 @@ Reverse-proxied Go service on the shared DigitalOcean VPS `developer-vps`
 ## Artifacts
 
 - `eventsintel-api.service` — systemd unit, runs `eventsintel serve` on `127.0.0.1:3005`.
-- `eventsintel-ingest.service` + `.timer` — 6h ingest batch (flock single-flight, 30/min polite rate).
+- `eventsintel-ingest.service` + `.timer` — 24h ingest batch (flock single-flight, 30/min polite rate).
 - `events.nukk.net.caddy` — Caddy site block.
 
 ## DNS (Cloudflare)
