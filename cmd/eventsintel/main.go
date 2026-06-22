@@ -108,7 +108,8 @@ func runIngest(cfg config.Config) error {
 	batchID := fmt.Sprintf("batch-%s", time.Now().UTC().Format("20060102T150405Z"))
 	p := pipeline.New(batchID).
 		WithMaxDiscover(cfg.MaxDiscoverPerSource).
-		WithSourceConcurrency(cfg.SourceConcurrency)
+		WithSourceConcurrency(cfg.SourceConcurrency).
+		WithDetailWorkers(cfg.DetailWorkers)
 
 	// WALL-CLOCK DEADLINE: cap the whole crawl so a hung Discover or a slow
 	// cumulative detail fetch can never let one run exceed the cron interval.
