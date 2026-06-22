@@ -257,11 +257,12 @@ stable and deployment-ready.
   `533934f fix(frontend): hide exhausted load more`, then found Cloudflare was
   still serving stale `/assets/app.js` from its four-hour asset cache. Committed
   `e5e00ae fix(frontend): bust cached app asset` so browser HTML requests
-  `/assets/app.js?v=20260622-hide-more`. Deployed current `main` HEAD
-  `e5e00ae` to `developer-vps`; linux/amd64 binary SHA256
-  `2e29b7106d728a7a1adbf47faabd82c57799907ccc701ec0639934edca9cefc9` matched
+  `/assets/app.js?v=20260622-hide-more`. The final deployment used
+  `go build -buildvcs=false` to avoid VCS-only checksum churn from this progress
+  record; linux/amd64 binary SHA256
+  `31e2b9cb0cdf2971a08a3029bb186c0b2fe98c0cb7d9fcb8c5722cd6e6f5414c` matched
   remote `/srv/developer/events-intel/eventsintel`, and `eventsintel-api`
-  restarted active at `2026-06-22 06:50:36 UTC`. Public smoke returned 200 for
+  restarted active at `2026-06-22 06:53:02 UTC`. Public smoke returned 200 for
   `/`, `/healthz`, `/llms.txt`, `/api/v1`, `/api/v1/schema`,
   `/api/v1/openapi.yaml`, `/api/v1/events`, `/assets/events.js`, and
   `/assets/app.js`. Public HTML references `/assets/app.js?v=20260622-hide-more`,
