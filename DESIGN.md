@@ -104,7 +104,7 @@ All spacing derives from a base of **4px**.
 
 ### Filter Bar
 
-- **Structure**: event-scope select, category select, venue select, search input, live count.
+- **Structure**: event-scope select (`주요 분야`, `기회 shortlist`, `모든 행사 보기`), category select, venue select, search input, live count.
 - **Variants**: sticky desktop/mobile wrapping layout.
 - **Spacing**: `12px` row gap, `24px` desktop horizontal padding, `16px` mobile.
 - **States**: focus uses accent outline; load count updates through `aria-live`.
@@ -114,7 +114,7 @@ All spacing derives from a base of **4px**.
 ### Event Card
 
 - **Structure**: button card with date, event name, venue, chips.
-- **Variants**: category/status/cost chip combinations.
+- **Variants**: category/status/cost/opportunity-quality chip combinations.
 - **Spacing**: `16px 18px 14px`, `9px` internal gap.
 - **States**: default, hover, focus-visible.
 - **Accessibility**: card is a real button with detail-focused aria label.

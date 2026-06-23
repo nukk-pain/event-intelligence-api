@@ -6,12 +6,12 @@
 - Current Stage: Shape
 - Owner: smpain
 - Started: 2026-06-21
-- Last Updated: 2026-06-22
+- Last Updated: 2026-06-23
 
 ## Current Focus
 
-Define the founder/operator opportunity radar layer on top of the deployed
-COEX/KINTEX schedule browser, without expanding into a generic event portal.
+Expand the founder/operator opportunity radar beyond the COEX/KINTEX domestic
+venue wedge, without turning the product into a generic event portal.
 
 ## Completed
 
@@ -62,6 +62,10 @@ COEX/KINTEX schedule browser, without expanding into a generic event portal.
   and 스타트업 프로그램 when those signals are source-backed.
 - [x] Defined the founder/operator opportunity radar scope and benchmark source
   set in `docs/founder-operator-opportunity-radar.md`.
+- [x] Added the first opportunity-radar implementation slice: deterministic
+  opportunity scoring, `opportunity=true`, `actionable=true`, and
+  `opportunity_quality` API filters, derived response fields, and the homepage
+  `기회 shortlist` scope.
 
 ## In Progress
 
@@ -443,6 +447,15 @@ COEX/KINTEX schedule browser, without expanding into a generic event portal.
   criteria, candidate API filters, homepage shortlist scope, and a first
   implementation slice. `docs/original-plan-gap.md` now points to this artifact
   as the current plan for filling the next product gap.
+- Opportunity shortlist implementation (2026-06-23): `go test ./...`, `go vet
+  ./...`, `go build -o /tmp/eventsintel-opportunity ./cmd/eventsintel`, `node
+  --check static/app.js static/events.js static/ui.js static/detail.js`, and
+  `git diff --check` pass. Local throwaway ingest against KINTEX produced 38
+  rows; local API checks returned 5 `opportunity=true` rows, 20
+  `actionable=true` rows, and 3 `opportunity_quality=high` rows. Selenium
+  browser QA on `127.0.0.1:8099` confirmed the `기회 shortlist` scope, 5
+  opportunity cards, visible quality chips, hidden pagination when
+  `has_more=false`, and no horizontal overflow at 1280px or 390px widths.
 
 ## Validation Notes
 
@@ -458,9 +471,10 @@ No product validation has been run yet. Current evidence level is Low.
 
 ## Next Action
 
-Implement the first opportunity-radar slice: deterministic opportunity-quality
-scoring over existing events, API filters for shortlist/actionability, and a
-homepage `기회 shortlist` scope.
+Add international benchmark source coverage for the founder/operator radar:
+start with a static seed from `docs/founder-operator-opportunity-radar.md`, then
+implement the first 2-3 official-source adapters and backfill them through the
+same opportunity scorer.
 
 ## Decision Needed
 

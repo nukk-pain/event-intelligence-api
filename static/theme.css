@@ -36,6 +36,10 @@
   --cost-paid-bg: #f0e2cc;
   --cost-mixed: #5a4a8a;
   --cost-mixed-bg: #e2dde8;
+  --opportunity-high: #145f4a;
+  --opportunity-high-bg: #dcebe3;
+  --opportunity-medium: #6a5a22;
+  --opportunity-medium-bg: #eee7c8;
   --modal-overlay: rgba(26, 24, 21, 0.55);
 }
 
@@ -78,6 +82,10 @@
     --cost-paid: #d0a878;
     --cost-mixed-bg: #2a243a;
     --cost-mixed: #b0a0d0;
+    --opportunity-high-bg: #20382f;
+    --opportunity-high: #8bc7ae;
+    --opportunity-medium-bg: #38321f;
+    --opportunity-medium: #d4c171;
     --modal-overlay: rgba(0, 0, 0, 0.72);
   }
 }

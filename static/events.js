@@ -19,6 +19,7 @@
 
   function scoped(events, scope) {
     if (scope === "all") return events;
+    if (scope === "opportunity") return events;
     return events.filter(hasCategory);
   }
 

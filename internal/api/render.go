@@ -134,10 +134,7 @@ func mdURL(u string) string {
 
 // --- shared field projection ----------------------------------------------
 
-// eventFieldOrder is the column order shared by the JSON and Markdown event
-// views. The Task 3.4 contract pins this set:
-// {event_id, name, start_date, end_date, venue.venue_id, categories, status}.
-var eventColumns = []string{"event_id", "name", "start_date", "end_date", "venue_id", "categories", "status"}
+var eventColumns = []string{"event_id", "name", "start_date", "end_date", "venue_id", "categories", "status", "opportunity_quality", "opportunity_signals"}
 
 // eventRow projects an Event onto the shared, injection-guarded column values in
 // eventColumns order.
@@ -154,6 +151,8 @@ func eventRow(e model.Event) []string {
 		mdText(venueID),
 		mdText(strings.Join(e.Categories, ", ")),
 		mdText(e.Status),
+		mdText(e.OpportunityQuality),
+		mdText(strings.Join(e.OpportunitySignals, ", ")),
 	}
 }
 

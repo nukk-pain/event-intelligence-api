@@ -20,8 +20,9 @@ The current product has already moved beyond the original shaping stage for the
 domestic venue wedge: COEX/KINTEX ingestion, normalization, SQLite storage,
 read-only API, `llms.txt`, public UI, and deployment to `events.nukk.net` exist.
 Action-oriented organizer-page enrichment has also been implemented and
-backfilled. The main remaining gaps are now international/source breadth, the
-choice of one target workflow, alert/export use cases, API-key tiers, and
+backfilled. A founder/operator opportunity shortlist now exists as a derived
+API/UI layer over those public facts. The main remaining gaps are now
+international/source breadth, alert/export use cases, API-key tiers, and
 long-term data quality operations.
 
 ## Superseded Gap
@@ -49,6 +50,7 @@ automated pipeline. The retained artifact is the v0.1 schema contract in
 | Cost posture | Normal reads are database/cache/static backed; no live LLM generation is part of the read path. |
 | Data policy | Public-only, read-only, source-provenance-first posture is intact. |
 | Action enrichment | Official/organizer page second-hop enrichment exists for public `homepage_url` records. Public API and modal UI expose register/exhibit links, cost hints, action booleans, and missing-field honesty. |
+| Opportunity radar | `/api/v1/events` exposes derived `opportunity=true`, `actionable=true`, and `opportunity_quality` filters. The homepage has a `기회 shortlist` scope and opportunity-quality chips. |
 
 Production evidence as of the action enrichment backfill:
 
@@ -67,7 +69,7 @@ Production evidence as of the action enrichment backfill:
 |---|---|---|
 | Domestic and international coverage | International benchmark events are still deferred. | Choose 20-30 benchmark events or source families before adding global coverage. |
 | Korea-wide venue coverage | BEXCO, SETEC, and other Korean venues are not implemented. | Add only after COEX/KINTEX quality and maintenance cost are stable. |
-| Industry intelligence taxonomy | The taxonomy exists, but the public surface is still mostly venue/date browsing. | Decide whether the first product should optimize for founders/operators, BD teams, analysts, or agent developers. |
+| Industry intelligence taxonomy | The taxonomy and founder/operator shortlist exist, but coverage is still only the COEX/KINTEX domestic venue wedge. | Add benchmark international/regional sources before adding generic Korean venue breadth. |
 | Action-oriented fields | First-pass action enrichment exists, but coverage is partial and heuristic. | Register/exhibit/cost signals are now populated where public organizer pages expose them. Deadline, sponsor, matchmaking, startup-program, and application-period extraction still needs source-specific rules and PDF/microsite handling. |
 | Exhibitor/sponsor/program data | Basic booleans and links exist, but full structured programs are not reliable. | Requires organizer microsites, PDFs, exhibitor lists, sponsor package pages, or event-specific source adapters beyond generic link/text matching. |
 | Alerts and saved filters | Not implemented. | Original human surface mentioned saved filters, alerts, and time-sensitive views. |
@@ -83,9 +85,9 @@ Production evidence as of the action enrichment backfill:
 ## Product Gap Framing
 
 The current product proves the domestic venue ingestion and public read surface.
-The action-enrichment backfill makes the COEX/KINTEX wedge more useful, but the
-product still does not prove the broader "industry intelligence" claim. To prove
-that claim, the next work should add either:
+The action-enrichment backfill and opportunity shortlist make the COEX/KINTEX
+wedge more useful, but the product still does not prove the broader "industry
+intelligence" claim. To prove that claim, the next work should add either:
 
 1. More source breadth: international benchmarks and more Korean venues.
 2. More workflow depth: better deadlines/program/exhibitor data, alerts, and
@@ -108,25 +110,22 @@ axis and keep the other constrained.
 
 ## Recommended Next Gap
 
-The next gap to fill should be **workflow focus plus source set selection**, not
-another generic field pass.
+The next gap to fill should be **international benchmark source coverage**, not
+another generic UI or field pass.
 
-Reason: COEX/KINTEX now have the basic date, summary, action, provenance, API,
-and UI surfaces. The remaining work can easily branch into a generic event
-portal unless the product chooses one concrete workflow. The highest-leverage
-choice is:
+Reason: COEX/KINTEX now have date, summary, action, provenance, API, UI, and
+founder/operator shortlist surfaces. The product still has not shown that the
+same intelligence layer works beyond the domestic venue wedge.
 
-**Startup founders / operators tracking AI, robotics, bio, digital-health, and
-medical-device opportunities.**
+Recommended next implementation:
 
-For that workflow, the next implementation should define a small benchmark set
-and add source coverage around it:
-
-- 20-30 international or regional benchmark events/source families.
-- A source-quality scorecard: event date, official URL, registration/exhibit
-  links, cost, deadlines, program/partnering signal, provenance, and freshness.
-- A first "opportunity shortlist" view/API filter for founder/operator use:
-  upcoming, source-backed, actionable events with missing fields visible.
+- Add a static benchmark source seed (`docs` + JSON/JSONL) from
+  `docs/founder-operator-opportunity-radar.md`.
+- Implement the first 2-3 official-source adapters from that set, preferring
+  HTTP-readable official pages with date, registration/exhibit, cost/deadline,
+  and program/partnering signals.
+- Backfill those sources into the same opportunity scorer and compare the
+  resulting shortlist against COEX/KINTEX.
 
 This directly tests the original thesis that the product is an industry
 intelligence layer, not only a COEX/KINTEX schedule browser.

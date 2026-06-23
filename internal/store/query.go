@@ -35,7 +35,10 @@ type EventFilter struct {
 	MinStartDate string
 	// MaxStartDate keeps only events whose start_date is <= this date (YYYY-MM-DD).
 	// Events with NULL start_date are excluded when this is set. Empty means no filter.
-	MaxStartDate string
+	MaxStartDate       string
+	Opportunity        bool
+	Actionable         bool
+	OpportunityQuality string
 	// Limit caps the page size. Callers should clamp/default before calling; a
 	// non-positive Limit falls back to defaultQueryLimit.
 	Limit int
@@ -112,6 +115,20 @@ func ListEvents(ctx context.Context, db *sql.DB, filter EventFilter) ([]model.Ev
 		where = append(where, "e.start_date IS NOT NULL AND e.start_date <= ?")
 		args = append(args, filter.MaxStartDate)
 	}
+	if filter.Actionable {
+		where = append(where, actionableExpr())
+	}
+	if filter.Opportunity {
+		where = append(where, opportunityEligibleExpr(), opportunitySignalCountExpr()+" >= 1")
+	}
+	switch filter.OpportunityQuality {
+	case "high":
+		where = append(where, opportunityEligibleExpr(), opportunitySignalCountExpr()+" >= 2")
+	case "medium":
+		where = append(where, opportunityEligibleExpr(), opportunitySignalCountExpr()+" = 1")
+	case "low":
+		where = append(where, "NOT ("+opportunityEligibleExpr()+" AND "+opportunitySignalCountExpr()+" >= 1)")
+	}
 	// Keyset boundary: (updated_at, event_id) strictly greater than the cursor.
 	if filter.Cursor.UpdatedAt != "" || filter.Cursor.EventID != "" {
 		where = append(where, "(e.updated_at > ? OR (e.updated_at = ? AND e.event_id > ?))")
@@ -153,6 +170,35 @@ func ListEvents(ctx context.Context, db *sql.DB, filter EventFilter) ([]model.Ev
 		next = &EventCursor{UpdatedAt: last.UpdatedAt, EventID: last.EventID}
 	}
 	return events, next, nil
+}
+
+func opportunityEligibleExpr() string {
+	return "e.start_date IS NOT NULL AND e.start_date != '' AND e.end_date IS NOT NULL AND e.end_date != '' AND e.homepage_url IS NOT NULL AND e.homepage_url != '' AND json_array_length(e.categories) > 0 AND json_array_length(e.sources) > 0"
+}
+
+func actionableExpr() string {
+	return "(e.register_url IS NOT NULL OR e.exhibit_url IS NOT NULL OR e.registration_deadline IS NOT NULL OR e.exhibitor_deadline IS NOT NULL OR e.cost_hint IN ('free', 'paid', 'mixed') OR json_extract(e.actions, '$.can_register') = 1 OR json_extract(e.actions, '$.can_exhibit') = 1 OR json_extract(e.actions, '$.can_sponsor') = 1 OR json_extract(e.actions, '$.has_matchmaking') = 1 OR json_extract(e.actions, '$.has_startup_program') = 1)"
+}
+
+func opportunitySignalCountExpr() string {
+	terms := []string{
+		"e.register_url IS NOT NULL AND e.register_url != ''",
+		"e.exhibit_url IS NOT NULL AND e.exhibit_url != ''",
+		"e.registration_deadline IS NOT NULL AND e.registration_deadline != ''",
+		"e.exhibitor_deadline IS NOT NULL AND e.exhibitor_deadline != ''",
+		"e.cost_hint IN ('free', 'paid', 'mixed')",
+		"json_extract(e.actions, '$.can_register') = 1",
+		"json_extract(e.actions, '$.can_exhibit') = 1",
+		"json_extract(e.actions, '$.can_sponsor') = 1",
+		"json_extract(e.actions, '$.has_matchmaking') = 1",
+		"json_extract(e.actions, '$.has_startup_program') = 1",
+		"e.summary IS NOT NULL AND e.summary != ''",
+	}
+	parts := make([]string, 0, len(terms))
+	for _, term := range terms {
+		parts = append(parts, "CASE WHEN "+term+" THEN 1 ELSE 0 END")
+	}
+	return "(" + strings.Join(parts, " + ") + ")"
 }
 
 // GetEvent loads a single event by id. It returns (nil, nil) when no row exists

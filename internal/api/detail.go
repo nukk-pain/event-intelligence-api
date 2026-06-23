@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/smpain/event-intelligence-api/internal/model"
+	"github.com/smpain/event-intelligence-api/internal/opportunity"
 	"github.com/smpain/event-intelligence-api/internal/store"
 )
 
@@ -59,6 +60,7 @@ func handleGetEvent(db *sql.DB) http.HandlerFunc {
 			writeError(w, http.StatusNotFound, "not_found", "event not found")
 			return
 		}
+		opportunity.Apply(event)
 		Respond(w, r, newEventDetailView(event), Links{})
 	}
 }
