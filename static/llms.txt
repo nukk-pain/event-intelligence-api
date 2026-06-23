@@ -36,8 +36,9 @@ Exceeding either returns HTTP 429 with a `Retry-After` header.
 - GET /api/v1 — meta index: version, schema_version, endpoints, quota, vocabularies.
 - GET /api/v1/schema — v0.1 schema descriptor + supported_versions.
 - GET /api/v1/openapi.yaml — OpenAPI 3.x specification.
-- GET /api/v1/events — list events. Filters: since (start_date >= YYYY-MM-DD),
-  updated_since, changed_since, category, venue. Pagination: limit, cursor.
+- GET /api/v1/events — list events. Filters: list=all|venue|benchmark,
+  since (start_date >= YYYY-MM-DD), updated_since, changed_since, category,
+  venue. Pagination: limit, cursor.
 - GET /api/v1/events/{event_id} — single event detail with provenance.
 - GET /api/v1/events/{event_id}/sources — source provenance entries (>=1).
 - GET /api/v1/events/changes — field-level change feed. Filters: since, event_id.
@@ -45,6 +46,7 @@ Exceeding either returns HTTP 429 with a `Retry-After` header.
 ## Vocabularies
 
 - categories: ai, humanoid-robotics, bio, medical-devices, digital-health
+- list_kinds: all, venue, benchmark
 - venues: coex, kintex
 - update_state: new, unchanged, updated, conflicting
 - status: scheduled, tentative, postponed, cancelled, ended

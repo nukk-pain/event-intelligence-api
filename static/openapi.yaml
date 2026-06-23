@@ -53,8 +53,9 @@ paths:
       operationId: listEvents
       summary: List events
       description: >-
-        Keyset-paginated, filterable event listing. Venue/date lists include all
-        discovered COEX/KINTEX events; non-taxonomy events keep excluded=true.
+        Keyset-paginated, filterable event listing. Use list=venue for
+        COEX/KINTEX venue schedules and list=benchmark for event-family
+        benchmark records.
       parameters:
         - name: limit
           in: query
@@ -81,6 +82,12 @@ paths:
           schema:
             type: string
             format: date-time
+        - name: list
+          in: query
+          description: List family: all records, venue schedules, or benchmark event families.
+          schema:
+            type: string
+            enum: [all, venue, benchmark]
         - name: since
           in: query
           description: Minimum start_date in YYYY-MM-DD form; useful for upcoming-event lists.
@@ -298,6 +305,28 @@ components:
           type: object
         vocabularies:
           type: object
+          properties:
+            categories:
+              type: array
+              items:
+                type: string
+            list_kinds:
+              type: array
+              items:
+                type: string
+                enum: [all, venue, benchmark]
+            venues:
+              type: array
+              items:
+                type: string
+            update_state:
+              type: array
+              items:
+                type: string
+            status:
+              type: array
+              items:
+                type: string
       required: [version, schema_version, endpoints, quota, vocabularies]
     Source:
       type: object

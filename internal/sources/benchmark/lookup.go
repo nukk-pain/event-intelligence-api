@@ -1,6 +1,10 @@
 package benchmark
 
-import "github.com/smpain/event-intelligence-api/internal/sources"
+import (
+	"strings"
+
+	"github.com/smpain/event-intelligence-api/internal/sources"
+)
 
 func refs() []sources.Ref {
 	out := make([]sources.Ref, 0, len(catalog))
@@ -11,8 +15,9 @@ func refs() []sources.Ref {
 }
 
 func lookup(rawURL string) (catalogEvent, bool) {
+	normalized := strings.TrimRight(rawURL, "/")
 	for _, event := range catalog {
-		if event.URL == rawURL {
+		if event.URL == rawURL || strings.TrimRight(event.URL, "/") == normalized {
 			return event, true
 		}
 	}

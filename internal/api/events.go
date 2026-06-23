@@ -60,6 +60,7 @@ func handleListEvents(db *sql.DB) http.HandlerFunc {
 		}
 
 		filter := store.EventFilter{
+			ListKind:     q.Get("list"),
 			UpdatedSince: q.Get("updated_since"),
 			ChangedSince: q.Get("changed_since"),
 			Category:     q.Get("category"),

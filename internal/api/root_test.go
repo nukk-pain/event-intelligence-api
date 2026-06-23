@@ -126,14 +126,17 @@ func TestRootIndexHTMLUsesHumanFriendlyCopy(t *testing.T) {
 		}
 	}
 	for _, want := range []string{
-		"행사 모아보기",
+		"AI·로봇·헬스케어 행사 모아보기",
+		"AI·로봇·헬스케어 국내 행사 일정과 글로벌 주요 행사를 한 곳에서 확인하세요.",
+		"국내 행사 일정",
+		"글로벌 주요 행사",
 		"주요 분야",
 		"모든 행사 보기",
 		"행사명 검색",
 		"연동 안내",
 		"요약 문서",
 		"더 보기",
-		"공개 예정 일정을 정리해 보여줍니다",
+		"국내 행사 일정과 글로벌 주요 행사를 분리해 보여줍니다",
 		`href="/assets/index.css"`,
 		`src="/assets/events.js"`,
 		`src="/assets/app.js?v=`,

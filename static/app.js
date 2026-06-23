@@ -9,6 +9,7 @@
     cursor: null,
     hasMore: false,
     loading: false,
+    list: "venue",
     scope: "categorized",
     category: "",
     venue: "",
@@ -19,6 +20,7 @@
     grid: document.getElementById("grid"),
     stateBox: document.getElementById("state"),
     loadMore: document.getElementById("load-more"),
+    fList: document.getElementById("f-list"),
     fScope: document.getElementById("f-scope"),
     fCategory: document.getElementById("f-category"),
     fVenue: document.getElementById("f-venue"),
@@ -69,7 +71,8 @@
 
   function updateCount(visible) {
     var total = state.events.length;
-    var label = state.scope === "all" ? "개 행사" : "개 주요 행사";
+    var label = state.list === "benchmark" ? "개 글로벌 주요 행사" : "개 국내 행사";
+    if (state.list === "venue" && state.scope === "categorized") label = "개 주요 국내 행사";
     if (state.search && visible !== total) {
       el.count.textContent = total + "개 중 " + visible + "개 표시" + (state.hasMore ? "+" : "");
       return;
@@ -107,9 +110,10 @@
   }
 
   function eventsURL(cursor) {
-    var url = "/api/v1/events?limit=100&since=" + todayKST();
+    var url = "/api/v1/events?limit=100&list=" + encodeURIComponent(state.list);
+    if (state.list === "venue") url += "&since=" + todayKST();
     if (state.category) url += "&category=" + encodeURIComponent(state.category);
-    if (state.venue) url += "&venue=" + encodeURIComponent(state.venue);
+    if (state.venue && state.list === "venue") url += "&venue=" + encodeURIComponent(state.venue);
     if (cursor) url += "&cursor=" + encodeURIComponent(cursor);
     return url;
   }
@@ -213,6 +217,22 @@
     };
   }
 
+  function syncListControls() {
+    var venueList = state.list === "venue";
+    el.fVenue.disabled = !venueList;
+    if (!venueList) {
+      el.fVenue.value = "";
+      state.venue = "";
+    }
+  }
+
+  el.fList.addEventListener("change", function() {
+    state.list = el.fList.value;
+    state.cursor = null;
+    state.events = [];
+    syncListControls();
+    loadEvents(false);
+  });
   el.fScope.addEventListener("change", function() {
     state.scope = el.fScope.value;
     state.cursor = null;
@@ -242,6 +262,7 @@
       if (closeBtn) closeBtn.click();
     }
   });
+  syncListControls();
   Promise.all([fetchJSON("/api/v1"), loadEvents(false)]).then(function(res) {
     if (res[0] && res[0].vocabularies) populateFilters(res[0].vocabularies);
   }).catch(function() {});

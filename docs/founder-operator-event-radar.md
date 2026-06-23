@@ -105,10 +105,18 @@ Selection rules:
 - Prefer official organizer pages over aggregators.
 - Prefer event families with at least one public action surface: register,
   exhibit, sponsor, startup program, partnering, meeting tool, or application.
-- Keep the first set at 20-30 families. Add more only after source quality and
+- Keep the first set around 30 families. Add more only after source quality and
   maintenance cost are measured.
 - Exclude general tech events unless they expose a founder/operator action path
   relevant to AI, robotics, bio, digital health, or medical devices.
+- Treat recurring benchmark events as first-class coverage even when the next
+  edition has not announced exact dates or venue yet. In that case, keep the
+  event family visible and record the unknown edition fields as `null` plus
+  explicit `missing_fields[]` entries instead of dropping the event from the
+  benchmark set.
+- Do not fabricate a year-specific edition. If the official source only proves
+  the recurring family, use the stable event-family URL, a source-backed summary,
+  and honest TBA notes until the next edition page confirms date and place.
 
 ## Source Quality Criteria
 
@@ -119,14 +127,25 @@ Required for a benchmark record:
 
 - `event_id`
 - `name`
-- `start_date`
-- `end_date`
-- `venue` or online/hybrid format
 - at least one official `sources[]` entry
 - `homepage_url` or equivalent official event URL
 - at least one taxonomy category
 - `last_checked_at`
 - `missing_fields[]`
+
+Date and place policy:
+
+- `start_date`, `end_date`, and `venue` are required when official current or
+  future edition facts exist.
+- For annual or recurring benchmark families whose next edition details are not
+  yet public, keep `start_date`, `end_date`, and unknown venue subfields null.
+  Add the corresponding keys to `missing_fields[]`.
+- Use `date_confidence=low` for TBA records, and include an ambiguity note such
+  as `next edition date not announced by official source` when the model can
+  represent it.
+- Prefer a stable family-level `event_id` only when no year-specific edition can
+  be proven. Promote it to a year-specific record once official date and venue
+  facts appear.
 
 Direct action signals that can make a record useful for operator follow-up:
 
@@ -146,8 +165,22 @@ Supporting context that can make an already actionable record more useful:
 - source-derived `summary` as supporting context
 - organizer/source provenance beyond the venue calendar
 
-Do not hide low-completeness records by default in the API. The browser
-should preserve honest missing fields for agents.
+Do not hide low-completeness records by default in the benchmark API list. The
+browser should preserve honest missing fields for agents.
+
+## List Separation
+
+The product has two different list models:
+
+- Venue schedules: COEX/KINTEX-style venue calendars, filtered by venue and
+  date. These are useful for browsing everything happening at a place.
+- Benchmark events: recurring event families such as CES, HIMSS, BioJapan, or
+  automatica. These are useful even when the next edition date or venue is TBA.
+
+These lists should stay separate in the UI and API. Venue schedules should not
+absorb benchmark event families, and benchmark lists should not depend on a
+COEX/KINTEX-style venue filter. API clients should use `list=venue` for venue
+calendar browsing and `list=benchmark` for event-family coverage.
 
 ## First International Coverage Slice
 
@@ -157,18 +190,27 @@ Implemented benchmark source seed:
 
 Implemented registered source adapter:
 
-- `benchmark`: current 10-source catalog, including CES 2027, NVIDIA GTC 2027,
-  BIO International Convention 2027, Web Summit Lisbon 2026, Slush 2026,
-  TechCrunch Disrupt 2026, World Summit AI 2026, HLTH USA 2026,
-  The MedTech Conference 2026, and MEDICA 2026.
+- `benchmark`: current 31-source catalog, including the initial CES/GTC/BIO/Web
+  Summit/Slush/TechCrunch/World Summit AI/HLTH/MedTech/MEDICA slice plus all
+  Oracle-recommended additions such as Web Summit Qatar, BioJapan, Medical
+  Taiwan, HIMSS Global, automatica, Robotics Summit, SWITCH, RSNA, COMPUTEX /
+  InnoVEX, VivaTech, WHX Dubai, BIO-Europe, AI & Big Data Expo Europe, HLTH
+  Europe, ICRA, HIMSS AI in Healthcare Forum, HumanX Europe, IROS, GITEX AI
+  Europe, WAIC Shanghai, and World Robot Conference Beijing.
 
-This slice intentionally covers official pages from different domains before
-expanding the full benchmark set.
+This slice intentionally covers official pages from different domains while
+keeping venue schedules and benchmark event families as separate list modes.
+
+Benchmark list ordering policy:
+
+- Upcoming dated events first, oldest upcoming date first.
+- Date-missing / TBA event-family rows next, sorted by name for stable scanning.
+- Completed events last, most recently completed first.
 
 ## Acceptance Criteria
 
 - The founder/operator workflow is documented and narrow.
-- The benchmark source set contains 20-30 official source families.
+- The benchmark source set contains 31 official source families.
 - Source-quality criteria are explicit and testable.
 - UI/API changes are concrete enough to implement without another strategy
   discussion.

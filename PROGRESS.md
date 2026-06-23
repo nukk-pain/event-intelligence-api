@@ -65,19 +65,17 @@ without turning the product into a generic event portal.
 - [x] Added the first international benchmark source coverage slice, backed by
   a registered `benchmark` source adapter and
   `docs/benchmark-source-seed.jsonl`.
-- [x] Expanded the registered `benchmark` source to 10 official international
-  benchmark events: CES 2027, NVIDIA GTC 2027, BIO International Convention
-  2027, Web Summit Lisbon 2026, Slush 2026, TechCrunch Disrupt 2026,
-  World Summit AI 2026, HLTH USA 2026, The MedTech Conference 2026, and
-  MEDICA 2026.
+- [x] Expanded the registered `benchmark` source to 31 official international
+  benchmark events, including the initial 10-source slice, all Oracle-recommended
+  additions, and China coverage.
 
 ## In Progress
 
 - [x] COEX/KINTEX ingestion feasibility check (`prototype/coex-kintex-feasibility.md`)
   — both static-HTML, field-rich, HTTP-parseable; no headless browser needed.
 - [ ] `/plan` the COEX/KINTEX ingestion backend + ADR superseding manual-first.
-- [x] Choose 20-30 international benchmark sources.
-- [x] Expand the registered `benchmark` source from 3 to 10 official
+- [x] Choose 31 international benchmark sources.
+- [x] Expand the registered `benchmark` source from 3 to 31 official
   international benchmark events and prove the new rows through a fresh local
   ingest and API response.
 
@@ -493,6 +491,21 @@ without turning the product into a generic event portal.
   note to reflect the completed 10-source slice, and tightened date
   normalization so RFC3339 timestamps are parsed strictly while invalid
   ISO-shaped prefixes are rejected instead of sliced.
+- Benchmark event-family expansion (2026-06-23): changed the registered
+  `benchmark` adapter from 10 to 31 official event-family records by including
+  all Oracle-recommended additions: Web Summit Qatar, BioJapan, Medical Taiwan,
+  HIMSS Global, automatica, Robotics Summit, SWITCH, RSNA, COMPUTEX / InnoVEX,
+  VivaTech, World Health Expo Dubai / WHX Tech, BIO-Europe, AI & Big Data Expo
+  Europe, HLTH Europe, ICRA, HIMSS AI in Healthcare Forum, HumanX Europe, IROS,
+  GITEX AI Europe, plus China coverage for WAIC Shanghai and World Robot
+  Conference Beijing. Added official URLs, dates, region/domain notes, and at
+  least one action signal or missing-field honesty path for each source family.
+  Local ingest against `/tmp/eventsintel-benchmark-all.db` stored benchmark
+  `31/31`, COEX `31/31`, and KINTEX `31/31` with `EVENTSINTEL_MAX_DISCOVER=31`.
+- Benchmark ordering policy (2026-06-23): UI sorting now groups benchmark rows
+  as upcoming dated events first, TBA/date-missing records next, and completed
+  events last. Completed events sort by most recently ended first inside the
+  archive group.
 
 ## Validation Notes
 
@@ -508,14 +521,13 @@ No product validation has been run yet. Current evidence level is Low.
 
 ## Next Action
 
-Review the 10-source benchmark slice on the local dev server
-`http://127.0.0.1:8110/` and decide whether the next benchmark coverage step
-should add more official sources or deploy the current catalog expansion first.
+Deploy the 31-source benchmark expansion, then choose the first 3-5 benchmark
+sources that need source-specific deadline, exhibitor, and program extraction.
 
 ## Decision Needed
 
-- Decision: international benchmark source list (which 20-30 events define
-  "good enough" first-30-day coverage)
+- Decision: which benchmark sources need source-specific deadline, exhibitor,
+  and program extraction after the 31-source baseline is verified.
 - Evidence Needed: candidate venue/organizer source families
 - Deadline: before seed dataset fill begins
 

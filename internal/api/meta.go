@@ -35,6 +35,7 @@ var metaVenues = []string{"coex", "kintex"}
 var (
 	updateStates = []string{"new", "unchanged", "updated", "conflicting"}
 	statuses     = []string{"scheduled", "tentative", "postponed", "cancelled", "ended"}
+	listKinds    = []string{"all", "venue", "benchmark"}
 )
 
 // OpenAPISpec returns the embedded OpenAPI 3.x document as text. Exported so the
@@ -142,6 +143,7 @@ type quotaTier struct {
 
 type vocabBlock struct {
 	Categories  []string `json:"categories"`
+	ListKinds   []string `json:"list_kinds"`
 	Venues      []string `json:"venues"`
 	UpdateState []string `json:"update_state"`
 	Status      []string `json:"status"`
@@ -166,6 +168,7 @@ func handleMetaIndex() http.HandlerFunc {
 		},
 		Vocabularies: vocabBlock{
 			Categories:  classify.Categories, // SSOT
+			ListKinds:   listKinds,
 			Venues:      metaVenues,
 			UpdateState: updateStates,
 			Status:      statuses,

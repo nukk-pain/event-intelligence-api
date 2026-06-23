@@ -193,12 +193,11 @@ func (p *Pipeline) processRef(ctx context.Context, s sources.Source, f *fetch.Fe
 
 	res, ferr := f.Fetch(ctx, ref.URL, fetch.Conditional{})
 	if ferr != nil {
-		if fallback, ok := s.(fallbackParser); ok {
-			parsed, perr := fallback.ParseFallback(ctx, ref, ferr)
+		if ev, ok, perr := p.tryFallback(ctx, s, f, ref, now, ferr); ok {
 			if perr != nil {
 				return nil, "fetch", fmt.Errorf("fetch %s: %w; fallback: %v", ref.URL, ferr, perr)
 			}
-			return p.normalizeParsed(ctx, f, ref, parsed, now)
+			return ev, "", nil
 		}
 		return nil, "fetch", fmt.Errorf("fetch %s: %w", ref.URL, ferr)
 	}
@@ -206,6 +205,13 @@ func (p *Pipeline) processRef(ctx context.Context, s sources.Source, f *fetch.Fe
 		return nil, "fetch", fmt.Errorf("not modified (no body to parse) for %s", ref.EventID)
 	}
 	if res.StatusCode != 200 {
+		statusErr := fmt.Errorf("detail status %d for %s", res.StatusCode, ref.EventID)
+		if ev, ok, perr := p.tryFallback(ctx, s, f, ref, now, statusErr); ok {
+			if perr != nil {
+				return nil, "fetch", fmt.Errorf("%w; fallback: %v", statusErr, perr)
+			}
+			return ev, "", nil
+		}
 		return nil, "fetch", fmt.Errorf("detail status %d for %s", res.StatusCode, ref.EventID)
 	}
 

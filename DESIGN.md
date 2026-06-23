@@ -1,4 +1,4 @@
-# COEX·KINTEX 행사 모아보기 Design System
+# AI·로봇·헬스케어 행사 모아보기 Design System
 
 ## 1. Atmosphere & Identity
 
@@ -104,7 +104,7 @@ All spacing derives from a base of **4px**.
 
 ### Filter Bar
 
-- **Structure**: event-scope select (`주요 분야`, `모든 행사 보기`), category select, venue select, search input, live count.
+- **Structure**: list select (`국내 행사 일정`, `글로벌 주요 행사`), event-scope select (`주요 분야`, `모든 행사 보기`), category select, venue select, search input, live count.
 - **Variants**: sticky desktop/mobile wrapping layout.
 - **Spacing**: `12px` row gap, `24px` desktop horizontal padding, `16px` mobile.
 - **States**: focus uses accent outline; load count updates through `aria-live`.

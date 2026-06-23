@@ -20,6 +20,9 @@ import (
 // EventFilter narrows and paginates a ListEvents call. The zero value lists the
 // first page of all events ordered by (updated_at, event_id).
 type EventFilter struct {
+	// ListKind separates venue-calendar rows from benchmark event-family rows.
+	// Empty and "all" preserve the original unscoped API listing.
+	ListKind string
 	// UpdatedSince keeps only events whose updated_at is >= this RFC3339 value.
 	UpdatedSince string
 	// ChangedSince keeps only events that have at least one change_log row whose
@@ -89,6 +92,12 @@ func ListEvents(ctx context.Context, db *sql.DB, filter EventFilter) ([]model.Ev
 	if filter.UpdatedSince != "" {
 		where = append(where, "e.updated_at >= ?")
 		args = append(args, filter.UpdatedSince)
+	}
+	switch filter.ListKind {
+	case "venue":
+		where = append(where, "e.venue_id IN ('coex', 'kintex')")
+	case "benchmark":
+		where = append(where, "e.event_id LIKE 'benchmark-%'")
 	}
 	if filter.Venue != "" {
 		where = append(where, "e.venue_id = ?")
@@ -273,80 +282,3 @@ func ListChanges(ctx context.Context, db *sql.DB, filter ChangeFilter) ([]model.
 	}
 	return out, next, nil
 }
-
-// rowScanner is satisfied by both *sql.Row and *sql.Rows so scanEvent serves
-// GetEvent and ListEvents from one decode path.
-type rowScanner interface {
-	Scan(dest ...any) error
-}
-
-// scanEvent reconstructs a model.Event from the eventColumns projection,
-// decoding the JSON TEXT columns back into their nested structs/slices.
-func scanEvent(row rowScanner) (model.Event, error) {
-	var (
-		e        model.Event
-		excluded int
-
-		venueJSON, scaleJSON         sql.NullString
-		categoriesJSON, audienceJSON sql.NullString
-		actionsJSON                  sql.NullString
-		sourcesJSON, missingJSON     sql.NullString
-		venueID                      sql.NullString
-		curatedBy                    sql.NullString
-	)
-
-	err := row.Scan(
-		&e.EventID, &e.SchemaVersion, &e.SeriesID, &e.Name, &e.NameKo, &e.NameEn, &e.Edition,
-		&e.StartDate, &e.EndDate, &e.Timezone, &e.DateConfidence, &e.Status, &e.Format,
-		&venueJSON, &venueID, &e.Country,
-		&categoriesJSON, &audienceJSON, &scaleJSON,
-		&actionsJSON, &e.RegisterURL, &e.ExhibitURL, &e.RegistrationDeadline, &e.ExhibitorDeadline, &e.CostHint,
-		&e.Summary, &sourcesJSON, &e.HomepageURL, &e.LastCheckedAt, &e.UpdateState, &e.Confidence, &missingJSON, &e.AmbiguityNotes,
-		&curatedBy, &e.CreatedAt, &e.UpdatedAt, &e.ContentHash, &excluded,
-	)
-	if err != nil {
-		return model.Event{}, err
-	}
-
-	e.Excluded = excluded != 0
-	e.CuratedBy = curatedBy.String
-
-	if venueJSON.Valid && venueJSON.String != "" {
-		var v model.Venue
-		if err := json.Unmarshal([]byte(venueJSON.String), &v); err != nil {
-			return model.Event{}, fmt.Errorf("decode venue for %s: %w", e.EventID, err)
-		}
-		e.Venue = &v
-	}
-	if scaleJSON.Valid && scaleJSON.String != "" {
-		var sc model.Scale
-		if err := json.Unmarshal([]byte(scaleJSON.String), &sc); err != nil {
-			return model.Event{}, fmt.Errorf("decode scale for %s: %w", e.EventID, err)
-		}
-		e.Scale = &sc
-	}
-	if actionsJSON.Valid && actionsJSON.String != "" {
-		if err := json.Unmarshal([]byte(actionsJSON.String), &e.Actions); err != nil {
-			return model.Event{}, fmt.Errorf("decode actions for %s: %w", e.EventID, err)
-		}
-	}
-	if err := decodeStringSlice(categoriesJSON, &e.Categories); err != nil {
-		return model.Event{}, fmt.Errorf("decode categories for %s: %w", e.EventID, err)
-	}
-	if err := decodeStringSlice(audienceJSON, &e.Audience); err != nil {
-		return model.Event{}, fmt.Errorf("decode audience for %s: %w", e.EventID, err)
-	}
-	if err := decodeStringSlice(missingJSON, &e.MissingFields); err != nil {
-		return model.Event{}, fmt.Errorf("decode missing_fields for %s: %w", e.EventID, err)
-	}
-	if sourcesJSON.Valid && sourcesJSON.String != "" {
-		if err := json.Unmarshal([]byte(sourcesJSON.String), &e.Sources); err != nil {
-			return model.Event{}, fmt.Errorf("decode sources for %s: %w", e.EventID, err)
-		}
-	}
-
-	return e, nil
-}
-
-// decodeStringSlice (defined in diff.go) unmarshals a nullable JSON-array TEXT
-// column into dst, yielding a nil slice for a NULL/empty column.

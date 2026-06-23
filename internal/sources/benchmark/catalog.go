@@ -22,7 +22,9 @@ type catalogEvent struct {
 	Notes        string
 }
 
-var catalog = []catalogEvent{
+var catalog = append(append(append([]catalogEvent{}, baseCatalog...), oracleCatalog...), chinaCatalog...)
+
+var baseCatalog = []catalogEvent{
 	{
 		EventID:      "benchmark-ces-2027",
 		URL:          "https://www.ces.tech/",

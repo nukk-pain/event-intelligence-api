@@ -48,7 +48,7 @@ automated pipeline. The retained artifact is the v0.1 schema contract in
 | Cost posture | Normal reads are database/cache/static backed; no live LLM generation is part of the read path. |
 | Data policy | Public-only, read-only, source-provenance-first posture is intact. |
 | Action enrichment | Official/organizer page second-hop enrichment exists for public `homepage_url` records. Public API and modal UI expose register/exhibit links, cost hints, action booleans, and missing-field honesty. |
-| International benchmark slice | The registered `benchmark` source now stores and displays 10 official international benchmark events across AI, bio, digital health, and medtech. |
+| International benchmark slice | The registered `benchmark` source now stores and displays 31 official international benchmark events across AI, robotics, bio, digital health, medtech, startup, and China coverage. |
 
 Production evidence as of the action enrichment backfill:
 
@@ -61,21 +61,21 @@ Production evidence as of the action enrichment backfill:
   rows with `register_url`, 61 with `exhibit_url`, and 49 with non-unknown
   `cost_hint`.
 
-Local benchmark evidence as of the 10-source expansion:
+Local benchmark evidence as of the 31-source expansion:
 
-- Local ingest stored 10/10 registered benchmark rows alongside COEX/KINTEX
+- Local ingest stored 31/31 registered benchmark rows alongside COEX/KINTEX
   rows in a production-copy style SQLite database.
-- Local API evidence on `127.0.0.1:8110` returned all 10 benchmark rows with
+- Local API evidence on `127.0.0.1:8110` returned all 31 benchmark rows with
   date, official URL, category/region representation, and action-or-honesty
   fields.
-- Local UI evidence on `127.0.0.1:8110` displayed all 10 benchmark rows in the
-  major-event view while preserving the domestic COEX/KINTEX rows.
+- Local UI evidence on `127.0.0.1:8110` displayed benchmark rows separately
+  from the domestic COEX/KINTEX venue schedule list.
 
 ## Remaining Gaps Against Original Plan
 
 | Original plan area | Gap now | Notes / next action |
 |---|---|---|
-| Domestic and international coverage | First 10 international benchmark events are implemented; broader benchmark breadth is still open. | Expand toward the documented 20-30 benchmark set only after the 10-source slice is reviewed. |
+| Domestic and international coverage | The first 31 international benchmark events are implemented and separated from COEX/KINTEX venue schedules in API/UI list modes. | Next coverage work should harden source-specific fields rather than keep broadening the benchmark list immediately. |
 | Korea-wide venue coverage | BEXCO, SETEC, and other Korean venues are not implemented. | Add only after COEX/KINTEX quality and maintenance cost are stable. |
 | Industry intelligence taxonomy | The taxonomy exists, but coverage is still only the COEX/KINTEX domestic venue wedge. | Add benchmark international/regional sources before adding generic Korean venue breadth. |
 | Action-oriented fields | First-pass action enrichment exists, but coverage is partial and heuristic. | Register/exhibit/cost signals are now populated where public organizer pages expose them. Deadline, sponsor, matchmaking, startup-program, and application-period extraction still needs source-specific rules and PDF/microsite handling. |
@@ -94,7 +94,7 @@ Local benchmark evidence as of the 10-source expansion:
 
 The current product proves the domestic venue ingestion, public read surface,
 and first international benchmark slice. The action-enrichment backfill makes
-the COEX/KINTEX wedge more useful, and the 10 benchmark records show that the
+the COEX/KINTEX wedge more useful, and the 31 benchmark records show that the
 same event/action schema can carry international official-source records. The
 remaining product proof is whether that coverage can become broad and durable
 enough for a real workflow. The next work should add either:
@@ -112,8 +112,8 @@ axis and keep the other constrained.
 - First user/workflow: founders/operators, BD teams, investors/analysts,
   attendees, or agent/API developers.
 - Next expansion axis: more sources vs deeper workflow fields.
-- International benchmark set: which 20-30 events or source families define
-  "global AI/humanoid/bio/medical-device coverage".
+- International benchmark hardening: which of the 31 records need
+  source-specific deadline/program/exhibitor extraction first.
 - API identity: stay keyless only, or add free API keys for stable agent usage.
 - Data operations: minimum freshness SLA, correction process, and source-breakage
   response policy.
@@ -124,17 +124,21 @@ The next gap to fill should be **benchmark coverage hardening**, not another
 generic UI or field pass.
 
 Reason: COEX/KINTEX now have date, summary, action, provenance, API, and UI
-surfaces, and the first 10 international benchmark records now exercise that
-same layer. The next risk is whether the benchmark set can scale from a useful
-seed to a maintained 20-30 source coverage baseline.
+surfaces, and the first 31 international benchmark records now exercise that
+same layer. The next risk is whether each benchmark source can preserve useful
+action fields and missing-field honesty as official pages change.
 
 Recommended next implementation:
 
-- Review the 10-source benchmark slice in API/UI before production deployment.
-- Decide which additional 10-20 records from
-  `docs/founder-operator-event-radar.md` are worth promoting.
-- Add source-specific hardening only where official pages expose durable
-  register/exhibit/deadline/program evidence.
+- Review the 31-source benchmark slice in API/UI before production deployment.
+- Pick the first 3-5 benchmark sources that need source-specific
+  deadline/program/exhibitor parsing beyond catalog fallback fields.
+- Add source-specific hardening where official pages expose durable
+  register/exhibit/deadline/program evidence, and preserve null plus
+  `missing_fields[]` honesty where edition details are not announced yet.
+- Keep COEX/KINTEX venue schedules and recurring benchmark event families as
+  separate list modes instead of mixing venue-calendar rows with global event
+  family rows.
 
 This directly tests the original thesis that the product is an industry
 intelligence layer, not only a COEX/KINTEX schedule browser.
