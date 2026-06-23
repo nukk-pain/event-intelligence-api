@@ -37,8 +37,10 @@ Exceeding either returns HTTP 429 with a `Retry-After` header.
 - GET /api/v1/schema — v0.1 schema descriptor + supported_versions.
 - GET /api/v1/openapi.yaml — OpenAPI 3.x specification.
 - GET /api/v1/events — list events. Filters: list=all|venue|benchmark,
-  since (start_date >= YYYY-MM-DD), updated_since, changed_since, category,
-  venue. Pagination: limit, cursor.
+  since (start_date >= YYYY-MM-DD), before (start_date <= YYYY-MM-DD),
+  updated_since, changed_since, category, venue. Pagination: limit, cursor.
+  Response also carries category_counts: the per-category event count under the
+  active (non-category) filters, in canonical taxonomy order.
 - GET /api/v1/events/{event_id} — single event detail with provenance.
 - GET /api/v1/events/{event_id}/sources — source provenance entries (>=1).
 - GET /api/v1/events/changes — field-level change feed. Filters: since, event_id.

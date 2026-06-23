@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -191,7 +192,18 @@ func (v eventListView) Markdown() string {
 	for _, e := range events {
 		rows = append(rows, eventRow(e))
 	}
-	return mdTable(eventColumns, rows)
+	table := mdTable(eventColumns, rows)
+	// Carry the category facet in the Markdown encoding too, so both formats
+	// expose the same field set (renderable contract). It is a single
+	// collection-level line, not per-row, keeping the rendering token-cheap.
+	if len(v.env.CategoryCounts) > 0 {
+		parts := make([]string, 0, len(v.env.CategoryCounts))
+		for _, c := range v.env.CategoryCounts {
+			parts = append(parts, fmt.Sprintf("%s %d", c.Category, c.Count))
+		}
+		return "category_counts: " + strings.Join(parts, ", ") + "\n\n" + table
+	}
+	return table
 }
 
 // --- event detail view -----------------------------------------------------

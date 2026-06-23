@@ -104,12 +104,21 @@ All spacing derives from a base of **4px**.
 
 ### Filter Bar
 
-- **Structure**: list select (`국내 행사 일정`, `글로벌 주요 행사`), event-scope select (`주요 분야`, `모든 행사 보기`), category select, venue select, search input, live count.
-- **Variants**: sticky desktop/mobile wrapping layout.
+- **Structure**: list select (`국내 행사 일정`, `글로벌 주요 행사`), event-scope select (`주요 분야`, `모든 행사 보기`), venue select, date-range inputs (`기간`: start ~ end), search input, live count, and a full-width category chip row (see Category Filter Chips).
+- **Variants**: sticky desktop/mobile wrapping layout; the chip row wraps onto its own line.
 - **Spacing**: `12px` row gap, `24px` desktop horizontal padding, `16px` mobile.
-- **States**: focus uses accent outline; load count updates through `aria-live`.
-- **Accessibility**: all controls have labels.
+- **States**: focus uses accent outline; load count updates through `aria-live`. Filter state is mirrored to the URL query string (shareable), so a control's value can be restored from the URL.
+- **Accessibility**: all controls have labels; date inputs are `aria-label`led; the chip row is a labelled `role="group"`.
 - **Motion**: none.
+
+### Category Filter Chips
+
+- **Structure**: an `전체` reset chip followed by one chip per taxonomy category, each carrying a tabular-num count badge (`chip-count`) sourced from the API `category_counts` facet (events under the active non-category filters). Chips render in canonical taxonomy order (`ai, humanoid-robotics, bio, medical-devices, digital-health`).
+- **Variants**: default (category tint), selected (`aria-pressed="true"` → accent border + inset accent ring + bold), disabled (zero count, dimmed to `0.4`).
+- **Spacing**: `3px 10px` padding, `6px` gap, `5px` label↔count gap.
+- **States**: hover (accent border), `focus-visible` (accent outline), pressed (single-select; clicking the active chip clears to `전체`).
+- **Accessibility**: real `<button aria-pressed>`; selected chip stays enabled even at zero count so it can be toggled off.
+- **Motion**: `150ms` border/shadow/opacity transitions.
 
 ### Event Card
 

@@ -84,42 +84,12 @@ func ListEvents(ctx context.Context, db *sql.DB, filter EventFilter) ([]model.Ev
 		limit = defaultQueryLimit
 	}
 
-	var (
-		where []string
-		args  []any
-	)
-
-	if filter.UpdatedSince != "" {
-		where = append(where, "e.updated_at >= ?")
-		args = append(args, filter.UpdatedSince)
-	}
-	switch filter.ListKind {
-	case "venue":
-		where = append(where, "e.venue_id IN ('coex', 'kintex')")
-	case "benchmark":
-		where = append(where, "e.event_id LIKE 'benchmark-%'")
-	}
-	if filter.Venue != "" {
-		where = append(where, "e.venue_id = ?")
-		args = append(args, filter.Venue)
-	}
+	where, args := filter.commonWhere()
 	if filter.Category != "" {
 		// categories is a JSON array TEXT column; EXISTS over json_each matches
 		// membership exactly (no substring false positives).
 		where = append(where, "EXISTS (SELECT 1 FROM json_each(e.categories) WHERE json_each.value = ?)")
 		args = append(args, filter.Category)
-	}
-	if filter.ChangedSince != "" {
-		where = append(where, "EXISTS (SELECT 1 FROM change_log c WHERE c.event_id = e.event_id AND c.changed_at >= ?)")
-		args = append(args, filter.ChangedSince)
-	}
-	if filter.MinStartDate != "" {
-		where = append(where, "e.start_date IS NOT NULL AND e.start_date >= ?")
-		args = append(args, filter.MinStartDate)
-	}
-	if filter.MaxStartDate != "" {
-		where = append(where, "e.start_date IS NOT NULL AND e.start_date <= ?")
-		args = append(args, filter.MaxStartDate)
 	}
 	// Keyset boundary: (updated_at, event_id) strictly greater than the cursor.
 	if filter.Cursor.UpdatedAt != "" || filter.Cursor.EventID != "" {
@@ -162,6 +132,89 @@ func ListEvents(ctx context.Context, db *sql.DB, filter EventFilter) ([]model.Ev
 		next = &EventCursor{UpdatedAt: last.UpdatedAt, EventID: last.EventID}
 	}
 	return events, next, nil
+}
+
+// commonWhere builds the filter predicates shared by ListEvents and
+// CategoryCounts: the updated_since floor, the list-kind partition (venue vs
+// benchmark), an explicit venue, the changed_since existence check, and the
+// start_date range. It deliberately OMITS the category-membership clause and the
+// keyset cursor so each caller appends those itself. Sharing one builder keeps
+// the facet's list/venue/date scope locked to the list it annotates; the facet
+// then narrows further to categorized events (see CategoryCounts).
+func (f EventFilter) commonWhere() (where []string, args []any) {
+	if f.UpdatedSince != "" {
+		where = append(where, "e.updated_at >= ?")
+		args = append(args, f.UpdatedSince)
+	}
+	switch f.ListKind {
+	case "venue":
+		where = append(where, "e.venue_id IN ('coex', 'kintex')")
+	case "benchmark":
+		where = append(where, "e.event_id LIKE 'benchmark-%'")
+	}
+	if f.Venue != "" {
+		where = append(where, "e.venue_id = ?")
+		args = append(args, f.Venue)
+	}
+	if f.ChangedSince != "" {
+		where = append(where, "EXISTS (SELECT 1 FROM change_log c WHERE c.event_id = e.event_id AND c.changed_at >= ?)")
+		args = append(args, f.ChangedSince)
+	}
+	if f.MinStartDate != "" {
+		where = append(where, "e.start_date IS NOT NULL AND e.start_date >= ?")
+		args = append(args, f.MinStartDate)
+	}
+	if f.MaxStartDate != "" {
+		where = append(where, "e.start_date IS NOT NULL AND e.start_date <= ?")
+		args = append(args, f.MaxStartDate)
+	}
+	return where, args
+}
+
+// CategoryCounts returns, per taxonomy category, the number of NON-EXCLUDED
+// events that match the same list/venue/date predicates as ListEvents — but
+// IGNORING filter.Category and the keyset cursor. It powers the API category
+// facet (the "AI 37" chip counts) so a client can see how many events sit in
+// each category under the currently active (non-category) filters, including the
+// one it may already be filtered to. Counts are keyed by slug; callers order
+// them by the canonical taxonomy order.
+//
+// The facet is intentionally CATEGORIZED-only (excluded=0): chips count industry
+// events, which is what the default UI view shows (the client hides excluded rows
+// in its "categorized" scope). This is why the count can be smaller than a raw
+// ?category=X list page, which does not filter excluded — though in practice the
+// classifier strips categories from excluded events, so such an event is not a
+// member of any category to begin with. The excluded=0 predicate is the
+// authoritative guard regardless of that classifier invariant.
+func CategoryCounts(ctx context.Context, db *sql.DB, filter EventFilter) (map[string]int, error) {
+	where, args := filter.commonWhere()
+	where = append(where, "e.excluded = 0")
+
+	q := "SELECT je.value AS category, COUNT(*) AS n FROM events e, json_each(e.categories) je" +
+		" WHERE " + strings.Join(where, " AND ") +
+		" GROUP BY je.value"
+
+	rows, err := db.QueryContext(ctx, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("category counts: %w", err)
+	}
+	defer rows.Close()
+
+	counts := make(map[string]int)
+	for rows.Next() {
+		var (
+			cat string
+			n   int
+		)
+		if err := rows.Scan(&cat, &n); err != nil {
+			return nil, fmt.Errorf("scan category count: %w", err)
+		}
+		counts[cat] = n
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate category counts: %w", err)
+	}
+	return counts, nil
 }
 
 // GetEvent loads a single event by id. It returns (nil, nil) when no row exists

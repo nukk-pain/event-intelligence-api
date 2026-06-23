@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/smpain/event-intelligence-api/internal/classify"
 	"github.com/smpain/event-intelligence-api/internal/model"
 	"github.com/smpain/event-intelligence-api/internal/store"
 )
@@ -96,12 +98,36 @@ func handleListEvents(db *sql.DB) http.HandlerFunc {
 				HasMore:    next != nil,
 				Limit:      limit, // echo the EFFECTIVE (clamped) limit
 			},
+			CategoryCounts: categoryFacet(r.Context(), db, filter),
 		}
 		// Task 3.4: route JSON and Markdown through one negotiator so both
 		// encodings carry the same field set and the cursor travels in a
 		// format-independent Link header.
 		Respond(w, r, newEventListView(env), links)
 	}
+}
+
+// categoryFacet computes the events-list category facet: the number of
+// non-excluded events per taxonomy category under the SAME filters as the list,
+// minus the category selection itself and minus pagination — so every category's
+// count stays visible even while the list is narrowed to one category. It emits
+// every canonical category in taxonomy order (including zeros) so the UI renders
+// a stable chip row. A facet query failure is non-fatal: the list still serves,
+// just without counts (nil is dropped by the envelope's omitempty).
+func categoryFacet(ctx context.Context, db *sql.DB, listFilter store.EventFilter) []CategoryCount {
+	f := listFilter
+	f.Category = ""
+	f.Cursor = store.EventCursor{}
+	f.Limit = 0
+	counts, err := store.CategoryCounts(ctx, db, f)
+	if err != nil {
+		return nil
+	}
+	out := make([]CategoryCount, 0, len(classify.Categories))
+	for _, slug := range classify.Categories {
+		out = append(out, CategoryCount{Category: slug, Count: counts[slug]})
+	}
+	return out
 }
 
 // nextPageURL builds the absolute-path URL for the next page by replacing the

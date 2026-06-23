@@ -94,6 +94,12 @@ paths:
           schema:
             type: string
             format: date
+        - name: before
+          in: query
+          description: Maximum start_date in YYYY-MM-DD form; pair with since for a date range.
+          schema:
+            type: string
+            format: date
         - name: category
           in: query
           description: Taxonomy category slug.
@@ -228,6 +234,16 @@ components:
         limit:
           type: integer
       required: [next_cursor, has_more, limit]
+    CategoryCount:
+      type: object
+      properties:
+        category:
+          type: string
+          description: Taxonomy category slug.
+        count:
+          type: integer
+          description: Non-excluded events in this category under the active filters.
+      required: [category, count]
     EventEnvelope:
       type: object
       properties:
@@ -237,6 +253,19 @@ components:
             $ref: "#/components/schemas/Event"
         page:
           $ref: "#/components/schemas/PageInfo"
+        category_counts:
+          type: array
+          description: >-
+            Category facet for the events list only. Counts CATEGORIZED
+            (non-excluded) events per taxonomy category under the SAME
+            list/venue/date filters as the page, but ignoring the category filter
+            itself (so a client filtered to one category still sees every
+            category's size). Emitted in canonical taxonomy order, including
+            zeros. Note: the data array itself is not filtered on excluded, so a
+            count may be smaller than a raw ?category= page that includes excluded
+            rows. Absent on other feeds.
+          items:
+            $ref: "#/components/schemas/CategoryCount"
       required: [data, page]
     ChangeEnvelope:
       type: object

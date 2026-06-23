@@ -12,7 +12,7 @@
 <script defer src="/assets/ui.js"></script>
 <script defer src="/assets/events.js"></script>
 <script defer src="/assets/detail.js"></script>
-<script defer src="/assets/app.js?v=20260623-browse"></script>
+<script defer src="/assets/app.js?v=20260623-filterux"></script>
 </head>
 <body>
 
@@ -39,16 +39,22 @@
       </select>
     </div>
     <div>
-      <label for="f-category">분야</label>
-      <select id="f-category"><option value="">전체 분야</option></select>
-    </div>
-    <div>
       <label for="f-venue">장소</label>
       <select id="f-venue"><option value="">전체 장소</option></select>
+    </div>
+    <div class="date-field">
+      <label for="f-date-from">기간</label>
+      <input id="f-date-from" type="date" aria-label="시작일">
+      <span class="date-sep" aria-hidden="true">~</span>
+      <input id="f-date-to" type="date" aria-label="종료일">
     </div>
     <div class="search-field">
       <label for="f-search" class="sr-only">검색</label>
       <input id="f-search" type="search" placeholder="행사명 검색" aria-label="행사명 검색">
+    </div>
+    <div class="cat-field">
+      <span class="cat-field-label">분야</span>
+      <div id="f-category-chips" class="cat-chips" role="group" aria-label="분야 필터"></div>
     </div>
     <span class="filter-count" id="filter-count" aria-live="polite"></span>
   </div>

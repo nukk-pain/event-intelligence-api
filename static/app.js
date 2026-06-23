@@ -13,7 +13,10 @@
     scope: "categorized",
     category: "",
     venue: "",
-    search: ""
+    search: "",
+    dateFrom: "",
+    dateTo: "",
+    categoryCounts: []
   };
 
   var el = {
@@ -22,8 +25,10 @@
     loadMore: document.getElementById("load-more"),
     fList: document.getElementById("f-list"),
     fScope: document.getElementById("f-scope"),
-    fCategory: document.getElementById("f-category"),
+    fCategoryChips: document.getElementById("f-category-chips"),
     fVenue: document.getElementById("f-venue"),
+    fDateFrom: document.getElementById("f-date-from"),
+    fDateTo: document.getElementById("f-date-to"),
     fSearch: document.getElementById("f-search"),
     count: document.getElementById("filter-count"),
     overlay: document.getElementById("modal-overlay")
@@ -32,7 +37,7 @@
   function fmtDateRange(s, e) {
     if (!s) return "일정 미정";
     if (!e || s === e) return s;
-    return s + " \u2013 " + e;
+    return s + " – " + e;
   }
   function cleanText(s) {
     return String(s || "").replace(/\s+,/g, ",").replace(/,\s+/g, ", ");
@@ -44,7 +49,7 @@
     if (v.name) parts.push(ui.escapeHtml(cleanText(v.name)));
     if (v.city) parts.push(ui.escapeHtml(cleanText(v.city)));
     if (v.hall) parts.push('<span class="hall">' + ui.escapeHtml(cleanText(v.hall)) + '</span>');
-    return parts.length ? parts.join(" \u00b7 ") : "";
+    return parts.length ? parts.join(" · ") : "";
   }
 
   function renderCard(e) {
@@ -79,6 +84,36 @@
     }
     el.count.textContent = total + (state.hasMore ? "+" : "") + label;
   }
+
+  // renderCategoryChips paints the category filter row: an "전체" reset chip plus
+  // one chip per taxonomy category, each carrying its server-computed count badge.
+  // Counts come from the events-list category_counts facet (state.categoryCounts).
+  function renderCategoryChips() {
+    var counts = {};
+    (state.categoryCounts || []).forEach(function(c) { counts[c.category] = c.count; });
+    var html = '<button type="button" class="chip chip-toggle chip-all" data-cat=""' +
+      ' aria-pressed="' + (state.category === "" ? "true" : "false") + '">전체</button>';
+    html += ui.categories.map(function(slug) {
+      return ui.categoryChip(slug, counts[slug], state.category === slug);
+    }).join("");
+    el.fCategoryChips.innerHTML = html;
+    el.fCategoryChips.querySelectorAll(".chip-toggle").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        var cat = btn.getAttribute("data-cat");
+        selectCategory(cat === state.category ? "" : cat);
+      });
+    });
+  }
+
+  function selectCategory(cat) {
+    state.category = cat;
+    state.cursor = null;
+    state.events = [];
+    renderCategoryChips(); // immediate pressed-state feedback
+    serializeFilters();
+    loadEvents(false);
+  }
+
   function renderList() {
     var evs = visibleEvents();
     el.grid.innerHTML = evs.map(renderCard).join("");
@@ -111,7 +146,11 @@
 
   function eventsURL(cursor) {
     var url = "/api/v1/events?limit=100&list=" + encodeURIComponent(state.list);
-    if (state.list === "venue") url += "&since=" + todayKST();
+    // Default the venue list to upcoming events (since=today) unless the user set
+    // an explicit start date; benchmark has no implicit date floor.
+    var since = state.dateFrom || (state.list === "venue" ? todayKST() : "");
+    if (since) url += "&since=" + since;
+    if (state.dateTo) url += "&before=" + state.dateTo;
     if (state.category) url += "&category=" + encodeURIComponent(state.category);
     if (state.venue && state.list === "venue") url += "&venue=" + encodeURIComponent(state.venue);
     if (cursor) url += "&cursor=" + encodeURIComponent(cursor);
@@ -119,6 +158,9 @@
   }
 
   function applyPage(d, append) {
+    // The facet is identical on every page (it aggregates the full filtered set),
+    // so capture it from the first page of a fresh load.
+    if (!append && d.category_counts) state.categoryCounts = d.category_counts;
     var data = events.scoped(d.data || [], state.scope);
     var merged = append ? events.mergeUnique(state.events, data) : { events: data, added: data.length };
     state.events = events.sort(merged.events);
@@ -127,30 +169,43 @@
     return merged.added;
   }
 
-  function loadPageBatch(append, pagesLeft, added) {
+  // loadSeq tags each fresh load so a filter change mid-flight (especially during
+  // the categorized lookahead, which can fetch several pages) cannot let a stale
+  // request append wrong-context events to the cleared list. Every continuation
+  // checks seq against loadSeq and drops itself once superseded.
+  var loadSeq = 0;
+
+  function loadPageBatch(append, pagesLeft, added, seq) {
     return fetchJSON(eventsURL(append ? state.cursor : null)).then(function(d) {
+      if (seq !== loadSeq) return added; // superseded by a newer load; drop this page
       var nextAdded = added + applyPage(d, append);
       var shouldLookAhead = state.scope === "categorized" && !state.category && !state.search;
       if (shouldLookAhead && state.hasMore && pagesLeft > 1) {
-        return loadPageBatch(true, pagesLeft - 1, nextAdded);
+        return loadPageBatch(true, pagesLeft - 1, nextAdded, seq);
       }
       return nextAdded;
     });
   }
 
   function loadEvents(append) {
-    if (state.loading) return Promise.resolve();
+    // A fresh load supersedes any in-flight load; only a duplicate load-more is
+    // ignored while one is already running.
+    if (append && state.loading) return Promise.resolve();
+    var seq = ++loadSeq;
     state.loading = true;
     if (!append) showSkeletons(6);
     el.loadMore.disabled = true;
     el.loadMore.textContent = "불러오는 중...";
-    return loadPageBatch(append, 20, 0).then(function() {
+    return loadPageBatch(append, 20, 0, seq).then(function() {
+      if (seq !== loadSeq) return; // a newer load started; let it own the UI/state
       state.loading = false;
       if (state.events.length === 0 && !state.search) showState("조건에 맞는 행사가 없습니다.", false);
       else renderList();
+      renderCategoryChips();
       el.loadMore.textContent = "더 보기";
       el.loadMore.disabled = false;
     }).catch(function(err) {
+      if (seq !== loadSeq) return;
       state.loading = false;
       el.loadMore.textContent = "더 보기";
       el.loadMore.disabled = false;
@@ -159,7 +214,7 @@
   }
 
   function openDetail(id) {
-    el.overlay.innerHTML = '<div class="modal"><button class="modal-close" aria-label="닫기">\u00d7</button><p class="modal-meta">불러오는 중...</p></div>';
+    el.overlay.innerHTML = '<div class="modal"><button class="modal-close" aria-label="닫기">×</button><p class="modal-meta">불러오는 중...</p></div>';
     el.overlay.classList.remove("hidden");
     document.body.style.overflow = "hidden";
     var prevFocus = document.activeElement;
@@ -172,7 +227,7 @@
       bindModalClose(close);
       focusCloseButton();
     }).catch(function(err) {
-      el.overlay.innerHTML = '<div class="modal"><button class="modal-close" aria-label="닫기">\u00d7</button><p style="color:var(--status-cancelled)">' + ui.escapeHtml(err.message || "행사를 불러오지 못했습니다.") + '</p></div>';
+      el.overlay.innerHTML = '<div class="modal"><button class="modal-close" aria-label="닫기">×</button><p style="color:var(--status-cancelled)">' + ui.escapeHtml(err.message || "행사를 불러오지 못했습니다.") + '</p></div>';
       bindModalClose(close);
     });
   }
@@ -194,12 +249,6 @@
     if (closeBtn) closeBtn.focus();
   }
   function populateFilters(vocab) {
-    (vocab.categories || []).forEach(function(slug) {
-      var o = document.createElement("option");
-      o.value = slug;
-      o.textContent = ui.humanizeCat(slug);
-      el.fCategory.appendChild(o);
-    });
     (vocab.venues || []).forEach(function(slug) {
       var o = document.createElement("option");
       o.value = slug;
@@ -226,33 +275,76 @@
     }
   }
 
-  el.fList.addEventListener("change", function() {
-    state.list = el.fList.value;
+  // restoreVenueControl reflects state.venue onto the select once its <option>
+  // list has been populated from the vocabulary (deserialize runs earlier).
+  function restoreVenueControl() {
+    if (state.venue && state.list === "venue") el.fVenue.value = state.venue;
+  }
+
+  // serializeFilters mirrors the active filters into the URL query string so the
+  // view is shareable and bookmarkable. Defaults are omitted to keep URLs short.
+  function serializeFilters() {
+    var p = new URLSearchParams();
+    if (state.list !== "venue") p.set("list", state.list);
+    if (state.scope !== "categorized") p.set("scope", state.scope);
+    if (state.category) p.set("category", state.category);
+    if (state.venue) p.set("venue", state.venue);
+    if (state.dateFrom) p.set("from", state.dateFrom);
+    if (state.dateTo) p.set("to", state.dateTo);
+    if (state.search) p.set("q", state.search);
+    var qs = p.toString();
+    history.replaceState(null, "", qs ? "?" + qs : location.pathname);
+  }
+
+  // deserializeFilters restores filter state from the URL and reflects it onto
+  // the controls that exist at parse time (selects/inputs). The venue select's
+  // options are populated later, so its value is restored by restoreVenueControl.
+  function deserializeFilters() {
+    var p = new URLSearchParams(location.search);
+    state.list = p.get("list") || "venue";
+    state.scope = p.get("scope") || "categorized";
+    state.category = p.get("category") || "";
+    state.venue = p.get("venue") || "";
+    state.dateFrom = p.get("from") || "";
+    state.dateTo = p.get("to") || "";
+    state.search = p.get("q") || "";
+    el.fList.value = state.list;
+    el.fScope.value = state.scope;
+    el.fDateFrom.value = state.dateFrom;
+    el.fDateTo.value = state.dateTo;
+    el.fSearch.value = state.search;
+  }
+
+  function reloadFresh() {
     state.cursor = null;
     state.events = [];
-    syncListControls();
+    serializeFilters();
     loadEvents(false);
+  }
+
+  el.fList.addEventListener("change", function() {
+    state.list = el.fList.value;
+    syncListControls();
+    reloadFresh();
   });
   el.fScope.addEventListener("change", function() {
     state.scope = el.fScope.value;
-    state.cursor = null;
-    state.events = [];
-    loadEvents(false);
-  });
-  el.fCategory.addEventListener("change", function() {
-    state.category = el.fCategory.value;
-    state.cursor = null;
-    state.events = [];
-    loadEvents(false);
+    reloadFresh();
   });
   el.fVenue.addEventListener("change", function() {
     state.venue = el.fVenue.value;
-    state.cursor = null;
-    state.events = [];
-    loadEvents(false);
+    reloadFresh();
   });
+  function onDateChange() {
+    state.dateFrom = el.fDateFrom.value;
+    state.dateTo = el.fDateTo.value;
+    reloadFresh();
+  }
+  el.fDateFrom.addEventListener("change", onDateChange);
+  el.fDateTo.addEventListener("change", onDateChange);
   el.fSearch.addEventListener("input", debounce(function() {
     state.search = el.fSearch.value.trim();
+    serializeFilters();
     renderList();
   }, 200));
   el.loadMore.addEventListener("click", function() { loadEvents(true); });
@@ -262,8 +354,21 @@
       if (closeBtn) closeBtn.click();
     }
   });
+  window.addEventListener("popstate", function() {
+    deserializeFilters();
+    syncListControls();
+    renderCategoryChips();
+    state.cursor = null;
+    state.events = [];
+    loadEvents(false).then(restoreVenueControl);
+  });
+
+  deserializeFilters();
   syncListControls();
+  // Chips are first painted by loadEvents' completion, with their counts already
+  // in hand — avoiding an initial badge-less flash.
   Promise.all([fetchJSON("/api/v1"), loadEvents(false)]).then(function(res) {
     if (res[0] && res[0].vocabularies) populateFilters(res[0].vocabularies);
+    restoreVenueControl();
   }).catch(function() {});
 })();
