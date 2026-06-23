@@ -506,6 +506,18 @@ without turning the product into a generic event portal.
   as upcoming dated events first, TBA/date-missing records next, and completed
   events last. Completed events sort by most recently ended first inside the
   archive group.
+- Benchmark list deployment (2026-06-23): committed `5dccb2c feat(events):
+  expand benchmark event lists`, deployed linux/amd64 binary SHA256
+  `34958505ee2daa4a40db901819ae19eb88085070144a9b6243415964f31f24ec` to
+  `developer-vps`, and restarted `eventsintel-api` active at
+  `2026-06-23 09:27:07 UTC`. Manual production ingest completed at
+  `2026-06-23 09:31:12 UTC` with benchmark `31/31`, COEX `95/95`, and KINTEX
+  `38/38` stored. Public smoke returned 200 for `/`, `/healthz`, `/llms.txt`,
+  `/api/v1`, `/api/v1/schema`, `/api/v1/openapi.yaml`, and `/api/v1/events`;
+  public HTML shows `AI·로봇·헬스케어 행사 모아보기`, `국내 행사 일정`, and
+  `글로벌 주요 행사`. Public API `list=benchmark&limit=100` returned 31
+  benchmark-only rows including WAIC Shanghai and World Robot Conference
+  Beijing; `list=venue&since=2026-06-23&limit=100` returned no benchmark IDs.
 
 ## Validation Notes
 
@@ -521,8 +533,8 @@ No product validation has been run yet. Current evidence level is Low.
 
 ## Next Action
 
-Deploy the 31-source benchmark expansion, then choose the first 3-5 benchmark
-sources that need source-specific deadline, exhibitor, and program extraction.
+Choose the first 3-5 benchmark sources that need source-specific deadline,
+exhibitor, and program extraction.
 
 ## Decision Needed
 
