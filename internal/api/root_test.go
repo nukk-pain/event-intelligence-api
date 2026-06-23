@@ -81,7 +81,7 @@ func TestRootIndexServesInteractiveHTML_whenBrowserAcceptsHTML(t *testing.T) {
 	if !strings.Contains(body, `id="modal-overlay"`) {
 		t.Fatalf("root HTML missing modal overlay")
 	}
-	if !strings.Contains(body, `href="/assets/detail.css"`) {
+	if !strings.Contains(body, `href="/assets/detail.css?v=`) {
 		t.Fatalf("root HTML missing detail stylesheet")
 	}
 }
@@ -137,8 +137,8 @@ func TestRootIndexHTMLUsesHumanFriendlyCopy(t *testing.T) {
 		"요약 문서",
 		"더 보기",
 		"국내 행사 일정과 글로벌 주요 행사를 분리해 보여줍니다",
-		`href="/assets/index.css"`,
-		`src="/assets/events.js"`,
+		`href="/assets/index.css?v=`,
+		`src="/assets/events.js?v=`,
 		`src="/assets/app.js?v=`,
 	} {
 		if !strings.Contains(body, want) {
