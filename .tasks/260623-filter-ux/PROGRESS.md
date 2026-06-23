@@ -55,10 +55,18 @@ confs.tech 스타일 필터 3종 구현: 분야 칩 건수 배지 · 날짜 범�
 - 라이브 확인: `list=venue&since=2026-06-23&limit=100` → returned 100, has_more true.
 - 조사 산출물: workflow wf_1398d23c-d89 (5 agents, file:line 매핑).
 
+## 배포 (events.nukk.net, 2026-06-23)
+
+- 커밋 3건: `f10aace` feat(filter-ux), `18dac5f` docs(CLAUDE.md), `8fcb4c7` fix(asset cache-bust).
+- VPS 바이너리 교체(백업 `eventsintel.bak`) + `systemctl restart eventsintel-api`. DB 마이그레이션 없음(facet은 read-time).
+- 공개 스모크: 모든 엔트리포인트 200, `category_counts` 라이브(ai:21…), `before` 동작, llms/openapi 갱신 확인.
+- **배포 인시던트(해결)**: 1차 배포에서 app.js만 cache-bust → CDN이 stale ui.js 페어링 → `undefined.map` 에러. 전 asset version-bust + 재배포로 해결. CF 토큰은 purge 권한 없음(HTML은 DYNAMIC이라 무관). 라이브 재검증: 칩·날짜·URL 복원 정상.
+
 ## 블로커
 
-- 없음.
+- 없음. 작업 완료.
 
-## 다음 행동
+## 미해결(선택)
 
-Task 1.1 — `internal/store/query.go`에 `commonWhere()` 추출 + `CategoryCounts` 추가.
+- 선행 statusChip/costChip XSS는 이번에 함께 하드닝 완료(ui.js).
+- 페이지 내 필터 back/forward(현재 replaceState) — 필요 시 pushState 전환 가능.
