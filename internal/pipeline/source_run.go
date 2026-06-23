@@ -28,6 +28,10 @@ type refResult struct {
 	started bool
 }
 
+type fallbackParser interface {
+	ParseFallback(ctx context.Context, ref sources.Ref, cause error) (*sources.ParsedEvent, error)
+}
+
 func (p *Pipeline) runSource(ctx context.Context, run sourceRun) SourceReport {
 	db := run.db
 	s := run.source
@@ -189,6 +193,13 @@ func (p *Pipeline) processRef(ctx context.Context, s sources.Source, f *fetch.Fe
 
 	res, ferr := f.Fetch(ctx, ref.URL, fetch.Conditional{})
 	if ferr != nil {
+		if fallback, ok := s.(fallbackParser); ok {
+			parsed, perr := fallback.ParseFallback(ctx, ref, ferr)
+			if perr != nil {
+				return nil, "fetch", fmt.Errorf("fetch %s: %w; fallback: %v", ref.URL, ferr, perr)
+			}
+			return p.normalizeParsed(ctx, f, ref, parsed, now)
+		}
 		return nil, "fetch", fmt.Errorf("fetch %s: %w", ref.URL, ferr)
 	}
 	if res.NotModified {
@@ -202,6 +213,10 @@ func (p *Pipeline) processRef(ctx context.Context, s sources.Source, f *fetch.Fe
 	if perr != nil {
 		return nil, "parse", fmt.Errorf("parse %s: %w", ref.EventID, perr)
 	}
+	return p.normalizeParsed(ctx, f, ref, parsed, now)
+}
+
+func (p *Pipeline) normalizeParsed(ctx context.Context, f *fetch.Fetcher, ref sources.Ref, parsed *sources.ParsedEvent, now string) (ev *model.Event, stage string, err error) {
 	if parsed == nil {
 		return nil, "parse", fmt.Errorf("parse %s: nil parsed event", ref.EventID)
 	}

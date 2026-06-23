@@ -20,10 +20,8 @@ The current product has already moved beyond the original shaping stage for the
 domestic venue wedge: COEX/KINTEX ingestion, normalization, SQLite storage,
 read-only API, `llms.txt`, public UI, and deployment to `events.nukk.net` exist.
 Action-oriented organizer-page enrichment has also been implemented and
-backfilled. A founder/operator opportunity shortlist now exists as a derived
-API/UI layer over those public facts. The main remaining gaps are now
-international/source breadth, alert/export use cases, API-key tiers, and
-long-term data quality operations.
+backfilled. The main remaining gaps are now international/source breadth,
+alert/export use cases, API-key tiers, and long-term data quality operations.
 
 ## Superseded Gap
 
@@ -50,7 +48,7 @@ automated pipeline. The retained artifact is the v0.1 schema contract in
 | Cost posture | Normal reads are database/cache/static backed; no live LLM generation is part of the read path. |
 | Data policy | Public-only, read-only, source-provenance-first posture is intact. |
 | Action enrichment | Official/organizer page second-hop enrichment exists for public `homepage_url` records. Public API and modal UI expose register/exhibit links, cost hints, action booleans, and missing-field honesty. |
-| Opportunity radar | `/api/v1/events` exposes derived `opportunity=true`, `actionable=true`, and `opportunity_quality` filters. The homepage has a `기회 shortlist` scope and opportunity-quality chips. |
+| International benchmark slice | The registered `benchmark` source now stores and displays 10 official international benchmark events across AI, bio, digital health, and medtech. |
 
 Production evidence as of the action enrichment backfill:
 
@@ -63,13 +61,23 @@ Production evidence as of the action enrichment backfill:
   rows with `register_url`, 61 with `exhibit_url`, and 49 with non-unknown
   `cost_hint`.
 
+Local benchmark evidence as of the 10-source expansion:
+
+- Local ingest stored 10/10 registered benchmark rows alongside COEX/KINTEX
+  rows in a production-copy style SQLite database.
+- Local API evidence on `127.0.0.1:8110` returned all 10 benchmark rows with
+  date, official URL, category/region representation, and action-or-honesty
+  fields.
+- Local UI evidence on `127.0.0.1:8110` displayed all 10 benchmark rows in the
+  major-event view while preserving the domestic COEX/KINTEX rows.
+
 ## Remaining Gaps Against Original Plan
 
 | Original plan area | Gap now | Notes / next action |
 |---|---|---|
-| Domestic and international coverage | International benchmark events are still deferred. | Choose 20-30 benchmark events or source families before adding global coverage. |
+| Domestic and international coverage | First 10 international benchmark events are implemented; broader benchmark breadth is still open. | Expand toward the documented 20-30 benchmark set only after the 10-source slice is reviewed. |
 | Korea-wide venue coverage | BEXCO, SETEC, and other Korean venues are not implemented. | Add only after COEX/KINTEX quality and maintenance cost are stable. |
-| Industry intelligence taxonomy | The taxonomy and founder/operator shortlist exist, but coverage is still only the COEX/KINTEX domestic venue wedge. | Add benchmark international/regional sources before adding generic Korean venue breadth. |
+| Industry intelligence taxonomy | The taxonomy exists, but coverage is still only the COEX/KINTEX domestic venue wedge. | Add benchmark international/regional sources before adding generic Korean venue breadth. |
 | Action-oriented fields | First-pass action enrichment exists, but coverage is partial and heuristic. | Register/exhibit/cost signals are now populated where public organizer pages expose them. Deadline, sponsor, matchmaking, startup-program, and application-period extraction still needs source-specific rules and PDF/microsite handling. |
 | Exhibitor/sponsor/program data | Basic booleans and links exist, but full structured programs are not reliable. | Requires organizer microsites, PDFs, exhibitor lists, sponsor package pages, or event-specific source adapters beyond generic link/text matching. |
 | Alerts and saved filters | Not implemented. | Original human surface mentioned saved filters, alerts, and time-sensitive views. |
@@ -77,17 +85,19 @@ Production evidence as of the action enrichment backfill:
 | Agent polling at scale | Basic read-only API and change feed exist, but free API keys and partner keys are not implemented. | Launch policy documented keyless, free-key, and allowlisted tiers; current public surface is effectively keyless. |
 | Quota operations | Keyless quota policy exists in API docs/code, but real usage-based tuning is not documented yet. | Revisit after traffic logs show request shape, cache hit rate, and crawler cost. |
 | Data quality operations | Parser tests and deployment evidence exist, but no long-running correction workflow is documented. | Need correction process, source-breakage triage, and freshness SLA if this becomes more than a prototype. |
-| Human editorial layer | "Why this event matters" and curated notes are not implemented. | Original plan allowed editorial notes only when evidence exists; not required for the current MVP. |
+| Human editorial layer | "Why this event matters" and editor notes are not implemented. | Original plan allowed editorial notes only when evidence exists; not required for the current MVP. |
 | Monetization | No paid product or billing exists. | This matches the original capture-time decision: free public service, no active monetization plan. |
 | API write/enrichment endpoints | Not implemented. | This matches the original non-goal for public v1. |
 | Live LLM answers | Not implemented. | This matches the original cost-efficiency rule and read-path non-goal. |
 
 ## Product Gap Framing
 
-The current product proves the domestic venue ingestion and public read surface.
-The action-enrichment backfill and opportunity shortlist make the COEX/KINTEX
-wedge more useful, but the product still does not prove the broader "industry
-intelligence" claim. To prove that claim, the next work should add either:
+The current product proves the domestic venue ingestion, public read surface,
+and first international benchmark slice. The action-enrichment backfill makes
+the COEX/KINTEX wedge more useful, and the 10 benchmark records show that the
+same event/action schema can carry international official-source records. The
+remaining product proof is whether that coverage can become broad and durable
+enough for a real workflow. The next work should add either:
 
 1. More source breadth: international benchmarks and more Korean venues.
 2. More workflow depth: better deadlines/program/exhibitor data, alerts, and
@@ -110,26 +120,25 @@ axis and keep the other constrained.
 
 ## Recommended Next Gap
 
-The next gap to fill should be **international benchmark source coverage**, not
-another generic UI or field pass.
+The next gap to fill should be **benchmark coverage hardening**, not another
+generic UI or field pass.
 
-Reason: COEX/KINTEX now have date, summary, action, provenance, API, UI, and
-founder/operator shortlist surfaces. The product still has not shown that the
-same intelligence layer works beyond the domestic venue wedge.
+Reason: COEX/KINTEX now have date, summary, action, provenance, API, and UI
+surfaces, and the first 10 international benchmark records now exercise that
+same layer. The next risk is whether the benchmark set can scale from a useful
+seed to a maintained 20-30 source coverage baseline.
 
 Recommended next implementation:
 
-- Add a static benchmark source seed (`docs` + JSON/JSONL) from
-  `docs/founder-operator-opportunity-radar.md`.
-- Implement the first 2-3 official-source adapters from that set, preferring
-  HTTP-readable official pages with date, registration/exhibit, cost/deadline,
-  and program/partnering signals.
-- Backfill those sources into the same opportunity scorer and compare the
-  resulting shortlist against COEX/KINTEX.
+- Review the 10-source benchmark slice in API/UI before production deployment.
+- Decide which additional 10-20 records from
+  `docs/founder-operator-event-radar.md` are worth promoting.
+- Add source-specific hardening only where official pages expose durable
+  register/exhibit/deadline/program evidence.
 
 This directly tests the original thesis that the product is an industry
 intelligence layer, not only a COEX/KINTEX schedule browser.
 
 Current planning artifact:
 
-- `docs/founder-operator-opportunity-radar.md`
+- `docs/founder-operator-event-radar.md`

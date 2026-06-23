@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
-	"reflect"
-	"sort"
 	"testing"
 
 	"github.com/smpain/event-intelligence-api/internal/api"
@@ -243,50 +241,6 @@ func TestListEvents_VenueFilter(t *testing.T) {
 	}
 }
 
-func TestListEvents_OpportunityFilters(t *testing.T) {
-	high := opportunityEvent("ev-high")
-	high.RegisterURL = strptr("https://expo.example/register")
-	high.ExhibitURL = strptr("https://expo.example/exhibit")
-
-	medium := opportunityEvent("ev-medium")
-	medium.CostHint = "free"
-
-	low := opportunityEvent("ev-low")
-
-	actionOnly := opportunityEvent("ev-action-only")
-	actionOnly.HomepageURL = nil
-	actionOnly.Actions.CanRegister = true
-
-	bioAction := opportunityEvent("ev-bio-action")
-	bioAction.Categories = []string{"bio"}
-	bioAction.Actions.CanRegister = true
-
-	srv := newServer(t, []model.Event{high, medium, low, actionOnly, bioAction})
-
-	shortlist, _ := getEnvelope(t, srv.URL+"/api/v1/events?opportunity=true&limit=100")
-	if got := eventIDs(shortlist.Data); !sameIDs(got, []string{"ev-high", "ev-medium", "ev-bio-action"}) {
-		t.Fatalf("opportunity=true ids = %v, want high, medium, and bio-action", got)
-	}
-	if shortlist.Data[0].OpportunityQuality == "" {
-		t.Fatalf("opportunity response omitted derived quality")
-	}
-
-	highOnly, _ := getEnvelope(t, srv.URL+"/api/v1/events?opportunity_quality=high&limit=100")
-	if got := eventIDs(highOnly.Data); !sameIDs(got, []string{"ev-high"}) {
-		t.Fatalf("opportunity_quality=high ids = %v, want ev-high", got)
-	}
-
-	actionable, _ := getEnvelope(t, srv.URL+"/api/v1/events?actionable=true&limit=100")
-	if got := eventIDs(actionable.Data); !sameIDs(got, []string{"ev-high", "ev-medium", "ev-action-only", "ev-bio-action"}) {
-		t.Fatalf("actionable=true ids = %v, want high, medium, action-only, and bio-action", got)
-	}
-
-	actionableAI, _ := getEnvelope(t, srv.URL+"/api/v1/events?actionable=true&category=ai&limit=100")
-	if got := eventIDs(actionableAI.Data); !sameIDs(got, []string{"ev-high", "ev-medium", "ev-action-only"}) {
-		t.Fatalf("actionable=true category=ai ids = %v, want only AI action events", got)
-	}
-}
-
 // TestListEvents_UpdatedSinceFilter asserts updated_since is applied as a >=
 // boundary: a cutoff after all rows hides everything, a cutoff before all rows
 // keeps everything, and the rows actually returned satisfy updated_at >= cutoff.
@@ -418,34 +372,4 @@ func TestCursorRoundTrip(t *testing.T) {
 	if c, err := api.DecodeCursor(""); err != nil || c != (api.Cursor{}) {
 		t.Errorf("DecodeCursor(empty) = (%+v, %v), want zero cursor, nil", c, err)
 	}
-}
-
-func opportunityEvent(id string) model.Event {
-	e := seedEvent(id, "coex", "ai", false)
-	e.StartDate = strptr("2026-07-01")
-	e.EndDate = strptr("2026-07-02")
-	e.HomepageURL = strptr("https://expo.example/" + id)
-	e.Sources = append(e.Sources, model.Source{
-		URL:         "https://expo.example/" + id,
-		Type:        "organizer",
-		Publisher:   "Organizer",
-		RetrievedAt: "2026-06-23T00:00:00Z",
-	})
-	return e
-}
-
-func eventIDs(events []model.Event) []string {
-	ids := make([]string, 0, len(events))
-	for _, event := range events {
-		ids = append(ids, event.EventID)
-	}
-	return ids
-}
-
-func sameIDs(got, want []string) bool {
-	gotCopy := append([]string(nil), got...)
-	wantCopy := append([]string(nil), want...)
-	sort.Strings(gotCopy)
-	sort.Strings(wantCopy)
-	return reflect.DeepEqual(gotCopy, wantCopy)
 }

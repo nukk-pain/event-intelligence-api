@@ -70,7 +70,6 @@
   function updateCount(visible) {
     var total = state.events.length;
     var label = state.scope === "all" ? "개 행사" : "개 주요 행사";
-    if (state.scope === "opportunity") label = "개 기회";
     if (state.search && visible !== total) {
       el.count.textContent = total + "개 중 " + visible + "개 표시" + (state.hasMore ? "+" : "");
       return;
@@ -109,7 +108,6 @@
 
   function eventsURL(cursor) {
     var url = "/api/v1/events?limit=100&since=" + todayKST();
-    if (state.scope === "opportunity") url += "&opportunity=true";
     if (state.category) url += "&category=" + encodeURIComponent(state.category);
     if (state.venue) url += "&venue=" + encodeURIComponent(state.venue);
     if (cursor) url += "&cursor=" + encodeURIComponent(cursor);

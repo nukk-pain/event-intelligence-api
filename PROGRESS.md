@@ -10,8 +10,8 @@
 
 ## Current Focus
 
-Expand the founder/operator opportunity radar beyond the COEX/KINTEX domestic
-venue wedge, without turning the product into a generic event portal.
+Expand benchmark source coverage beyond the COEX/KINTEX domestic venue wedge,
+without turning the product into a generic event portal.
 
 ## Completed
 
@@ -60,12 +60,16 @@ venue wedge, without turning the product into a generic event portal.
 - [x] Updated the event detail modal to show extracted cost hints and action
   signal chips such as 참가 가능, 부스 문의 가능, 후원 문의 가능, 비즈니스 상담,
   and 스타트업 프로그램 when those signals are source-backed.
-- [x] Defined the founder/operator opportunity radar scope and benchmark source
-  set in `docs/founder-operator-opportunity-radar.md`.
-- [x] Added the first opportunity-radar implementation slice: deterministic
-  opportunity scoring, `opportunity=true`, `actionable=true`, and
-  `opportunity_quality` API filters, derived response fields, and the homepage
-  `기회 shortlist` scope.
+- [x] Defined the founder/operator benchmark source set in
+  `docs/founder-operator-event-radar.md`.
+- [x] Added the first international benchmark source coverage slice, backed by
+  a registered `benchmark` source adapter and
+  `docs/benchmark-source-seed.jsonl`.
+- [x] Expanded the registered `benchmark` source to 10 official international
+  benchmark events: CES 2027, NVIDIA GTC 2027, BIO International Convention
+  2027, Web Summit Lisbon 2026, Slush 2026, TechCrunch Disrupt 2026,
+  World Summit AI 2026, HLTH USA 2026, The MedTech Conference 2026, and
+  MEDICA 2026.
 
 ## In Progress
 
@@ -73,6 +77,9 @@ venue wedge, without turning the product into a generic event portal.
   — both static-HTML, field-rich, HTTP-parseable; no headless browser needed.
 - [ ] `/plan` the COEX/KINTEX ingestion backend + ADR superseding manual-first.
 - [x] Choose 20-30 international benchmark sources.
+- [x] Expand the registered `benchmark` source from 3 to 10 official
+  international benchmark events and prove the new rows through a fresh local
+  ingest and API response.
 
 ## Blockers
 
@@ -441,21 +448,51 @@ venue wedge, without turning the product into a generic event portal.
   matchmaking signal. Sample event `kintex-26051208` returns register and
   exhibit URLs, two provenance sources including an organizer source, and
   missing-field honesty for unknown deadline/cost/sponsor/program fields.
-- Opportunity radar planning (2026-06-23): `docs/founder-operator-opportunity-radar.md`
+- Benchmark-source planning (2026-06-23): `docs/founder-operator-event-radar.md`
   defines the founder/operator workflow, a 25-source benchmark set across AI,
-  robotics, bio, digital health, and medtech, source-quality/completeness
-  criteria, candidate API filters, homepage shortlist scope, and a first
-  implementation slice. `docs/original-plan-gap.md` now points to this artifact
-  as the current plan for filling the next product gap.
-- Opportunity shortlist implementation (2026-06-23): `go test ./...`, `go vet
-  ./...`, `go build -o /tmp/eventsintel-opportunity ./cmd/eventsintel`, `node
-  --check static/app.js static/events.js static/ui.js static/detail.js`, and
-  `git diff --check` pass. Local throwaway ingest against KINTEX produced 38
-  rows; local API checks returned 5 `opportunity=true` rows, 20
-  `actionable=true` rows, and 3 `opportunity_quality=high` rows. Selenium
-  browser QA on `127.0.0.1:8099` confirmed the `기회 shortlist` scope, 5
-  opportunity cards, visible quality chips, hidden pagination when
-  `has_more=false`, and no horizontal overflow at 1280px or 390px widths.
+  robotics, bio, digital health, and medtech, and source-quality/completeness
+  criteria.
+- International benchmark source implementation (2026-06-23): added the first
+  registered `benchmark` adapter slice for official international event pages.
+  Targeted red/green coverage:
+  `go test ./internal/sources/benchmark ./internal/normalize ./internal/config
+  -run 'TestParse_|TestNormalize_InternationalParsedEvent|TestDefault_IncludesBenchmarkSource'
+  -count=1`.
+- International benchmark local verification (2026-06-23): `go test ./...`,
+  `go vet ./...`, `go build -o /tmp/eventsintel-benchmark ./cmd/eventsintel`,
+  and `git diff --check` pass. Local ingest against `/tmp/eventsintel-benchmark.db`
+  stored benchmark `3/3`, COEX `3/3`, and KINTEX `3/3` with `EVENTSINTEL_MAX_DISCOVER=3`.
+  Local API on `127.0.0.1:8101` returned all three benchmark rows, and browser
+  QA confirmed the homepage remained stable with no horizontal overflow at
+  1280px or 390px widths.
+- Benchmark source expansion slice (2026-06-23): expanded the registered
+  `benchmark` adapter from 3 to exactly 10 official future/upcoming benchmark
+  events: CES 2027, NVIDIA GTC 2027, BIO International Convention 2027,
+  Web Summit Lisbon 2026, Slush 2026, TechCrunch Disrupt 2026,
+  World Summit AI 2026, HLTH USA 2026, The MedTech Conference 2026, and
+  MEDICA 2026. Added catalog fallback dates, summaries, action signals, and
+  missing-field honesty so JS-heavy pages can still produce structured,
+  source-declared records without inventing facts. Focused red/green and
+  runtime evidence:
+  `go test ./internal/sources/benchmark ./internal/pipeline ./internal/normalize
+  ./cmd/eventsintel -count=1`, `go vet ./internal/sources/benchmark
+  ./internal/pipeline ./internal/normalize ./cmd/eventsintel`, JSONL `jq`
+  structure checks, and a temp `eventsintel ingest` + localhost
+  `/api/v1/events?limit=100` smoke that stored and returned 10/10 benchmark rows
+  with dates, place, homepage, and action-or-honesty fields.
+- Benchmark action-honesty follow-up (2026-06-23): scoped generic second-hop
+  action enrichment away from benchmark catalog records so broad organizer
+  navigation cannot fill future-event register/exhibit/sponsor fields without
+  source-backed event-year evidence. Added a pipeline regression for BIO
+  International Convention 2027; fresh localhost API evidence on
+  `127.0.0.1:8110` returns BIO with `has_matchmaking=true`, null
+  register/exhibit URLs, and register/exhibit/deadline honesty in
+  `missing_fields`.
+- Benchmark source finalization (2026-06-23): renamed the benchmark planning
+  artifact to `docs/founder-operator-event-radar.md`, updated the original gap
+  note to reflect the completed 10-source slice, and tightened date
+  normalization so RFC3339 timestamps are parsed strictly while invalid
+  ISO-shaped prefixes are rejected instead of sliced.
 
 ## Validation Notes
 
@@ -471,10 +508,9 @@ No product validation has been run yet. Current evidence level is Low.
 
 ## Next Action
 
-Add international benchmark source coverage for the founder/operator radar:
-start with a static seed from `docs/founder-operator-opportunity-radar.md`, then
-implement the first 2-3 official-source adapters and backfill them through the
-same opportunity scorer.
+Review the 10-source benchmark slice on the local dev server
+`http://127.0.0.1:8110/` and decide whether the next benchmark coverage step
+should add more official sources or deploy the current catalog expansion first.
 
 ## Decision Needed
 

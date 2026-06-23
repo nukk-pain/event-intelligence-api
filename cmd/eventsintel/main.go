@@ -17,6 +17,7 @@ import (
 	"github.com/smpain/event-intelligence-api/internal/fetch"
 	"github.com/smpain/event-intelligence-api/internal/pipeline"
 	"github.com/smpain/event-intelligence-api/internal/sources"
+	"github.com/smpain/event-intelligence-api/internal/sources/benchmark"
 	"github.com/smpain/event-intelligence-api/internal/sources/coex"
 	"github.com/smpain/event-intelligence-api/internal/sources/kintex"
 	"github.com/smpain/event-intelligence-api/internal/store"
@@ -84,7 +85,20 @@ func runIngest(cfg config.Config) error {
 		fetch.WithPerMinute(cfg.RateLimitPerMinute),
 		// Production allowlist (default already covers the two venues; passed
 		// explicitly here so the wiring is auditable from the command).
-		fetch.WithAllowedHosts("www.coex.co.kr", "www.kintex.com"),
+		fetch.WithAllowedHosts(
+			"www.coex.co.kr",
+			"www.kintex.com",
+			"www.ces.tech",
+			"www.nvidia.com",
+			"convention.bio.org",
+			"websummit.com",
+			"slush.org",
+			"techcrunch.com",
+			"worldsummit.ai",
+			"hlth.com",
+			"themedtechconference.com",
+			"www.medica-tradefair.com",
+		),
 	)
 	if err != nil {
 		return err
@@ -101,6 +115,7 @@ func runIngest(cfg config.Config) error {
 	// Register the venue adapters (single registration point).
 	sources.Register(coex.New())
 	sources.Register(kintex.New())
+	sources.Register(benchmark.New())
 
 	registeredSources := sources.All()
 	sourceIDs := make([]string, 0, len(registeredSources))

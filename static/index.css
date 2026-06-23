@@ -171,8 +171,6 @@ main {
 .chip.cost-free { background: var(--cost-free-bg); color: var(--cost-free); }
 .chip.cost-paid { background: var(--cost-paid-bg); color: var(--cost-paid); }
 .chip.cost-mixed { background: var(--cost-mixed-bg); color: var(--cost-mixed); }
-.chip.opportunity-high { background: var(--opportunity-high-bg); color: var(--opportunity-high); }
-.chip.opportunity-medium { background: var(--opportunity-medium-bg); color: var(--opportunity-medium); }
 
 footer.site {
   border-top: 1px solid var(--rule);

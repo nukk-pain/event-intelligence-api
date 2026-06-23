@@ -37,9 +37,14 @@ type ParsedEvent struct {
 	VenueName *string // venue label as scraped (e.g. "코엑스", "KINTEX")
 	Hall      *string // hall/room text, if present
 	City      *string // city text, if present
+	Country   *string
+	Timezone  *string
+	Format    *string
 
-	Organizer *string // 주최
-	Host      *string // 주관
+	Organizer  *string // 주최
+	Host       *string // 주관
+	Publisher  *string
+	SourceType *string
 
 	HomepageURL  *string // event homepage link, if present
 	SummaryText  *string

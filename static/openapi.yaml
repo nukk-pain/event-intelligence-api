@@ -97,22 +97,6 @@ paths:
           description: Venue id slug (e.g. coex, kintex).
           schema:
             type: string
-        - name: opportunity
-          in: query
-          description: When true, returns events with enough public facts and at least one opportunity signal.
-          schema:
-            type: boolean
-        - name: actionable
-          in: query
-          description: When true, returns events with at least one registration, exhibition, deadline, cost, or action signal.
-          schema:
-            type: boolean
-        - name: opportunity_quality
-          in: query
-          description: Derived opportunity-quality bucket.
-          schema:
-            type: string
-            enum: [high, medium, low]
         - name: format
           in: query
           description: Response encoding override; md returns a Markdown rendering.
@@ -464,20 +448,6 @@ components:
           type: array
           items:
             type: string
-        opportunity_quality:
-          type: string
-          enum: [high, medium, low]
-          description: Derived read-time opportunity quality.
-        opportunity_signals:
-          type: array
-          items:
-            type: string
-          description: Derived read-time signals used for opportunity quality.
-        source_quality_notes:
-          type: array
-          items:
-            type: string
-          description: Derived read-time notes for missing opportunity prerequisites.
         excluded:
           type: boolean
       required:

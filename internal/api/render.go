@@ -134,7 +134,7 @@ func mdURL(u string) string {
 
 // --- shared field projection ----------------------------------------------
 
-var eventColumns = []string{"event_id", "name", "start_date", "end_date", "venue_id", "categories", "status", "opportunity_quality", "opportunity_signals"}
+var eventColumns = []string{"event_id", "name", "start_date", "end_date", "venue_id", "categories", "status"}
 
 // eventRow projects an Event onto the shared, injection-guarded column values in
 // eventColumns order.
@@ -151,8 +151,6 @@ func eventRow(e model.Event) []string {
 		mdText(venueID),
 		mdText(strings.Join(e.Categories, ", ")),
 		mdText(e.Status),
-		mdText(e.OpportunityQuality),
-		mdText(strings.Join(e.OpportunitySignals, ", ")),
 	}
 }
 

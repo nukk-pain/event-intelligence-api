@@ -37,9 +37,7 @@ Exceeding either returns HTTP 429 with a `Retry-After` header.
 - GET /api/v1/schema — v0.1 schema descriptor + supported_versions.
 - GET /api/v1/openapi.yaml — OpenAPI 3.x specification.
 - GET /api/v1/events — list events. Filters: since (start_date >= YYYY-MM-DD),
-  updated_since, changed_since, category, venue, opportunity=true,
-  actionable=true, opportunity_quality=high|medium|low. Pagination: limit,
-  cursor.
+  updated_since, changed_since, category, venue. Pagination: limit, cursor.
 - GET /api/v1/events/{event_id} — single event detail with provenance.
 - GET /api/v1/events/{event_id}/sources — source provenance entries (>=1).
 - GET /api/v1/events/changes — field-level change feed. Filters: since, event_id.
@@ -64,5 +62,3 @@ Exceeding either returns HTTP 429 with a `Retry-After` header.
 - `register_url`, `exhibit_url`, `registration_deadline`,
   `exhibitor_deadline`, and `cost_hint` may come from linked organizer pages;
   use `sources[]` to distinguish organizer-backed facts from venue-only records.
-- `opportunity_quality` and `opportunity_signals[]` are derived read-time
-  fields for founder/operator shortlist workflows; they are not stored facts.

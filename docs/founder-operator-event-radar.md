@@ -1,8 +1,8 @@
-# Founder / Operator Opportunity Radar
+# Founder / Operator Benchmark Sources
 
 ## Metadata
 
-- Status: current execution definition
+- Status: benchmark source planning
 - Date: 2026-06-23
 - Scope: define the next product gap after COEX/KINTEX schedule browsing and
   first-pass action enrichment
@@ -11,9 +11,8 @@
 
 ## Goal
 
-Turn the current COEX/KINTEX event browser into an opportunity radar for startup
-founders and operators tracking AI, robotics, bio, digital-health, and
-medical-device opportunities.
+Define benchmark source families for startup founders and operators tracking
+AI, robotics, bio, digital-health, and medical-device events.
 
 This should not become a generic event portal. The product should answer:
 
@@ -33,8 +32,8 @@ Primary jobs:
 - Avoid missing registration, booth, startup program, or partnering windows.
 - Compare domestic COEX/KINTEX opportunities against a small global benchmark
   set.
-- Export or hand off a short actionable shortlist to an internal planning tool
-  or agent.
+- Export or hand off actionable event facts to an internal planning tool or
+  agent.
 
 Non-goals for this phase:
 
@@ -53,7 +52,6 @@ the first implementation pass.
 |---:|---|---|---|---|
 | 1 | CES / CES Digital Health Summit | AI, digital health, robotics | US/global | Major cross-domain launch and partnership surface with digital-health and AI relevance. |
 | 2 | NVIDIA GTC | AI infrastructure, physical AI, robotics | US/global | High-signal AI ecosystem event; useful for AI infrastructure and robotics startups. |
-| 3 | COMPUTEX / InnoVEX | AI computing, robotics, startups | Taiwan/Asia | Asia benchmark for AI hardware, robotics/mobility, and startup exhibition. |
 | 4 | VivaTech | AI, startups, enterprise innovation | France/Europe | Major startup/operator event with global investor and enterprise presence. |
 | 5 | Web Summit Lisbon | startups, AI, investors | Portugal/global | Founder/investor workflow benchmark and startup program surface. |
 | 6 | Web Summit Qatar | startups, AI, investors | Qatar/MENA | Regional founder/investor expansion benchmark. |
@@ -68,7 +66,6 @@ the first implementation pass.
 | 15 | IEEE/RSJ IROS | robotics, intelligent systems | global/academic-industry | Robotics research benchmark for technical ecosystem tracking. |
 | 16 | automatica | robotics, automation, manufacturing | Germany/Europe | Major robotics/automation trade fair with exhibitor action surface. |
 | 17 | BIO International Convention | biotech, partnering | US/global | Biotech partnering and business-development benchmark. |
-| 18 | Bio-IT World Conference & Expo | bioinformatics, precision medicine | US | Strong bio/AI/data overlap and exhibitor surface. |
 | 19 | HLTH USA | digital health, healthcare innovation | US | Healthcare innovation event with register/sponsor/action surfaces. |
 | 20 | HIMSS Global Health Conference | digital health, health IT | US/global | Major health IT and digital-health benchmark. |
 | 21 | HIMSS AI in Healthcare Forum | AI in healthcare | US | Focused AI-health event with clear registration signal. |
@@ -81,7 +78,6 @@ Primary source URLs:
 
 - CES / Digital Health Summit: `https://www.ces.tech/explore-ces/digital-health-summit/`
 - NVIDIA GTC: `https://www.nvidia.com/gtc/`
-- COMPUTEX / InnoVEX: `https://www.computextaipei.com.tw/en/index.html`
 - VivaTech: `https://vivatech.com/`
 - Web Summit Lisbon startup program: `https://websummit.com/startups/`
 - Web Summit Qatar: `https://qatar.websummit.com/`
@@ -95,8 +91,7 @@ Primary source URLs:
 - IEEE ICRA: `https://2026.ieee-icra.org/`
 - IEEE/RSJ IROS: `https://www.ieee-ras.org/conferences-workshops/financially-co-sponsored/iros/`
 - automatica: `https://automatica-munich.com/en/`
-- BIO International Convention: `https://convention.bio.org/landing`
-- Bio-IT World Conference & Expo: `https://www.bio-itworldexpo.com/`
+- BIO International Convention: `https://convention.bio.org/future-dates`
 - HLTH USA: `https://hlth.com/events/usa/`
 - HIMSS Global Health Conference: `https://www.himssconference.com/`
 - HIMSS AI in Healthcare Forum: `https://www.himss.org/events-overview/ai-in-healthcare-forum-boston/`
@@ -120,7 +115,7 @@ Selection rules:
 Each event should receive a completeness profile. This is not a popularity rank;
 it tells users and agents whether the record is actionable.
 
-Required for inclusion in the opportunity shortlist:
+Required for a benchmark record:
 
 - `event_id`
 - `name`
@@ -133,95 +128,42 @@ Required for inclusion in the opportunity shortlist:
 - `last_checked_at`
 - `missing_fields[]`
 
-Strong opportunity signals:
+Direct action signals that can make a record useful for operator follow-up:
 
 - `register_url`
 - `exhibit_url`
 - `registration_deadline`
 - `exhibitor_deadline`
-- `cost_hint` not `unknown`
 - `actions.can_register`
 - `actions.can_exhibit`
 - `actions.can_sponsor`
 - `actions.has_matchmaking`
 - `actions.has_startup_program`
-- source-derived `summary`
+
+Supporting context that can make an already actionable record more useful:
+
+- `cost_hint` not `unknown`
+- source-derived `summary` as supporting context
 - organizer/source provenance beyond the venue calendar
 
-Suggested score bands:
-
-| Band | Meaning | Rule of thumb |
-|---|---|---|
-| `high` | Ready for operator action | Dates, official URL, category, provenance, and at least two strong opportunity signals. |
-| `medium` | Worth watching | Dates, official URL, category, provenance, and at least one strong opportunity signal. |
-| `low` | Not yet actionable | Event is relevant, but action fields are mostly missing or weakly sourced. |
-
 Do not hide low-completeness records by default in the API. The browser
-shortlist may prioritize `high` and `medium`, but the API should preserve
-honest missing fields for agents.
+should preserve honest missing fields for agents.
 
-## UI Changes
+## First International Coverage Slice
 
-Add one focused surface, not a new portal:
+Implemented benchmark source seed:
 
-- A homepage scope option: `기회 shortlist`.
-- Default sort for that scope: upcoming date, then source-quality band, then
-  action richness.
-- Card badges for:
-  - `참가 가능`
-  - `부스 가능`
-  - `후원 가능`
-  - `상담/파트너링`
-  - `스타트업 프로그램`
-  - `비용 확인`
-  - `마감일 있음`
-- A compact completeness indicator:
-  - `충분`
-  - `보통`
-  - `부족`
-- Keep missing fields visible in the detail modal; do not imply certainty when a
-  field is unknown.
+- `docs/benchmark-source-seed.jsonl`
 
-Avoid:
+Implemented registered source adapter:
 
-- A marketing-style landing page.
-- Generic "recommended events" without source-backed action criteria.
-- User accounts or saved filters in this phase.
+- `benchmark`: current 10-source catalog, including CES 2027, NVIDIA GTC 2027,
+  BIO International Convention 2027, Web Summit Lisbon 2026, Slush 2026,
+  TechCrunch Disrupt 2026, World Summit AI 2026, HLTH USA 2026,
+  The MedTech Conference 2026, and MEDICA 2026.
 
-## API Changes
-
-Add derived read-only filters and fields that can be computed from canonical
-event data.
-
-Candidate query parameters for `GET /api/v1/events`:
-
-- `opportunity=true`: returns records that meet the shortlist inclusion rule.
-- `opportunity_quality=high|medium|low`: filters by score band.
-- `actionable=true`: at least one source-backed action signal or action URL.
-- `has_register_url=true`
-- `has_exhibit_url=true`
-- `has_deadline=true`
-- `has_startup_program=true`
-- `has_matchmaking=true`
-- `region=kr|asia|us|europe|global`
-
-Candidate derived response fields:
-
-- `opportunity_quality`: `high|medium|low`
-- `opportunity_signals`: string array, e.g. `["register_url","exhibit_url","cost_hint"]`
-- `source_quality_notes`: short machine-readable reason codes, not prose
-
-Do not create write endpoints. Do not create live LLM read paths.
-
-## First Implementation Slice
-
-1. Add a deterministic opportunity-quality scorer over existing `model.Event`.
-2. Add tests with COEX/KINTEX backfill-shaped fixtures.
-3. Add API filters for `opportunity=true`, `actionable=true`, and
-   `opportunity_quality`.
-4. Add the `기회 shortlist` homepage scope using the new API filters.
-5. Add a static benchmark-source seed document or JSONL file from the source set
-   above. Do not implement all new adapters in the same slice.
+This slice intentionally covers official pages from different domains before
+expanding the full benchmark set.
 
 ## Acceptance Criteria
 

@@ -29,6 +29,18 @@ func TestDefault_UsesConcurrencyDefaults(t *testing.T) {
 	}
 }
 
+func TestDefault_IncludesBenchmarkSource(t *testing.T) {
+	cfg := Default()
+
+	seen := map[string]bool{}
+	for _, source := range cfg.Sources {
+		seen[source.ID] = source.Enabled
+	}
+	if !seen["benchmark"] {
+		t.Fatalf("benchmark source not enabled by default: %+v", cfg.Sources)
+	}
+}
+
 func TestFromEnv_ConcurrencyOverrides(t *testing.T) {
 	// Given
 	t.Setenv("EVENTSINTEL_SOURCE_CONCURRENCY", "3")

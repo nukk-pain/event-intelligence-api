@@ -23,12 +23,16 @@ import (
 	"github.com/smpain/event-intelligence-api/internal/sources"
 )
 
-// dateLayouts are the source date shapes seen on the two venues: COEX uses
-// "2024.08.24" and KINTEX uses "2026-06-18". Both normalize to ISO "2006-01-02".
-// Order is irrelevant (each layout is unambiguous). Parsing is strict — a string
-// that matches no layout is treated as unparseable (null + missing_fields),
-// never coerced.
-var dateLayouts = []string{"2006.01.02", "2006.1.2", "2006-01-02", "2006-1-2"}
+// dateLayouts are the source date shapes seen across venue and benchmark
+// sources. They normalize to ISO "2006-01-02". Parsing is strict: a string that
+// matches no complete layout is treated as unparseable, never sliced or guessed.
+var dateLayouts = []string{
+	time.RFC3339,
+	"2006.01.02",
+	"2006.1.2",
+	"2006-01-02",
+	"2006-1-2",
+}
 
 // parseDate returns the ISO (YYYY-MM-DD) form of a raw date string, or ("",
 // false) when it matches no known layout. It does not fabricate or guess.
@@ -89,19 +93,14 @@ func normalizeDates(startRaw, endRaw *string, mf *missingFields) (start, end *st
 	return start, end, confidence, ""
 }
 
-// country is the fixed ISO 3166-1 alpha-2 code for both v1 venues (COEX/KINTEX
-// are Korean). It is a deterministic fact about the source, not a guess.
-const country = "KR"
+const defaultCountry = "KR"
 
 // summaryMaxRunes caps the source-derived summary length (schema convention:
 // <=240 chars). Measured in runes so multi-byte Korean text is not truncated
 // mid-glyph.
 const summaryMaxRunes = 240
 
-// sourceType is the provenance type for a venue detail page (schema enum:
-// venue|organizer|association|press|social|aggregator). Both adapters scrape the
-// venue's own site, so the single source is always "venue".
-const sourceType = "venue"
+const sourceTypeVenue = "venue"
 
 // validSourceTypes is the schema enum for sources[].type, used by Validate.
 var validSourceTypes = map[string]struct{}{
@@ -142,9 +141,9 @@ func Normalize(p *sources.ParsedEvent, now string) (*model.Event, error) {
 		SchemaVersion: model.SchemaVersion,
 		EventID:       strings.TrimSpace(p.EventID),
 		Name:          strings.TrimSpace(p.Name),
-		Country:       country,
+		Country:       countryOrDefault(p.Country),
 		Status:        "scheduled",
-		Format:        "onsite",
+		Format:        formatOrDefault(p.Format),
 		CostHint:      "unknown",
 		LastCheckedAt: now,
 		CreatedAt:     now,
@@ -182,7 +181,7 @@ func Normalize(p *sources.ParsedEvent, now string) (*model.Event, error) {
 
 	// timezone: venue pages never state it; KR venues are Asia/Seoul (a fact),
 	// but to avoid asserting beyond the source we record it as known-constant.
-	tz := "Asia/Seoul"
+	tz := timezoneOrDefault(p.Timezone)
 	e.Timezone = &tz
 
 	// --- venue ---
@@ -309,4 +308,29 @@ func derefTrim(p *string) string {
 		return ""
 	}
 	return strings.TrimSpace(*p)
+}
+
+func countryOrDefault(p *string) string {
+	country := strings.ToUpper(derefTrim(p))
+	if country == "" {
+		return defaultCountry
+	}
+	return country
+}
+
+func timezoneOrDefault(p *string) string {
+	timezone := derefTrim(p)
+	if timezone == "" {
+		return "Asia/Seoul"
+	}
+	return timezone
+}
+
+func formatOrDefault(p *string) string {
+	switch derefTrim(p) {
+	case "online", "hybrid", "onsite":
+		return derefTrim(p)
+	default:
+		return "onsite"
+	}
 }

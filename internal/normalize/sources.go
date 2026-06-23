@@ -16,7 +16,14 @@ func buildSources(p *sources.ParsedEvent, now string) []model.Source {
 	if retrieved == "" {
 		retrieved = now
 	}
-	publisher := derefTrim(p.VenueName)
+	sourceType := derefTrim(p.SourceType)
+	if _, ok := validSourceTypes[sourceType]; !ok {
+		sourceType = sourceTypeVenue
+	}
+	publisher := derefTrim(p.Publisher)
+	if publisher == "" {
+		publisher = derefTrim(p.VenueName)
+	}
 	if publisher == "" {
 		publisher = p.SourceID
 	}

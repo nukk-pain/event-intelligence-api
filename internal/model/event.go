@@ -105,10 +105,6 @@ type Event struct {
 	ContentHash string `json:"content_hash,omitempty"` // computed; EXCLUDED from ContentHash input
 	Excluded    bool   `json:"excluded"`               // non-industry; preserved, not source-semantic
 	BatchID     string `json:"-"`                      // ingest batch; EXCLUDED from ContentHash
-
-	OpportunityQuality string   `json:"opportunity_quality,omitempty"`
-	OpportunitySignals []string `json:"opportunity_signals,omitempty"`
-	SourceQualityNotes []string `json:"source_quality_notes,omitempty"`
 }
 
 // ChangeLog is one field-level change record (the change feed row).

@@ -9,7 +9,6 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/smpain/event-intelligence-api/internal/model"
-	"github.com/smpain/event-intelligence-api/internal/opportunity"
 	"github.com/smpain/event-intelligence-api/internal/store"
 )
 
@@ -61,17 +60,14 @@ func handleListEvents(db *sql.DB) http.HandlerFunc {
 		}
 
 		filter := store.EventFilter{
-			UpdatedSince:       q.Get("updated_since"),
-			ChangedSince:       q.Get("changed_since"),
-			Category:           q.Get("category"),
-			Venue:              q.Get("venue"),
-			MinStartDate:       q.Get("since"),
-			MaxStartDate:       q.Get("before"),
-			Opportunity:        q.Get("opportunity") == "true",
-			Actionable:         q.Get("actionable") == "true",
-			OpportunityQuality: q.Get("opportunity_quality"),
-			Limit:              limit,
-			Cursor:             store.EventCursor{UpdatedAt: cur.UpdatedAt, EventID: cur.EventID},
+			UpdatedSince: q.Get("updated_since"),
+			ChangedSince: q.Get("changed_since"),
+			Category:     q.Get("category"),
+			Venue:        q.Get("venue"),
+			MinStartDate: q.Get("since"),
+			MaxStartDate: q.Get("before"),
+			Limit:        limit,
+			Cursor:       store.EventCursor{UpdatedAt: cur.UpdatedAt, EventID: cur.EventID},
 		}
 
 		events, next, err := store.ListEvents(r.Context(), db, filter)
@@ -84,10 +80,6 @@ func handleListEvents(db *sql.DB) http.HandlerFunc {
 		if events == nil {
 			events = []model.Event{}
 		}
-		for i := range events {
-			opportunity.Apply(&events[i])
-		}
-
 		var nextCursor *string
 		var links Links
 		if next != nil {
