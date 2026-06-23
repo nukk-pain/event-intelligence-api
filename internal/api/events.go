@@ -160,9 +160,14 @@ func clampLimit(raw string) (int, bool) {
 	return n, true
 }
 
-// writeJSON serializes v as a JSON response with the given status.
+// writeJSON serializes v as a JSON response with the given status. Every call
+// site passes http.StatusOK (success), so it stamps the shared edge-cache policy
+// here, covering the Respond JSON path plus the directly-written sources/schema/
+// meta responses. If writeJSON is ever reused for a non-200 status, revisit this
+// — error responses must not be cached (they use the writeError path instead).
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	setEdgeCache(w)
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(v)
 }

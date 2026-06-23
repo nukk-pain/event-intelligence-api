@@ -133,3 +133,29 @@ func TestFromEnv_ConcurrencyInvalidValuesFallBackToDefaults(t *testing.T) {
 		})
 	}
 }
+
+func TestFromEnv_CFPurgeDisabledByDefault(t *testing.T) {
+	t.Setenv("EVENTSINTEL_CF_PURGE_ZONE", "")
+	t.Setenv("EVENTSINTEL_CF_PURGE_TOKEN", "")
+
+	cfg := FromEnv()
+
+	if cfg.CFPurgeZoneID != "" || cfg.CFPurgeToken != "" {
+		t.Fatalf("CF purge should be empty (disabled) by default, got zone=%q token-set=%v",
+			cfg.CFPurgeZoneID, cfg.CFPurgeToken != "")
+	}
+}
+
+func TestFromEnv_CFPurgeOverrides(t *testing.T) {
+	t.Setenv("EVENTSINTEL_CF_PURGE_ZONE", "zone123")
+	t.Setenv("EVENTSINTEL_CF_PURGE_TOKEN", "secret-token")
+
+	cfg := FromEnv()
+
+	if cfg.CFPurgeZoneID != "zone123" {
+		t.Fatalf("CFPurgeZoneID = %q, want zone123", cfg.CFPurgeZoneID)
+	}
+	if cfg.CFPurgeToken != "secret-token" {
+		t.Fatalf("CFPurgeToken = %q, want secret-token", cfg.CFPurgeToken)
+	}
+}

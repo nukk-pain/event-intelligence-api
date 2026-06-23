@@ -295,3 +295,40 @@ run live LLM generation.
   absence.
 - The official-page fetcher allows arbitrary public HTTP(S) hosts but keeps the
   existing SSRF public-IP guard, robots checks, rate limiting, and body limits.
+
+## Decision: Edge-Cache The Read API At Cloudflare With Ingest-Time Purge
+
+### Context
+
+Every page open paid a full Cloudflare→origin round trip: live measurement showed
+`/` and `/api/v1/events` returning `cf-cache-status: DYNAMIC` with TTFB 0.6–1.2s,
+because the Go service only set `Cache-Control` on the landing HTML and static
+assets — the data endpoints set none, and Cloudflare does not edge-cache HTML or
+`/api/...` paths without an explicit Cache Rule. The dataset only changes when the
+24h ingest batch runs, so these responses are highly cacheable.
+
+### Decision
+
+All read success responses now advertise
+`public, max-age=120, s-maxage=3600, stale-while-revalidate=86400`
+(`internal/api/cache.go`, applied via `writeJSON`, `Respond`'s Markdown branch,
+the meta/openapi/llms handlers, and the root HTML/asset handlers). A Cloudflare
+Cache Rule ("Cache Everything", respect origin TTL) is applied for `/`,
+`/api/v1/*`, and `/llms.txt`, bypassing requests whose `Accept` negotiates
+Markdown (Free-plan caches ignore `Vary: Accept`). After an ingest that stored
+events, the binary issues a best-effort `purge_everything`
+(`internal/cfpurge`, env-gated via `EVENTSINTEL_CF_PURGE_ZONE`/`_TOKEN`).
+
+### Consequences
+
+- Most page opens become edge `HIT`s; origin round trips drop to ≈1 per
+  s-maxage window per PoP, backgrounded by stale-while-revalidate.
+- Error responses (4xx/5xx/429) deliberately carry no `Cache-Control`, so the
+  edge never caches an error.
+- The long edge TTL is safe because ingest purges on data change; with purge
+  unset, worst-case staleness is s-maxage (1h) on a once-daily dataset.
+- Purge is best-effort and non-fatal: a purge failure logs but never fails
+  ingest. Purge needs a token with Zone→Cache Purge; the Cache Rule needs
+  Zone→Cache Rules (the existing DNS-only token is insufficient).
+- Markdown-by-`Accept`-header is not edge-cached (collision guard); `?format=md`
+  is a distinct cache key and unaffected.

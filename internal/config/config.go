@@ -59,6 +59,14 @@ type Config struct {
 	// historical exhibitions; a freshness-oriented MVP only needs recent ones, and
 	// crawling the full history every run is neither polite nor useful.
 	MaxDiscoverPerSource int `json:"max_discover_per_source"`
+
+	// CFPurgeZoneID and CFPurgeToken configure the optional Cloudflare cache purge
+	// fired after an ingest that actually changed data. Both empty (the default)
+	// disables purging entirely — a no-op. Set via EVENTSINTEL_CF_PURGE_ZONE and
+	// EVENTSINTEL_CF_PURGE_TOKEN on the ingest unit only. The token is a secret:
+	// it is read from the environment, never defaulted in code, and never logged.
+	CFPurgeZoneID string `json:"-"`
+	CFPurgeToken  string `json:"-"`
 }
 
 // Default returns a Config populated with sane defaults.
@@ -125,5 +133,9 @@ func FromEnv() Config {
 			c.MaxDiscoverPerSource = n
 		}
 	}
+	// Cloudflare purge is opt-in: leave both empty to disable. No default — the
+	// token is a secret and must come from the environment.
+	c.CFPurgeZoneID = os.Getenv("EVENTSINTEL_CF_PURGE_ZONE")
+	c.CFPurgeToken = os.Getenv("EVENTSINTEL_CF_PURGE_TOKEN")
 	return c
 }

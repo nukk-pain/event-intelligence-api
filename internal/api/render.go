@@ -69,6 +69,7 @@ func Respond(w http.ResponseWriter, r *http.Request, payload renderable, links L
 	}
 	if negotiate(r) == "md" {
 		w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+		setEdgeCache(w) // the JSON path inherits this via writeJSON
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(payload.Markdown()))
 		return

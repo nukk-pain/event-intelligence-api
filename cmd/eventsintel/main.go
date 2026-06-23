@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/smpain/event-intelligence-api/internal/api"
+	"github.com/smpain/event-intelligence-api/internal/cfpurge"
 	"github.com/smpain/event-intelligence-api/internal/config"
 	"github.com/smpain/event-intelligence-api/internal/fetch"
 	"github.com/smpain/event-intelligence-api/internal/pipeline"
@@ -182,7 +183,36 @@ func runIngest(cfg config.Config) error {
 		log.Printf("  source=%s discovered=%d (raw=%d dropped_by_cap=%d) parsed=%d stored=%d skipped=%d %s",
 			sr.Source, sr.Discovered, sr.DiscoveredRaw, sr.DroppedByCap, sr.Parsed, sr.Stored, sr.Skipped, status)
 	}
+
+	// Invalidate the Cloudflare edge cache so it stops serving stale event JSON/
+	// HTML now that fresh data is in the store. This is what makes the long edge
+	// s-maxage safe (see internal/api/cache.go). It is best-effort: a purge failure
+	// is logged but never fails the ingest — the data is already persisted; only the
+	// edge is briefly stale until s-maxage expires. A fresh context is used so a
+	// near-deadline ingest ctx cannot abort the purge (the client has its own
+	// timeout). No-op when purge env is unset.
+	if ingestChangedData(rep) {
+		if err := cfpurge.PurgeEverything(context.Background(), cfg.CFPurgeZoneID, cfg.CFPurgeToken, nil); err != nil {
+			log.Printf("ingest: cloudflare cache purge failed (non-fatal): %v", err)
+		} else if cfg.CFPurgeToken != "" {
+			log.Printf("ingest: cloudflare cache purged")
+		}
+	}
 	return nil
+}
+
+// ingestChangedData reports whether the batch processed any events into the store
+// (events handed to ApplyBatch). It gates the Cloudflare purge: there is no point
+// purging when a run stored nothing (e.g. every source aborted). Because the
+// dataset refreshes about once per day, a run that does store events is the right
+// cadence to refresh the edge — over-purging on a no-op-diff day is negligible.
+func ingestChangedData(rep pipeline.Report) bool {
+	for _, sr := range rep.Sources {
+		if sr.Stored > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // runServe starts the read-only HTTP API.

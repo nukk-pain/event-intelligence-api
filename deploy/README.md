@@ -49,9 +49,25 @@ then flip `proxied:true`.
    `"service":"event-intelligence-api"`); a bare `404 page not found` means the
    deployed binary is stale — rebuild and redeploy before proceeding.
 
+## Edge caching (Cloudflare)
+
+The service advertises `Cache-Control` on read responses, but Cloudflare needs an
+explicit Cache Rule to edge-cache HTML/`/api/...` paths (otherwise `cf-cache-status:
+DYNAMIC`, full origin round trip per page open). Setup, verification, and token
+scopes are in `deploy/cloudflare-cache-rule.md`; apply with
+`deploy/apply-cache-rule.sh` (dry-run by default, `--apply` to commit).
+
+Purge: `eventsintel ingest` auto-purges `purge_everything` after a run that stored
+events, **when** the ingest unit has `EVENTSINTEL_CF_PURGE_ZONE` +
+`EVENTSINTEL_CF_PURGE_TOKEN` set (no-op otherwise — token needs Zone→Cache Purge).
+Add them to `eventsintel-ingest.service` via `Environment=`/`EnvironmentFile=`.
+After deploying a binary that changes the HTML or bumps asset `?v=` versions,
+purge once manually (see the cache-rule doc) so the edge drops the stale HTML.
+
 ## Rollback
 
 - `systemctl disable --now eventsintel-api eventsintel-ingest.timer`
 - Remove the `events.nukk.net` block from `/etc/caddy/Caddyfile` → reload.
+- Remove the Cloudflare Cache Rule (`http_request_cache_settings` entrypoint) if rolling back edge caching.
 - Delete the Cloudflare A record.
 - `git revert` is not applicable (no repo); keep the prior binary as `eventsintel.bak`.
