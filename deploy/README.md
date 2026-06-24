@@ -35,19 +35,37 @@ then flip `proxied:true`.
 5. Create Cloudflare A record (DNS-only).
 6. Append Caddy block → `caddy validate` → `systemctl reload caddy`.
 7. Verify origin HTTPS 200 → flip Cloudflare `proxied:true`.
-8. Smoke test all public entry points (not just the API paths — a stale binary
-   with no root handler will 404 on `/` while the API still looks healthy):
+8. **Verify (MANDATORY — every deploy ends here):** run `deploy/verify.sh`. It is
+   the gate that proves the live site serves the new build correctly, not just that
+   a process is up. Do not consider a deploy done until it prints `ALL CHECKS
+   PASSED`.
 
    ```sh
-   for p in / /healthz /llms.txt /api/v1 /api/v1/schema /api/v1/openapi.yaml /api/v1/events; do
-     code=$(curl -s -o /dev/null -w '%{http_code}' "https://events.nukk.net$p")
-     echo "$code  $p"
-   done
+   deploy/verify.sh                         # the public edge (default)
+   deploy/verify.sh http://127.0.0.1:3005   # origin only (run on the VPS), pre-edge
    ```
 
-   Expect 200 on every path. `/` must return the JSON landing (contains
-   `"service":"event-intelligence-api"`); a bare `404 page not found` means the
-   deployed binary is stale — rebuild and redeploy before proceeding.
+   It checks: every public path returns 200; the Accept-negotiated `/` serves the
+   **HTML UI to browsers** and the **JSON service index to agents** (a stale binary
+   404s `/`; a mis-cached edge serves the JSON variant to browsers — both caught
+   here); `/api/v1/events` is non-empty; and the API surface is edge-cached. Any
+   `FAIL` line means stop and fix before calling the deploy complete.
+
+## Re-deploy (code update to an already-live service)
+
+1. Cross-compile the linux binary (step 1 above).
+2. `scp` it to `eventsintel.new`, back up the current binary (`cp -a eventsintel
+   eventsintel.bak-$(date -u +%Y%m%dT%H%M%SZ)`), verify the uploaded sha256, then
+   `mv eventsintel.new eventsintel`.
+3. **If the change includes a schema migration** (new `internal/store/migrations/*`):
+   back up `data/events.db` first, then run the migration BEFORE restarting the API
+   (`serve` reads columns the new code expects) — `systemctl start
+   eventsintel-ingest.service` applies migrations on writer startup and does the
+   first crawl. The old API keeps serving meanwhile. Code-only changes skip this.
+4. `systemctl restart eventsintel-api`.
+5. If the change alters HTML / asset versions / cache policy, re-`--apply` the cache
+   rule if its expression changed and purge once (see the cache-rule doc).
+6. **Run `deploy/verify.sh`** (step 8 above) — non-negotiable.
 
 ## Edge caching (Cloudflare)
 
