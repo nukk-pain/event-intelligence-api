@@ -113,6 +113,11 @@ func Migrate(db *sql.DB) error {
 	return nil
 }
 
+// isAlreadyAppliedMigration reports whether an error from re-running a migration
+// just means it was already applied. ADD COLUMN migrations are not natively
+// idempotent in SQLite (no IF NOT EXISTS for columns), so a re-run raises
+// "duplicate column name: <col>" — which is the benign "already applied" signal
+// for every such migration (summary, content_key, superseded, …).
 func isAlreadyAppliedMigration(err error) bool {
-	return strings.Contains(err.Error(), "duplicate column name: summary")
+	return strings.Contains(err.Error(), "duplicate column name")
 }

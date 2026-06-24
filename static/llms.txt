@@ -66,3 +66,7 @@ Exceeding either returns HTTP 429 with a `Retry-After` header.
 - `register_url`, `exhibit_url`, `registration_deadline`,
   `exhibitor_deadline`, and `cost_hint` may come from linked organizer pages;
   use `sources[]` to distinguish organizer-backed facts from venue-only records.
+- Some KINTEX events (externally organized hall rentals not yet on the venue's own
+  calendar) are discovered via an exhibition aggregator; those carry an
+  `aggregator`-type entry in `sources[]`. When the same event is found on both the
+  venue and the aggregator, it is collapsed into one record (the venue-sourced one).

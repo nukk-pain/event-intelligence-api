@@ -21,6 +21,7 @@ import (
 	"github.com/smpain/event-intelligence-api/internal/sources/benchmark"
 	"github.com/smpain/event-intelligence-api/internal/sources/coex"
 	"github.com/smpain/event-intelligence-api/internal/sources/kintex"
+	"github.com/smpain/event-intelligence-api/internal/sources/showala"
 	"github.com/smpain/event-intelligence-api/internal/store"
 )
 
@@ -89,6 +90,7 @@ func runIngest(cfg config.Config) error {
 		fetch.WithAllowedHosts(
 			"www.coex.co.kr",
 			"www.kintex.com",
+			"showala.com",
 			"www.ces.tech",
 			"www.nvidia.com",
 			"convention.bio.org",
@@ -137,6 +139,10 @@ func runIngest(cfg config.Config) error {
 	sources.Register(coex.New())
 	sources.Register(kintex.New())
 	sources.Register(benchmark.New())
+	// SHOWALA aggregator, scoped to KINTEX events — catches externally organized
+	// rentals (e.g. RoboWorld) that KINTEX's own list.do has not yet published.
+	// Cross-source dups fold into the venue-native canonical row (store dedup).
+	sources.Register(showala.New())
 
 	registeredSources := sources.All()
 	sourceIDs := make([]string, 0, len(registeredSources))

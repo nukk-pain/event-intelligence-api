@@ -142,6 +142,11 @@ func ListEvents(ctx context.Context, db *sql.DB, filter EventFilter) ([]model.Ev
 // the facet's list/venue/date scope locked to the list it annotates; the facet
 // then narrows further to categorized events (see CategoryCounts).
 func (f EventFilter) commonWhere() (where []string, args []any) {
+	// Cross-source de-dup: never surface a superseded (hidden duplicate) row in any
+	// listing or facet. The canonical row of each content_key cluster has
+	// superseded=0; pre-dedup and single-source rows are 0 by default, so this adds
+	// no exclusion for them.
+	where = append(where, "e.superseded = 0")
 	if f.UpdatedSince != "" {
 		where = append(where, "e.updated_at >= ?")
 		args = append(args, f.UpdatedSince)
@@ -219,9 +224,12 @@ func CategoryCounts(ctx context.Context, db *sql.DB, filter EventFilter) (map[st
 
 // GetEvent loads a single event by id. It returns (nil, nil) when no row exists
 // (so callers distinguish not-found from an error). It does NOT filter on
-// excluded — a direct detail lookup by id is allowed even for excluded events.
+// excluded — a direct detail lookup by id is allowed even for excluded events —
+// but it DOES exclude superseded (cross-source duplicate) rows so the public
+// contract is "one event": a deep link to a hidden duplicate id resolves as
+// not-found, the canonical row being the one the listing links to.
 func GetEvent(ctx context.Context, db *sql.DB, eventID string) (*model.Event, error) {
-	q := "SELECT" + eventColumns + " FROM events e WHERE e.event_id = ?"
+	q := "SELECT" + eventColumns + " FROM events e WHERE e.event_id = ? AND e.superseded = 0"
 	row := db.QueryRowContext(ctx, q, eventID)
 	e, err := scanEvent(row)
 	if err == sql.ErrNoRows {
@@ -238,7 +246,7 @@ func GetEvent(ctx context.Context, db *sql.DB, eventID string) (*model.Event, er
 // exist.
 func ListSources(ctx context.Context, db *sql.DB, eventID string) ([]model.Source, error) {
 	var sourcesJSON sql.NullString
-	err := db.QueryRowContext(ctx, "SELECT sources FROM events WHERE event_id = ?", eventID).Scan(&sourcesJSON)
+	err := db.QueryRowContext(ctx, "SELECT sources FROM events WHERE event_id = ? AND superseded = 0", eventID).Scan(&sourcesJSON)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -287,7 +295,11 @@ func ListChanges(ctx context.Context, db *sql.DB, filter ChangeFilter) ([]model.
 	}
 
 	var (
-		where []string
+		// Cross-source de-dup: never surface change_log rows for a superseded
+		// (hidden duplicate) event — the feed must stay consistent with the "one
+		// event" listing/detail contract. Canonical and single-source rows are
+		// superseded=0, so this excludes only hidden duplicates.
+		where = []string{"EXISTS (SELECT 1 FROM events e WHERE e.event_id = change_log.event_id AND e.superseded = 0)"}
 		args  []any
 	)
 	if filter.Since != "" {

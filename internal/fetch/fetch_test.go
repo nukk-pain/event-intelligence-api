@@ -104,6 +104,41 @@ func TestFetchNoConditionalWhenNoValidators(t *testing.T) {
 	}
 }
 
+// Referer is sent only when the caller supplies one, and carries the exact value.
+func TestFetchRefererOptIn(t *testing.T) {
+	var gotReferer atomic.Value // string
+	gotReferer.Store("")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/robots.txt" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		gotReferer.Store(r.Header.Get("Referer"))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	}))
+	defer srv.Close()
+
+	f := testFetcher(t, allowHost(t, srv))
+
+	// 1. No Referer field -> no Referer header (existing behavior unchanged).
+	if _, err := f.Fetch(context.Background(), srv.URL+"/x", Conditional{}); err != nil {
+		t.Fatalf("Fetch (no referer): %v", err)
+	}
+	if got := gotReferer.Load().(string); got != "" {
+		t.Fatalf("Referer sent without being requested: %q", got)
+	}
+
+	// 2. Referer field set -> exact header value sent.
+	const ref = "https://showala.com/ex/ex_list.php?place[]=1"
+	if _, err := f.Fetch(context.Background(), srv.URL+"/y", Conditional{Referer: ref}); err != nil {
+		t.Fatalf("Fetch (referer): %v", err)
+	}
+	if got := gotReferer.Load().(string); got != ref {
+		t.Fatalf("Referer = %q, want %q", got, ref)
+	}
+}
+
 func TestFetch429Retries(t *testing.T) {
 	var hits atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

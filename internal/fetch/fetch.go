@@ -57,12 +57,16 @@ const (
 	defaultRobotsTTL    = 24 * time.Hour
 )
 
-// Conditional carries best-effort validators for conditional GET. The caller
-// supplies whatever the server previously handed back (ETag / Last-Modified).
-// Empty fields are not sent.
+// Conditional carries best-effort validators for conditional GET plus an
+// optional Referer. The caller supplies whatever the server previously handed
+// back (ETag / Last-Modified); empty fields are not sent. Referer is an opt-in
+// request header some endpoints require (e.g. an AJAX pagination endpoint that
+// rejects requests without a same-origin Referer); it defaults to empty so every
+// existing caller is byte-for-byte unchanged.
 type Conditional struct {
 	ETag         string // value to send as If-None-Match
 	LastModified string // value to send as If-Modified-Since
+	Referer      string // value to send as Referer; empty means no Referer header
 }
 
 // Result is a fetched document.
@@ -251,6 +255,11 @@ func (f *Fetcher) do(ctx context.Context, u *url.URL, cond Conditional) (res *Re
 	}
 	if cond.LastModified != "" {
 		req.Header.Set("If-Modified-Since", cond.LastModified)
+	}
+	// Opt-in Referer for endpoints that require a same-origin referrer (left unset
+	// — and thus identical to prior behavior — for every caller that omits it).
+	if cond.Referer != "" {
+		req.Header.Set("Referer", cond.Referer)
 	}
 
 	resp, err := f.client.Do(req)

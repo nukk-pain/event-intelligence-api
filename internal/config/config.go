@@ -76,6 +76,7 @@ func Default() Config {
 			{ID: "coex", Name: "COEX", BaseURL: "https://www.coex.co.kr", Enabled: true},
 			{ID: "kintex", Name: "KINTEX", BaseURL: "https://www.kintex.com", Enabled: true},
 			{ID: "benchmark", Name: "International Benchmarks", BaseURL: "https://events.nukk.net/benchmarks", Enabled: true},
+			{ID: "showala", Name: "SHOWALA (KINTEX)", BaseURL: "https://showala.com", Enabled: true},
 		},
 		CrawlInterval:        24 * time.Hour,
 		IngestDeadline:       30 * time.Minute,

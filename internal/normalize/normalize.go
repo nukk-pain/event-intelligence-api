@@ -108,11 +108,32 @@ var validSourceTypes = map[string]struct{}{
 	"press": {}, "social": {}, "aggregator": {},
 }
 
-// venueIDForSource maps an adapter id to the durable venue slug used in
-// venue.venue_id. Unknown adapters get a nil venue_id (recorded in missing_fields).
+// venueIDForSource maps a single-venue adapter id to the durable venue slug used
+// in venue.venue_id. Aggregator sources that span multiple venues are NOT listed
+// here — they resolve by venue NAME via venueIDFor.
 var venueIDForSource = map[string]string{
 	"coex":   "coex",
 	"kintex": "kintex",
+}
+
+// venueIDFor resolves the durable venue slug for an event. A source bound to one
+// venue (coex/kintex) maps by its adapter id. An aggregator source (e.g. showala)
+// carries events from many venues, so it maps by the SCRAPED venue name: a
+// SHOWALA-discovered KINTEX event therefore gets venue_id "kintex", aligning its
+// cross-source dedup key with the kintex adapter's own row for the same event. An
+// unrecognized venue yields "" (recorded in missing_fields by the caller).
+func venueIDFor(sourceID, venueName string) string {
+	if id, ok := venueIDForSource[sourceID]; ok {
+		return id
+	}
+	lower := strings.ToLower(venueName)
+	switch {
+	case strings.Contains(venueName, "킨텍스") || strings.Contains(lower, "kintex"):
+		return "kintex"
+	case strings.Contains(venueName, "코엑스") || strings.Contains(lower, "coex"):
+		return "coex"
+	}
+	return ""
 }
 
 // Normalize maps a raw ParsedEvent to a canonical model.Event.
@@ -243,7 +264,7 @@ func buildVenue(p *sources.ParsedEvent, mf *missingFields) *model.Venue {
 		return nil
 	}
 	v := &model.Venue{Name: name, City: city}
-	if id, ok := venueIDForSource[p.SourceID]; ok {
+	if id := venueIDFor(p.SourceID, name); id != "" {
 		v.VenueID = &id
 	} else {
 		mf.add("venue.venue_id")

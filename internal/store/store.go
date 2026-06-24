@@ -380,7 +380,7 @@ INSERT INTO events (
     categories, audience, scale,
     actions, register_url, exhibit_url, registration_deadline, exhibitor_deadline, cost_hint,
     summary, sources, homepage_url, last_checked_at, update_state, confidence, missing_fields, ambiguity_notes,
-    curated_by, content_hash, excluded, updated_at
+    curated_by, content_hash, content_key, excluded, updated_at
 ) VALUES (
     ?, ?, ?, ?, ?, ?, ?,
     ?, ?, ?, ?, ?, ?,
@@ -388,7 +388,7 @@ INSERT INTO events (
     ?, ?, ?,
     ?, ?, ?, ?, ?, ?,
     ?, ?, ?, ?, ?, ?, ?, ?,
-    ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now')
+    ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now')
 )
 ON CONFLICT(event_id) DO UPDATE SET
     schema_version=excluded.schema_version,
@@ -425,6 +425,7 @@ ON CONFLICT(event_id) DO UPDATE SET
     ambiguity_notes=excluded.ambiguity_notes,
     curated_by=excluded.curated_by,
     content_hash=excluded.content_hash,
+    content_key=excluded.content_key,
     excluded=excluded.excluded,
     updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
 `
@@ -436,7 +437,7 @@ ON CONFLICT(event_id) DO UPDATE SET
 		mustJSON(e.Categories), jsonArrOrNull(e.Audience), jsonOrNull(e.Scale, e.Scale == nil),
 		mustJSON(actionsMap(e.Actions)), ptrArg(e.RegisterURL), ptrArg(e.ExhibitURL), ptrArg(e.RegistrationDeadline), ptrArg(e.ExhibitorDeadline), e.CostHint,
 		ptrArg(e.Summary), mustJSON(e.Sources), ptrArg(e.HomepageURL), e.LastCheckedAt, e.UpdateState, e.Confidence, mustJSON(e.MissingFields), ptrArg(e.AmbiguityNotes),
-		nullIfEmpty(e.CuratedBy), hash, boolToInt(e.Excluded),
+		nullIfEmpty(e.CuratedBy), hash, nullIfEmpty(ContentKey(e)), boolToInt(e.Excluded),
 	)
 	return err
 }

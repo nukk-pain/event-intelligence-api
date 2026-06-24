@@ -40,6 +40,42 @@ func validParsed() *sources.ParsedEvent {
 	}
 }
 
+// An aggregator source (showala) carrying a KINTEX event must resolve venue_id
+// to "kintex" by venue NAME, so its cross-source dedup key aligns with the kintex
+// adapter's own row.
+func TestNormalize_AggregatorVenueIDByName(t *testing.T) {
+	p := validParsed()
+	p.SourceID = "showala"
+	p.EventID = "showala-3219"
+	p.URL = "https://showala.com/ex/ex_detail.php?idx=3219"
+	p.VenueName = ptr("킨텍스 (KINTEX)")
+	p.City = nil
+
+	e, err := Normalize(p, now)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	if e.Venue == nil || e.Venue.VenueID == nil {
+		t.Fatalf("venue_id not set for showala KINTEX event")
+	}
+	if *e.Venue.VenueID != "kintex" {
+		t.Fatalf("venue_id = %q, want kintex", *e.Venue.VenueID)
+	}
+}
+
+// Regression: a single-venue source still maps venue_id by its adapter id (not by
+// the scraped name), regardless of how the venue name reads.
+func TestNormalize_SingleVenueSourceMapsByID(t *testing.T) {
+	p := validParsed() // SourceID "coex"
+	e, err := Normalize(p, now)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	if e.Venue == nil || e.Venue.VenueID == nil || *e.Venue.VenueID != "coex" {
+		t.Fatalf("coex venue_id mapping regressed: %+v", e.Venue)
+	}
+}
+
 func contains(xs []string, want string) bool {
 	for _, x := range xs {
 		if x == want {

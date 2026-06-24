@@ -107,7 +107,7 @@ func ApplyBatch(ctx context.Context, db *sql.DB, events []model.Event, batchID s
 		// attribution, regardless of any per-event BatchID the caller set.
 		e.BatchID = batchID
 
-		prev, prevHash, found, err := loadCanonical(ctx, db, e.EventID)
+		prev, prevHash, oldKey, found, err := loadCanonical(ctx, db, e.EventID)
 		if err != nil {
 			return fmt.Errorf("load existing %s: %w", e.EventID, err)
 		}
@@ -124,11 +124,14 @@ func ApplyBatch(ctx context.Context, db *sql.DB, events []model.Event, batchID s
 
 		case newHash == prevHash:
 			// No semantic change. Settle update_state to "unchanged" and refresh
-			// last_checked_at plus generated summary, leaving updated_at (and thus
-			// the (updated_at,event_id) change-feed cursor) untouched. Do not
+			// last_checked_at, generated summary, and content_key, leaving updated_at
+			// (and thus the (updated_at,event_id) change-feed cursor) and content_hash
+			// untouched. content_key is refreshed here too so a row that predates the
+			// dedup migration gets its key populated on the first post-migration
+			// ingest even when nothing else changed — without that, it could never
+			// cluster with a newly discovered cross-source duplicate. Do not
 			// re-upsert (that would bump updated_at and rewrite content_hash).
-			// Re-running an already-"unchanged" event is then a true fixed point.
-			if err := markUnchanged(ctx, db, e.EventID, e.LastCheckedAt, e.Summary); err != nil {
+			if err := markUnchanged(ctx, db, e.EventID, e.LastCheckedAt, e.Summary, ContentKey(e)); err != nil {
 				return fmt.Errorf("mark unchanged %s: %w", e.EventID, err)
 			}
 
@@ -146,6 +149,25 @@ func ApplyBatch(ctx context.Context, db *sql.DB, events []model.Event, batchID s
 			changes := Diff(prev, &e, ts, batchID)
 			if err := UpsertEvent(ctx, db, e, changes, nil); err != nil {
 				return fmt.Errorf("update %s: %w", e.EventID, err)
+			}
+		}
+
+		// Cross-source de-dup: after this event's own write, re-elect the canonical
+		// row for its content_key cluster. Running for every event (new/updated/
+		// unchanged) makes the outcome order-independent — the last write in any
+		// cluster always sees the full set — and idempotent. A row without a
+		// content_key (no start_date / venue_id) reconciles to a no-op.
+		newKey := ContentKey(e)
+		if err := reconcileContentKey(ctx, db, newKey); err != nil {
+			return fmt.Errorf("reconcile %s: %w", e.EventID, err)
+		}
+		// If this event's key CHANGED (venue/date/name edit, or key gained/lost),
+		// the row it just left behind would orphan its old cluster — re-reconcile
+		// that key too so the remaining members re-elect a canonical and the cluster
+		// never ends with zero visible rows.
+		if oldKey != "" && oldKey != newKey {
+			if err := reconcileContentKey(ctx, db, oldKey); err != nil {
+				return fmt.Errorf("reconcile old key for %s: %w", e.EventID, err)
 			}
 		}
 	}
@@ -167,29 +189,29 @@ func changeTimestamp(e model.Event) string {
 // no-op run does not reorder the (updated_at,event_id) change-feed cursor nor
 // perturb the hash. If lastChecked is empty, last_checked_at is left as-is but
 // update_state still settles to "unchanged".
-func markUnchanged(ctx context.Context, db *sql.DB, eventID, lastChecked string, summary *string) error {
+func markUnchanged(ctx context.Context, db *sql.DB, eventID, lastChecked string, summary *string, contentKey string) error {
 	if lastChecked == "" {
 		_, err := db.ExecContext(ctx,
-			`UPDATE events SET update_state='unchanged', summary=? WHERE event_id=?`,
-			ptrArg(summary), eventID)
+			`UPDATE events SET update_state='unchanged', summary=?, content_key=? WHERE event_id=?`,
+			ptrArg(summary), nullIfEmpty(contentKey), eventID)
 		return err
 	}
 	_, err := db.ExecContext(ctx,
-		`UPDATE events SET update_state='unchanged', last_checked_at=?, summary=? WHERE event_id=?`,
-		lastChecked, ptrArg(summary), eventID)
+		`UPDATE events SET update_state='unchanged', last_checked_at=?, summary=?, content_key=? WHERE event_id=?`,
+		lastChecked, ptrArg(summary), nullIfEmpty(contentKey), eventID)
 	return err
 }
 
 // loadCanonical reads the persisted semantic columns for an event and rebuilds a
 // model.Event sufficient for CanonicalFields/Diff, plus the stored content_hash.
 // found=false means the event is not yet in the store.
-func loadCanonical(ctx context.Context, db *sql.DB, eventID string) (*model.Event, string, bool, error) {
+func loadCanonical(ctx context.Context, db *sql.DB, eventID string) (*model.Event, string, string, bool, error) {
 	const q = `
 SELECT schema_version, series_id, name, name_ko, name_en, edition,
        start_date, end_date, timezone, date_confidence, status, format,
        venue, country, categories, audience, scale, actions,
        register_url, exhibit_url, registration_deadline, exhibitor_deadline, cost_hint,
-       sources, homepage_url, missing_fields, ambiguity_notes, content_hash
+       sources, homepage_url, missing_fields, ambiguity_notes, content_hash, content_key
 FROM events WHERE event_id=?`
 
 	var (
@@ -206,6 +228,7 @@ FROM events WHERE event_id=?`
 		costHint                                                         string
 		sourcesJSON                                                      sql.NullString
 		homepageURL, missingFieldsJSON, ambiguityNotes, contentHash      sql.NullString
+		contentKey                                                       sql.NullString
 	)
 
 	err := db.QueryRowContext(ctx, q, eventID).Scan(
@@ -213,13 +236,13 @@ FROM events WHERE event_id=?`
 		&startDate, &endDate, &timezone, &dateConfidence, &status, &format,
 		&venueJSON, &country, &categoriesJSON, &audienceJSON, &scaleJSON, &actionsJSON,
 		&registerURL, &exhibitURL, &registrationDeadline, &exhibitorDeadline, &costHint,
-		&sourcesJSON, &homepageURL, &missingFieldsJSON, &ambiguityNotes, &contentHash,
+		&sourcesJSON, &homepageURL, &missingFieldsJSON, &ambiguityNotes, &contentHash, &contentKey,
 	)
 	if err == sql.ErrNoRows {
-		return nil, "", false, nil
+		return nil, "", "", false, nil
 	}
 	if err != nil {
-		return nil, "", false, err
+		return nil, "", "", false, err
 	}
 
 	e := model.Event{
@@ -249,38 +272,38 @@ FROM events WHERE event_id=?`
 	if venueJSON.Valid && venueJSON.String != "" {
 		var v model.Venue
 		if err := json.Unmarshal([]byte(venueJSON.String), &v); err != nil {
-			return nil, "", false, fmt.Errorf("decode venue: %w", err)
+			return nil, "", "", false, fmt.Errorf("decode venue: %w", err)
 		}
 		e.Venue = &v
 	}
 	if scaleJSON.Valid && scaleJSON.String != "" {
 		var s model.Scale
 		if err := json.Unmarshal([]byte(scaleJSON.String), &s); err != nil {
-			return nil, "", false, fmt.Errorf("decode scale: %w", err)
+			return nil, "", "", false, fmt.Errorf("decode scale: %w", err)
 		}
 		e.Scale = &s
 	}
 	if actionsJSON.Valid && actionsJSON.String != "" {
 		if err := json.Unmarshal([]byte(actionsJSON.String), &e.Actions); err != nil {
-			return nil, "", false, fmt.Errorf("decode actions: %w", err)
+			return nil, "", "", false, fmt.Errorf("decode actions: %w", err)
 		}
 	}
 	if err := decodeStringSlice(categoriesJSON, &e.Categories); err != nil {
-		return nil, "", false, fmt.Errorf("decode categories: %w", err)
+		return nil, "", "", false, fmt.Errorf("decode categories: %w", err)
 	}
 	if err := decodeStringSlice(audienceJSON, &e.Audience); err != nil {
-		return nil, "", false, fmt.Errorf("decode audience: %w", err)
+		return nil, "", "", false, fmt.Errorf("decode audience: %w", err)
 	}
 	if err := decodeStringSlice(missingFieldsJSON, &e.MissingFields); err != nil {
-		return nil, "", false, fmt.Errorf("decode missing_fields: %w", err)
+		return nil, "", "", false, fmt.Errorf("decode missing_fields: %w", err)
 	}
 	if sourcesJSON.Valid && sourcesJSON.String != "" {
 		if err := json.Unmarshal([]byte(sourcesJSON.String), &e.Sources); err != nil {
-			return nil, "", false, fmt.Errorf("decode sources: %w", err)
+			return nil, "", "", false, fmt.Errorf("decode sources: %w", err)
 		}
 	}
 
-	return &e, contentHash.String, true, nil
+	return &e, contentHash.String, contentKey.String, true, nil
 }
 
 func nsPtr(ns sql.NullString) *string {
