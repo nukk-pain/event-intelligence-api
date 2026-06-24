@@ -96,13 +96,13 @@ func handleHealthz(w http.ResponseWriter, r *http.Request) {
 func handleRoot(w http.ResponseWriter, r *http.Request) {
 	if prefersHTML(r) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		setEdgeCache(w)
+		setNegotiatedCache(w)
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(static.IndexHTML))
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	setEdgeCache(w)
+	setNegotiatedCache(w)
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(`{` +
 		`"service":"event-intelligence-api",` +

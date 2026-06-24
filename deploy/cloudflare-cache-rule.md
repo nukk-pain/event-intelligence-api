@@ -15,7 +15,6 @@ applied automatically — run the script in dry-run first, then with `--apply`.
 
 Cache (eligible + respect origin TTL) for the cacheable read surface:
 
-- `/` (the HTML UI and the JSON service index)
 - `/api/v1/*` (events list/detail/sources/changes, meta, schema, openapi.yaml)
 - `/llms.txt`
 
@@ -26,6 +25,14 @@ Bypassing cache when `Accept` contains `text/markdown` removes that collision; t
 `?format=md` query is a distinct cache key and is unaffected. Browser/agent JSON
 traffic — the overwhelming majority — is cached.
 
+The bare **`/` is intentionally NOT edge-cached**. It is Accept-negotiated — HTML
+for browsers, the JSON service index for agents — at a single URL. Because the CF
+Free-plan cache is URL-keyed and ignores `Vary: Accept`, one cached entry for `/`
+would be served to every client regardless of `Accept` (e.g. the JSON index shown
+to browsers). The root handler marks `/` `Cache-Control: private` for the same
+reason, so it is browser-cached per-variant but never shared/edge-cached. Its heavy
+assets (`/assets/*`) are still edge-cached by extension, so page-open cost is tiny.
+
 Errors (4xx/5xx/429) carry **no** `Cache-Control` (the `writeError` path omits it),
 so Cloudflare won't cache them even under "respect origin TTL".
 
@@ -34,8 +41,7 @@ so Cloudflare won't cache them even under "respect origin TTL".
 ```
 (http.host eq "events.nukk.net"
  and not any(http.request.headers["accept"][*] contains "text/markdown")
- and (http.request.uri.path eq "/"
-      or starts_with(http.request.uri.path, "/api/v1/")
+ and (starts_with(http.request.uri.path, "/api/v1/")
       or http.request.uri.path eq "/llms.txt"))
 ```
 

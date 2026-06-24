@@ -1,8 +1,10 @@
 package api_test
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/smpain/event-intelligence-api/internal/api"
@@ -21,8 +23,9 @@ const wantCacheControl = "public, max-age=120, s-maxage=3600, stale-while-revali
 func TestCacheControlOnReadEndpoints(t *testing.T) {
 	srv := newFullServer(t, []model.Event{seedEvent("ev-1", "coex", "ai", false)})
 
+	// NOTE: "/" is deliberately excluded — it is Accept-negotiated (HTML vs JSON)
+	// at one URL, so it must NOT be shared/edge-cacheable. See TestRootNotSharedCached.
 	paths := []string{
-		"/",
 		"/api/v1",
 		"/api/v1/schema",
 		"/api/v1/openapi.yaml",
@@ -45,6 +48,47 @@ func TestCacheControlOnReadEndpoints(t *testing.T) {
 		}
 		if got := resp.Header.Get("Cache-Control"); got != wantCacheControl {
 			t.Errorf("GET %s: Cache-Control = %q, want %q", p, got, wantCacheControl)
+		}
+	}
+}
+
+// TestRootNotSharedCached pins that the bare "/" landing is NOT shared/edge
+// cacheable. It is content-negotiated (HTML for browsers, JSON for agents) at a
+// single URL, and a URL-keyed edge cache (CF Free ignores Vary: Accept) would
+// otherwise serve one variant to everyone. Both variants must carry a private
+// (browser-only) policy plus Vary: Accept, and the right body per Accept.
+func TestRootNotSharedCached(t *testing.T) {
+	srv := newFullServer(t, []model.Event{seedEvent("ev-1", "coex", "ai", false)})
+
+	cases := []struct {
+		accept   string
+		wantCT   string
+		wantBody string // substring
+	}{
+		{"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "text/html; charset=utf-8", "<!DOCTYPE html>"},
+		{"application/json", "application/json; charset=utf-8", `"service":"event-intelligence-api"`},
+	}
+	for _, c := range cases {
+		req, _ := http.NewRequest(http.MethodGet, srv.URL+"/", nil)
+		req.Header.Set("Accept", c.accept)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("GET / (%s): %v", c.accept, err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if ct := resp.Header.Get("Content-Type"); ct != c.wantCT {
+			t.Errorf("Accept %q: Content-Type = %q, want %q", c.accept, ct, c.wantCT)
+		}
+		if !strings.Contains(string(body), c.wantBody) {
+			t.Errorf("Accept %q: body missing %q", c.accept, c.wantBody)
+		}
+		const wantNegotiated = "private, max-age=120" // browser-only, never shared/edge cached
+		if got := resp.Header.Get("Cache-Control"); got != wantNegotiated {
+			t.Errorf("Accept %q: Cache-Control = %q, want %q (must not be shared-cacheable)", c.accept, got, wantNegotiated)
+		}
+		if got := resp.Header.Get("Vary"); !strings.Contains(got, "Accept") {
+			t.Errorf("Accept %q: Vary = %q, want to contain Accept", c.accept, got)
 		}
 	}
 }

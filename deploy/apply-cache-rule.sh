@@ -20,7 +20,11 @@ ZONE_JSON=$(api "https://api.cloudflare.com/client/v4/zones?name=${ZONE_NAME}")
 ZONE_ID=$(printf '%s' "$ZONE_JSON" | python3 -c 'import json,sys; r=json.load(sys.stdin).get("result") or []; print(r[0]["id"] if r else "")')
 [[ -n "$ZONE_ID" ]] || { echo "ERROR: could not resolve zone id for ${ZONE_NAME} (token scope?). Response:"; echo "$ZONE_JSON"; exit 1; }
 
-EXPR='(http.host eq "'"$HOST"'" and not any(http.request.headers["accept"][*] contains "text/markdown") and (http.request.uri.path eq "/" or starts_with(http.request.uri.path, "/api/v1/") or http.request.uri.path eq "/llms.txt"))'
+# NOTE: the bare "/" is deliberately NOT cached here. It is Accept-negotiated
+# (HTML for browsers, JSON for agents) at one URL, and a URL-keyed edge cache (CF
+# Free ignores Vary: Accept) would serve one variant to everyone. The root handler
+# marks "/" private (browser-only) for the same reason; keep the two in sync.
+EXPR='(http.host eq "'"$HOST"'" and not any(http.request.headers["accept"][*] contains "text/markdown") and (starts_with(http.request.uri.path, "/api/v1/") or http.request.uri.path eq "/llms.txt"))'
 
 PAYLOAD=$(EXPR="$EXPR" python3 -c '
 import json, os
