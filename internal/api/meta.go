@@ -16,6 +16,7 @@ import (
 //   GET /api/v1/schema     v0.1 schema descriptor + supported_versions
 //   GET /api/v1/openapi.yaml   the embedded OpenAPI 3.x document
 //   GET /llms.txt          embedded agent-facing API summary (root, not /api/v1)
+//   GET /robots.txt        embedded robots policy with explicit content signals
 //
 // These endpoints are data-independent: they describe the contract, not the
 // data, so they take no *sql.DB. The controlled vocabularies are sourced from
@@ -54,6 +55,7 @@ func registerMetaRoutes(v1 chi.Router) {
 // registerRootMetaRoutes mounts root-level (non-/api/v1) discovery routes.
 func registerRootMetaRoutes(r chi.Router) {
 	r.Get("/llms.txt", handleLLMsTxt())
+	r.Get("/robots.txt", handleRobotsTxt())
 }
 
 // fieldDescriptor describes one field of the v0.1 schema for GET /api/v1/schema.
@@ -194,5 +196,14 @@ func handleLLMsTxt() http.HandlerFunc {
 		setEdgeCache(w)
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(static.LLMsTxt))
+	}
+}
+
+func handleRobotsTxt() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		setEdgeCache(w)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(static.RobotsTxt))
 	}
 }

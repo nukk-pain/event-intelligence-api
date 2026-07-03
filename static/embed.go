@@ -18,6 +18,13 @@ var OpenAPIYAML string
 //go:embed llms.txt
 var LLMsTxt string
 
+// RobotsTxt is served at /robots.txt. It explicitly grants the search and
+// ai-input content signals so answer engines don't treat an unset signal as
+// a reason to withhold citation.
+//
+//go:embed robots.txt
+var RobotsTxt string
+
 // IndexHTML is the human-facing landing page served at / when the client
 // prefers HTML (Accept: text/html). API clients (curl, agents, JSON consumers)
 // still receive the JSON service index via content negotiation in handleRoot.
