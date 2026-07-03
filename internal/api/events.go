@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -67,7 +68,7 @@ func handleListEvents(db *sql.DB) http.HandlerFunc {
 			ChangedSince: q.Get("changed_since"),
 			Category:     q.Get("category"),
 			Venue:        q.Get("venue"),
-			MinStartDate: q.Get("since"),
+			MinStartDate: defaultMinStartDate(q.Get("list"), q.Get("since")),
 			MaxStartDate: q.Get("before"),
 			Limit:        limit,
 			Cursor:       store.EventCursor{UpdatedAt: cur.UpdatedAt, EventID: cur.EventID},
@@ -105,6 +106,17 @@ func handleListEvents(db *sql.DB) http.HandlerFunc {
 		// format-independent Link header.
 		Respond(w, r, newEventListView(env), links)
 	}
+}
+
+func defaultMinStartDate(listKind, explicitSince string) string {
+	if explicitSince != "" || listKind != "venue" {
+		return explicitSince
+	}
+	loc, err := time.LoadLocation("Asia/Seoul")
+	if err != nil {
+		loc = time.FixedZone("KST", 9*60*60)
+	}
+	return time.Now().In(loc).Format("2006-01-02")
 }
 
 // categoryFacet computes the events-list category facet: the number of

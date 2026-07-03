@@ -33,6 +33,7 @@ func seedEvent(id, venueID, category string, excluded bool) model.Event {
 		SchemaVersion:  model.SchemaVersion,
 		EventID:        id,
 		Name:           "Event " + id,
+		StartDate:      strptr("2999-01-01"),
 		DateConfidence: "high",
 		Status:         "scheduled",
 		Format:         "onsite",
@@ -103,6 +104,25 @@ func getEnvelope(t *testing.T, url string) (envelopeResp, *http.Response) {
 		t.Fatalf("decode %s: %v", url, err)
 	}
 	return env, resp
+}
+
+func TestListEvents_VenueDefaultsToUpcomingKST(t *testing.T) {
+	past := withStart(seedEvent("ev-past", "coex", "ai", false), "2000-01-01")
+	future := withStart(seedEvent("ev-future", "coex", "ai", false), "2999-01-01")
+	srv := newServer(t, []model.Event{past, future})
+
+	env, resp := getEnvelope(t, srv.URL+"/api/v1/events?list=venue&limit=100")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	if got := eventIDs(env.Data); len(got) != 1 || got[0] != "ev-future" {
+		t.Fatalf("default venue list returned %+v, want only upcoming ev-future", got)
+	}
+
+	env, _ = getEnvelope(t, srv.URL+"/api/v1/events?list=venue&since=1999-01-01&limit=100")
+	if got := idSet(env.Data); !got["ev-past"] || !got["ev-future"] {
+		t.Fatalf("explicit since should override default upcoming floor; got %v", got)
+	}
 }
 
 // TestListEvents_FullIterationNoGapsNoDupes seeds more events than the page

@@ -39,6 +39,8 @@ Exceeding either returns HTTP 429 with a `Retry-After` header.
 - GET /api/v1/events — list events. Filters: list=all|venue|benchmark,
   since (start_date >= YYYY-MM-DD), before (start_date <= YYYY-MM-DD),
   updated_since, changed_since, category, venue. Pagination: limit, cursor.
+  When list=venue and since is omitted, since defaults to today's Asia/Seoul
+  date so the domestic venue feed is current/upcoming by default.
   Response also carries category_counts: the per-category event count under the
   active (non-category) filters, in canonical taxonomy order.
 - GET /api/v1/events/{event_id} — single event detail with provenance.

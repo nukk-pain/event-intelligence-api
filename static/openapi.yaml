@@ -55,7 +55,9 @@ paths:
       description: >-
         Keyset-paginated, filterable event listing. Use list=venue for
         COEX/KINTEX venue schedules and list=benchmark for event-family
-        benchmark records.
+        benchmark records. When list=venue and since is omitted, the server
+        defaults since to today's date in Asia/Seoul so venue reads show current
+        and upcoming schedules by default.
       parameters:
         - name: limit
           in: query
@@ -90,7 +92,7 @@ paths:
             enum: [all, venue, benchmark]
         - name: since
           in: query
-          description: Minimum start_date in YYYY-MM-DD form; useful for upcoming-event lists.
+          description: Minimum start_date in YYYY-MM-DD form; defaults to today's Asia/Seoul date when list=venue.
           schema:
             type: string
             format: date

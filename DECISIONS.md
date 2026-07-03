@@ -141,6 +141,33 @@ upcoming COEX/KINTEX venue schedule.
 
 ---
 
+## Decision: Default Venue API Reads To Current And Upcoming Events
+
+- Status: accepted
+- Date: 2026-06-25
+- Decision Maker: smpain
+
+### Context
+
+The deployed API could look stale or partial when callers requested
+`list=venue` without `since`: the raw keyset order could surface old stored
+COEX/KINTEX rows before current schedules, even though the UI already supplied
+an upcoming date floor.
+
+### Decision
+
+For `GET /api/v1/events?list=venue`, omitted `since` now defaults to today's
+date in `Asia/Seoul`. Explicit `since` still wins, so clients can request older
+venue rows intentionally.
+
+### Consequences
+
+- Domestic venue API reads are current/upcoming by default.
+- Historical venue data remains available by passing an explicit older `since`.
+- `list=all` and `list=benchmark` keep their existing behavior.
+
+---
+
 ## Decision: Use One-Year KINTEX Listing Discovery
 
 - Status: accepted

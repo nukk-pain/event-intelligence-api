@@ -6,7 +6,7 @@
 - Current Stage: Shape
 - Owner: smpain
 - Started: 2026-06-21
-- Last Updated: 2026-06-23
+- Last Updated: 2026-06-25
 
 ## Current Focus
 
@@ -68,6 +68,13 @@ without turning the product into a generic event portal.
 - [x] Expanded the registered `benchmark` source to 31 official international
   benchmark events, including the initial 10-source slice, all Oracle-recommended
   additions, and China coverage.
+- [x] Changed `GET /api/v1/events?list=venue` so omitted `since` defaults to
+  today's `Asia/Seoul` date, keeping domestic venue API reads current/upcoming
+  by default while preserving explicit historical queries.
+- [x] Deployed the venue API default change to `events.nukk.net`, restarted
+  `eventsintel-api`, purged Cloudflare edge cache, and verified the public API:
+  `list=venue` without `since` now has `min_start=2026-06-25`; explicit
+  `since=1999-01-01` still returns historical rows.
 
 ## In Progress
 
