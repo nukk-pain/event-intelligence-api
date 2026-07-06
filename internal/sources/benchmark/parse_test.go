@@ -44,13 +44,13 @@ const techCrunchFixture = `<!doctype html><html><head>
 <meta property="og:url" content="https://techcrunch.com/events/techcrunch-disrupt/">
 </head><body></body></html>`
 
-func TestDiscover_ReturnsThirtyTwoBenchmarkRefs(t *testing.T) {
+func TestDiscover_ReturnsFortyThreeBenchmarkRefs(t *testing.T) {
 	refs, err := New().Discover(context.Background(), nil)
 	if err != nil {
 		t.Fatalf("Discover: %v", err)
 	}
-	if len(refs) != 32 {
-		t.Fatalf("refs len = %d, want 32", len(refs))
+	if len(refs) != 43 {
+		t.Fatalf("refs len = %d, want 43", len(refs))
 	}
 	seen := map[string]bool{}
 	for _, ref := range refs {

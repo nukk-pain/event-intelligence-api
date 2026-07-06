@@ -62,6 +62,17 @@ the first implementation pass.
 | 11 | GITEX AI Europe | AI, startups, investors | Germany/Europe | AI exhibition with startup, investor, and public-sector partnership surface. |
 | 12 | HumanX Europe | AI, enterprise, investors | Netherlands/Europe | AI leadership event; useful if source quality exposes partner/startup signals. |
 | 12.5 | ICML | machine learning, AI research | Korea/global/academic-industry | Premier AI research conference at COEX with registration, workshop, expo, and ecosystem signals. |
+| 12.6 | ACL | NLP, language models | North America/global/academic-industry | Flagship computational linguistics conference with demos, tutorials, sponsors, and LLM/NLP ecosystem signal. |
+| 12.7 | KDD | data science, AI | Korea/global/academic-industry | Premier data science and AI conference in Jeju with applied data science, datasets/benchmarks, and AI for Sciences tracks. |
+| 12.8 | IJCAI-ECAI | AI research | Europe/global/academic-industry | Major global AI research conference with special tracks and sponsorship opportunities. |
+| 12.9 | SIGGRAPH | graphics, AI, simulation | North America/global/industry-academic | Large conference and exhibition spanning AI, robotics, immersive experiences, simulation, animation, and real-time systems. |
+| 12.10 | AIES | AI ethics, governance | Europe/global/academic-policy | AI ethics and society conference for responsible AI, governance, policy, and societal-impact signal. |
+| 12.11 | COLM | language modeling, LLMs | North America/global/academic-industry | Language-modeling-focused conference with invited talks, oral presentations, posters, and workshops. |
+| 12.12 | EMNLP | NLP, language models | Europe/global/academic-industry | Major NLP conference with systems demos and industry-track signal. |
+| 12.13 | NeurIPS | machine learning, AI | Australia/global/academic-industry | Top-tier ML conference with Sydney main conference and Atlanta/Paris satellites. |
+| 12.14 | AAAI | AI research | North America/global/academic-industry | Broad AI research conference covering core AI, social impact, education, and applications. |
+| 12.15 | ICLR | representation learning, deep learning | North America/global/academic-industry | Top-tier ML/deep-learning conference; 2027 region is confirmed while exact dates remain TBA. |
+| 12.16 | CVPR | computer vision, AI | North America/global/academic-industry | Flagship computer vision conference and key AI research benchmark. |
 | 13 | Robotics Summit & Expo | robotics, automation | US | Commercial robotics operator benchmark with expo/action surfaces. |
 | 14 | IEEE ICRA | robotics, automation | global/academic-industry | Premier robotics conference; strong technical signal, weaker exhibit/startup signal. |
 | 15 | IEEE/RSJ IROS | robotics, intelligent systems | global/academic-industry | Robotics research benchmark for technical ecosystem tracking. |
@@ -89,6 +100,17 @@ Primary source URLs:
 - GITEX AI Europe: `https://www.gitexeurope.com/`
 - HumanX Europe: `https://www.humanx.co/europe/`
 - ICML: `https://icml.cc/Conferences/2026`
+- ACL: `https://2026.aclweb.org/`
+- KDD: `https://kdd2026.kdd.org/`
+- IJCAI-ECAI: `https://2026.ijcai.org/`
+- SIGGRAPH: `https://s2026.siggraph.org/`
+- AIES: `https://www.aies-conference.com/2026/`
+- COLM: `https://colmweb.org/`
+- EMNLP: `https://2026.emnlp.org/`
+- NeurIPS: `https://neurips.cc/`
+- AAAI: `https://aaai.org/conference/aaai/aaai-27/`
+- ICLR: `https://iclr.cc/Conferences/FutureMeetings`
+- CVPR: `https://www.thecvf.com/`
 - Robotics Summit & Expo: `https://www.roboticssummit.com/`
 - IEEE ICRA: `https://2026.ieee-icra.org/`
 - IEEE/RSJ IROS: `https://www.ieee-ras.org/conferences-workshops/financially-co-sponsored/iros/`
@@ -192,13 +214,14 @@ Implemented benchmark source seed:
 
 Implemented registered source adapter:
 
-- `benchmark`: current 32-source catalog, including the initial CES/GTC/BIO/Web
+- `benchmark`: current 43-source catalog, including the initial CES/GTC/BIO/Web
   Summit/Slush/TechCrunch/World Summit AI/HLTH/MedTech/MEDICA slice plus all
   Oracle-recommended additions such as Web Summit Qatar, BioJapan, Medical
   Taiwan, HIMSS Global, automatica, Robotics Summit, SWITCH, RSNA, COMPUTEX /
   InnoVEX, VivaTech, WHX Dubai, BIO-Europe, AI & Big Data Expo Europe, HLTH
   Europe, ICRA, HIMSS AI in Healthcare Forum, HumanX Europe, IROS, GITEX AI
-  Europe, WAIC Shanghai, World Robot Conference Beijing, and ICML.
+  Europe, WAIC Shanghai, World Robot Conference Beijing, ICML, ACL, KDD,
+  IJCAI-ECAI, SIGGRAPH, AIES, COLM, EMNLP, NeurIPS, AAAI, ICLR, and CVPR.
 
 This slice intentionally covers official pages from different domains while
 keeping venue schedules and benchmark event families as separate list modes.
@@ -212,7 +235,7 @@ Benchmark list ordering policy:
 ## Acceptance Criteria
 
 - The founder/operator workflow is documented and narrow.
-- The benchmark source set contains 32 official source families.
+- The benchmark source set contains 43 official source families.
 - Source-quality criteria are explicit and testable.
 - UI/API changes are concrete enough to implement without another strategy
   discussion.

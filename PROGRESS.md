@@ -65,9 +65,10 @@ without turning the product into a generic event portal.
 - [x] Added the first international benchmark source coverage slice, backed by
   a registered `benchmark` source adapter and
   `docs/benchmark-source-seed.jsonl`.
-- [x] Expanded the registered `benchmark` source to 32 official international
+- [x] Expanded the registered `benchmark` source to 43 official international
   benchmark events, including the initial 10-source slice, all Oracle-recommended
-  additions, China coverage, and ICML 2026.
+  additions, China coverage, ICML 2026, and the expanded academic AI conference
+  batch.
 - [x] Changed `GET /api/v1/events?list=venue` so omitted `since` defaults to
   today's `Asia/Seoul` date, keeping domestic venue API reads current/upcoming
   by default while preserving explicit historical queries.
@@ -81,8 +82,8 @@ without turning the product into a generic event portal.
 - [x] COEX/KINTEX ingestion feasibility check (`prototype/coex-kintex-feasibility.md`)
   — both static-HTML, field-rich, HTTP-parseable; no headless browser needed.
 - [ ] `/plan` the COEX/KINTEX ingestion backend + ADR superseding manual-first.
-- [x] Choose 32 international benchmark sources.
-- [x] Expand the registered `benchmark` source from 3 to 32 official
+- [x] Choose 43 international benchmark sources.
+- [x] Expand the registered `benchmark` source from 3 to 43 official
   international benchmark events and prove the new rows through a fresh local
   ingest and API response.
 
@@ -540,6 +541,12 @@ without turning the product into a generic event portal.
   cache purged. `deploy/verify.sh` printed `ALL CHECKS PASSED`, and public API
   `list=benchmark&limit=100` returned `benchmark-icml-2026` plus 32 benchmark
   rows.
+- Academic benchmark expansion (2026-07-06): expanded the official benchmark
+  source family list from 32 to 43 by adding ACL 2026, ACM KDD 2026,
+  IJCAI-ECAI 2026, SIGGRAPH 2026, AIES 2026, COLM 2026, EMNLP 2026,
+  NeurIPS 2026, AAAI-27, ICLR 2027, and CVPR 2027. ICLR 2027 uses `TBA`
+  dates because the official future-meetings page confirms only the region
+  so far; normalization should mark date fields missing honestly.
 
 ## Validation Notes
 
@@ -561,7 +568,7 @@ exhibitor, and program extraction.
 ## Decision Needed
 
 - Decision: which benchmark sources need source-specific deadline, exhibitor,
-  and program extraction after the 31-source baseline is verified.
+  and program extraction after the 43-source baseline is verified.
 - Evidence Needed: candidate venue/organizer source families
 - Deadline: before seed dataset fill begins
 
