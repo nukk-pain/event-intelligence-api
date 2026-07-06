@@ -547,6 +547,16 @@ without turning the product into a generic event portal.
   NeurIPS 2026, AAAI-27, ICLR 2027, and CVPR 2027. ICLR 2027 uses `TBA`
   dates because the official future-meetings page confirms only the region
   so far; normalization should mark date fields missing honestly.
+- Academic benchmark deployment verification (2026-07-06): committed
+  `66f6f11 feat(events): expand academic benchmark sources`, deployed
+  linux/amd64 binary SHA256
+  `186338e9ac22793e836f72dce0be10d2d94a3db58a1ff525232ce9c3102088df` to
+  `developer-vps`, and restarted `eventsintel-api`. Manual production ingest
+  completed at `2026-07-06 11:56:11 UTC` with benchmark `43/43`, COEX `83/83`,
+  KINTEX `38/38`, and SHOWALA `65/65`, then Cloudflare cache purged.
+  `deploy/verify.sh` printed `ALL CHECKS PASSED`; public API
+  `list=benchmark&limit=100` returned 43 benchmark rows including all 11 new
+  academic additions, with ICLR 2027 date fields empty as expected.
 
 ## Validation Notes
 
