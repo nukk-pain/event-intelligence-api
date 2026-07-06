@@ -44,13 +44,13 @@ const techCrunchFixture = `<!doctype html><html><head>
 <meta property="og:url" content="https://techcrunch.com/events/techcrunch-disrupt/">
 </head><body></body></html>`
 
-func TestDiscover_ReturnsThirtyOneBenchmarkRefs(t *testing.T) {
+func TestDiscover_ReturnsThirtyTwoBenchmarkRefs(t *testing.T) {
 	refs, err := New().Discover(context.Background(), nil)
 	if err != nil {
 		t.Fatalf("Discover: %v", err)
 	}
-	if len(refs) != 31 {
-		t.Fatalf("refs len = %d, want 31", len(refs))
+	if len(refs) != 32 {
+		t.Fatalf("refs len = %d, want 32", len(refs))
 	}
 	seen := map[string]bool{}
 	for _, ref := range refs {
@@ -61,6 +61,32 @@ func TestDiscover_ReturnsThirtyOneBenchmarkRefs(t *testing.T) {
 			t.Fatalf("duplicate event id %q", ref.EventID)
 		}
 		seen[ref.EventID] = true
+	}
+}
+
+func TestParse_ICMLFromCatalogFallback(t *testing.T) {
+	parsed, err := New().Parse(context.Background(), result("https://icml.cc/Conferences/2026", "<!doctype html><html><head></head><body></body></html>"))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+
+	if parsed.EventID != "benchmark-icml-2026" {
+		t.Fatalf("EventID = %q", parsed.EventID)
+	}
+	if parsed.StartRaw == nil || *parsed.StartRaw != "2026-07-06" {
+		t.Fatalf("StartRaw = %v", parsed.StartRaw)
+	}
+	if parsed.EndRaw == nil || *parsed.EndRaw != "2026-07-11" {
+		t.Fatalf("EndRaw = %v", parsed.EndRaw)
+	}
+	if parsed.Country == nil || *parsed.Country != "KR" {
+		t.Fatalf("Country = %v", parsed.Country)
+	}
+	if parsed.VenueName == nil || *parsed.VenueName != "COEX Convention & Exhibition Center" {
+		t.Fatalf("VenueName = %v", parsed.VenueName)
+	}
+	if parsed.Actions.CanRegister == nil || !*parsed.Actions.CanRegister {
+		t.Fatalf("CanRegister = %v, want true", parsed.Actions.CanRegister)
 	}
 }
 

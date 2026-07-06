@@ -22,7 +22,7 @@ type catalogEvent struct {
 	Notes        string
 }
 
-var catalog = append(append(append([]catalogEvent{}, baseCatalog...), oracleCatalog...), chinaCatalog...)
+var catalog = append(append(append(append([]catalogEvent{}, baseCatalog...), oracleCatalog...), chinaCatalog...), academicCatalog...)
 
 var baseCatalog = []catalogEvent{
 	{

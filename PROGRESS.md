@@ -6,7 +6,7 @@
 - Current Stage: Shape
 - Owner: smpain
 - Started: 2026-06-21
-- Last Updated: 2026-06-25
+- Last Updated: 2026-07-06
 
 ## Current Focus
 
@@ -65,9 +65,9 @@ without turning the product into a generic event portal.
 - [x] Added the first international benchmark source coverage slice, backed by
   a registered `benchmark` source adapter and
   `docs/benchmark-source-seed.jsonl`.
-- [x] Expanded the registered `benchmark` source to 31 official international
+- [x] Expanded the registered `benchmark` source to 32 official international
   benchmark events, including the initial 10-source slice, all Oracle-recommended
-  additions, and China coverage.
+  additions, China coverage, and ICML 2026.
 - [x] Changed `GET /api/v1/events?list=venue` so omitted `since` defaults to
   today's `Asia/Seoul` date, keeping domestic venue API reads current/upcoming
   by default while preserving explicit historical queries.
@@ -81,8 +81,8 @@ without turning the product into a generic event portal.
 - [x] COEX/KINTEX ingestion feasibility check (`prototype/coex-kintex-feasibility.md`)
   — both static-HTML, field-rich, HTTP-parseable; no headless browser needed.
 - [ ] `/plan` the COEX/KINTEX ingestion backend + ADR superseding manual-first.
-- [x] Choose 31 international benchmark sources.
-- [x] Expand the registered `benchmark` source from 3 to 31 official
+- [x] Choose 32 international benchmark sources.
+- [x] Expand the registered `benchmark` source from 3 to 32 official
   international benchmark events and prove the new rows through a fresh local
   ingest and API response.
 
@@ -525,6 +525,21 @@ without turning the product into a generic event portal.
   `글로벌 주요 행사`. Public API `list=benchmark&limit=100` returned 31
   benchmark-only rows including WAIC Shanghai and World Robot Conference
   Beijing; `list=venue&since=2026-06-23&limit=100` returned no benchmark IDs.
+- Benchmark ICML addition (2026-07-06): added ICML 2026 as the 32nd official
+  benchmark source family after confirming the official ICML page exposes
+  COEX Seoul dates, registration/pricing links, workshop registration status,
+  and closed exhibitor applications. Added `icml.cc` to the ingest allowlist
+  and updated benchmark seed/count docs.
+- Benchmark ICML deployment verification (2026-07-06): deployed linux/amd64
+  binary SHA256
+  `188394d296a0f17fd1d472613576d378cf03fb940642c1783e818d93e7b4a748` to
+  `developer-vps`, backing up the previous binary as
+  `eventsintel.bak-20260706T111436Z`. `eventsintel-api` restarted active, manual
+  production ingest completed at `2026-07-06 11:21:26 UTC` with benchmark
+  `32/32`, COEX `83/83`, KINTEX `38/38`, and SHOWALA `65/65`, then Cloudflare
+  cache purged. `deploy/verify.sh` printed `ALL CHECKS PASSED`, and public API
+  `list=benchmark&limit=100` returned `benchmark-icml-2026` plus 32 benchmark
+  rows.
 
 ## Validation Notes
 

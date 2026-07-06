@@ -91,6 +91,7 @@ func runIngest(cfg config.Config) error {
 			"www.coex.co.kr",
 			"www.kintex.com",
 			"showala.com",
+			"icml.cc",
 			"www.ces.tech",
 			"www.nvidia.com",
 			"convention.bio.org",

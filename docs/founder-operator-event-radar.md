@@ -61,6 +61,7 @@ the first implementation pass.
 | 10 | AI & Big Data Expo Europe / TechEx | AI, data, robotics, enterprise tech | Netherlands/Europe | Exhibitor-heavy AI and robotics-adjacent source with B2B action signals. |
 | 11 | GITEX AI Europe | AI, startups, investors | Germany/Europe | AI exhibition with startup, investor, and public-sector partnership surface. |
 | 12 | HumanX Europe | AI, enterprise, investors | Netherlands/Europe | AI leadership event; useful if source quality exposes partner/startup signals. |
+| 12.5 | ICML | machine learning, AI research | Korea/global/academic-industry | Premier AI research conference at COEX with registration, workshop, expo, and ecosystem signals. |
 | 13 | Robotics Summit & Expo | robotics, automation | US | Commercial robotics operator benchmark with expo/action surfaces. |
 | 14 | IEEE ICRA | robotics, automation | global/academic-industry | Premier robotics conference; strong technical signal, weaker exhibit/startup signal. |
 | 15 | IEEE/RSJ IROS | robotics, intelligent systems | global/academic-industry | Robotics research benchmark for technical ecosystem tracking. |
@@ -87,6 +88,7 @@ Primary source URLs:
 - AI & Big Data Expo Europe: `https://www.ai-expo.net/europe/`
 - GITEX AI Europe: `https://www.gitexeurope.com/`
 - HumanX Europe: `https://www.humanx.co/europe/`
+- ICML: `https://icml.cc/Conferences/2026`
 - Robotics Summit & Expo: `https://www.roboticssummit.com/`
 - IEEE ICRA: `https://2026.ieee-icra.org/`
 - IEEE/RSJ IROS: `https://www.ieee-ras.org/conferences-workshops/financially-co-sponsored/iros/`
@@ -190,13 +192,13 @@ Implemented benchmark source seed:
 
 Implemented registered source adapter:
 
-- `benchmark`: current 31-source catalog, including the initial CES/GTC/BIO/Web
+- `benchmark`: current 32-source catalog, including the initial CES/GTC/BIO/Web
   Summit/Slush/TechCrunch/World Summit AI/HLTH/MedTech/MEDICA slice plus all
   Oracle-recommended additions such as Web Summit Qatar, BioJapan, Medical
   Taiwan, HIMSS Global, automatica, Robotics Summit, SWITCH, RSNA, COMPUTEX /
   InnoVEX, VivaTech, WHX Dubai, BIO-Europe, AI & Big Data Expo Europe, HLTH
   Europe, ICRA, HIMSS AI in Healthcare Forum, HumanX Europe, IROS, GITEX AI
-  Europe, WAIC Shanghai, and World Robot Conference Beijing.
+  Europe, WAIC Shanghai, World Robot Conference Beijing, and ICML.
 
 This slice intentionally covers official pages from different domains while
 keeping venue schedules and benchmark event families as separate list modes.
@@ -210,7 +212,7 @@ Benchmark list ordering policy:
 ## Acceptance Criteria
 
 - The founder/operator workflow is documented and narrow.
-- The benchmark source set contains 31 official source families.
+- The benchmark source set contains 32 official source families.
 - Source-quality criteria are explicit and testable.
 - UI/API changes are concrete enough to implement without another strategy
   discussion.
