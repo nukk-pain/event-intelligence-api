@@ -8,12 +8,19 @@ import (
 	"time"
 )
 
-// LinkRef is a candidate link discovered on the event page: its URL plus the
-// fetched page text (or a snippet). The agent decides which are worth reading.
+// LinkRef is a candidate link discovered on the event page: its URL plus text
+// used to decide relevance — the fetched page text (fixture mode) or just the
+// anchor text (real-crawl mode, where the full page is fetched only if chosen).
 type LinkRef struct {
 	URL  string
 	Text string
 }
+
+// LinkFetcher fetches the full text of a chosen link's page. In real-crawl mode
+// the agent selects links on cheap anchor text, then fetches only the chosen
+// pages via this — deciding what to crawl before spending the request. Nil in
+// fixture mode (link Text is already the full page text).
+type LinkFetcher func(ctx context.Context, url string) (string, error)
 
 // Brief is the founder-actionable output: the core event facts plus the
 // action-oriented facts the agent enriched by reading linked pages.
@@ -47,7 +54,9 @@ values short and factual. Output the JSON object only.`
 
 // Run is the agent loop: extract core facts, decide which links to read, read
 // the chosen links to enrich with action facts, and assemble a founder brief.
-func Run(ctx context.Context, be Backend, mainText string, links []LinkRef, maxTokens int, timeout time.Duration) (Brief, Trace, error) {
+// If linkFetcher is non-nil, chosen links are fetched (real crawl) after the
+// selection decision; otherwise each link's Text is used as-is (fixture mode).
+func Run(ctx context.Context, be Backend, mainText string, links []LinkRef, linkFetcher LinkFetcher, maxTokens int, timeout time.Duration) (Brief, Trace, error) {
 	var tr Trace
 
 	facts, u, _, err := Extract(ctx, be, mainText, maxTokens, timeout)
@@ -72,6 +81,15 @@ func Run(ctx context.Context, be Backend, mainText string, links []LinkRef, maxT
 	tr.Usage.CompletionTokens += u2.CompletionTokens
 	if len(chosen) == 0 {
 		return brief, tr, nil
+	}
+
+	// Real-crawl mode: fetch the chosen pages now that the agent has decided.
+	if linkFetcher != nil {
+		for i := range chosen {
+			if txt, ferr := linkFetcher(ctx, chosen[i].URL); ferr == nil && strings.TrimSpace(txt) != "" {
+				chosen[i].Text = txt
+			}
+		}
 	}
 
 	action, u3, err := enrich(ctx, be, chosen, maxTokens, timeout)
