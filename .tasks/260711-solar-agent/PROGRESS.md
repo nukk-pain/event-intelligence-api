@@ -26,6 +26,9 @@
       데이터 조회는 LLM-free), `cmd/eventmcp`(JSON-RPC 2.0 stdio MCP 서버, 무의존).
       툴 `search_events`(구조화)·`ask_events`(자연어). 프로토콜 핸드셰이크 검증됨.
       → **야심 버전 3겹 루프 전부 로컬 구현·검증 완료.**
+- [x] **실데이터 연결(루프 ③)**: eventmcp가 fixture 대신 라이브 events.nukk.net
+      read API 조회(카테고리 taxonomy 매핑·서버측 필터·upcoming 기본). search_events
+      13건·ask_events 6건 실데이터 반환 검증. → 토이 아님, 라이브 시스템 위 에이전트.
 - [x] 로컬 baseline 측정·저장(qwen36-dwq).
 - [x] 복귀 후 절차 `RUNBOOK.md` 작성.
 - [ ] (7/17~) Solar 키 발급 → A/B 측정 → 프롬프트 튜닝 → 실검색 툴 연결(루프 ①).
