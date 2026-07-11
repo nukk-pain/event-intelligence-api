@@ -1,0 +1,8 @@
+[
+  {"id":"coex-ai-2026","name":"제7회 대한민국 인공지능 컨퍼런스 2026","start_date":"2026-09-15","end_date":"2026-09-17","venue":"코엑스","city":"서울","category":"ai","register_url":"https://k-aiconf.example.kr/register","source_url":"https://www.coex.co.kr/exhibitions"},
+  {"id":"kintex-robot-2026","name":"2026 국제로봇산업대전","name_en":"Korea Robot Expo","start_date":"2026-10-28","end_date":"2026-10-31","venue":"킨텍스","city":"고양","category":"robotics","register_url":"https://korearobotexpo.example.kr/apply","source_url":"https://www.kintex.com/kr/calendar"},
+  {"id":"coex-bio-2026","name":"2026 바이오헬스 소재부품전","start_date":"2026-11-05","end_date":"2026-11-06","venue":"코엑스","city":"서울","category":"bio","source_url":"https://www.coex.co.kr/exhibitions"},
+  {"id":"pangyo-aisemi-2026","name":"AI 반도체 서밋 2026","name_en":"AI Semiconductor Summit Korea","start_date":"2026-12-03","end_date":"2026-12-04","city":"판교","category":"ai","register_url":"https://aisemi.example.kr","source_url":"https://www.k-ai.or.kr/events"},
+  {"id":"kintex-smartfactory-2026","name":"제12회 스마트팩토리·자동화산업전","start_date":"2026-03-11","end_date":"2026-03-13","venue":"킨텍스","category":"robotics","register_url":"https://smartfactory.example.kr","source_url":"https://www.kintex.com/kr/calendar"},
+  {"id":"sf-worldai-2027","name":"세계 인공지능 대회 2027","name_en":"World AI Congress","start_date":"2027-04-20","end_date":"2027-04-22","city":"샌프란시스코","category":"ai","source_url":"https://www.k-ai.or.kr/events"}
+]

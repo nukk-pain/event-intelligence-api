@@ -22,11 +22,15 @@
 - [x] **루프 ① 자율 소스 발견 구현**: `internal/agent/discover.go`(질의 제안 →
       검색 툴 → 소스 판별 루프, 다음 행동을 모델이 결정), `cmd/eventscout`(CLI +
       fixture 검색). 검색은 `SearchTool` 인터페이스로 추상화 → 7/17에 실검색 교체.
+- [x] **루프 ③ MCP 노출 구현**: `internal/agent/eventquery.go`(자연어→필터는 모델,
+      데이터 조회는 LLM-free), `cmd/eventmcp`(JSON-RPC 2.0 stdio MCP 서버, 무의존).
+      툴 `search_events`(구조화)·`ask_events`(자연어). 프로토콜 핸드셰이크 검증됨.
+      → **야심 버전 3겹 루프 전부 로컬 구현·검증 완료.**
 - [x] 로컬 baseline 측정·저장(qwen36-dwq).
 - [x] 복귀 후 절차 `RUNBOOK.md` 작성.
 - [ ] (7/17~) Solar 키 발급 → A/B 측정 → 프롬프트 튜닝 → 실검색 툴 연결(루프 ①).
 - [ ] (~7/31) 후기 수치 채우기 → 제출.
-- [ ] 스트레치 잔여: 루프 ③ MCP 노출.
+- [ ] 프로덕션 연결(선택): eventmcp 데이터소스를 fixture → store/read API로 교체.
 
 ## Evidence
 
