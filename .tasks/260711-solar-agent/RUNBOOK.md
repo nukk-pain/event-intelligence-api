@@ -48,6 +48,19 @@ go run ./cmd/eventscout -backend solar -rounds 2
   **실검색 연결**: `agent.SearchTool`을 구현한 실제 웹검색 어댑터를 만들어
   `cmd/eventscout`의 `fixtureSearch` 대신 주입. robots·공개데이터 준수 유지.
 
+```sh
+# 루프 ③ MCP 서버 — ask_events가 Solar로 자연어 파싱
+export EVENTSINTEL_SOLAR_API_KEY=...   # (2번에서 export했으면 생략)
+printf '%s\n' \
+  '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \
+  '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"ask_events","arguments":{"question":"다음 달 서울 AI 행사"}}}' \
+  | go run ./cmd/eventmcp
+```
+
+- eventmcp: `search_events`(LLM 없음)·`ask_events`(모델이 자연어→필터) MCP 툴.
+  **프로덕션 연결(선택)**: `cmd/eventmcp`의 fixture 이벤트 로드를 store/read API
+  조회로 교체. **MCP 클라이언트 등록**: 빌드한 `eventmcp` 바이너리를 stdio로 지정.
+
 ## 4. 튜닝 (반나절)
 
 - Solar가 틀리는 필드에 맞춰 `internal/agent/extract.go`의 `ExtractPrompt`,
