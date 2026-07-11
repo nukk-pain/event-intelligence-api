@@ -19,3 +19,8 @@ bin/
 # Test/cache artifacts
 coverage.out
 *.test
+
+# Secrets — never commit real env files (.env.example is the template)
+.env
+.env.local
+.env.*.local
