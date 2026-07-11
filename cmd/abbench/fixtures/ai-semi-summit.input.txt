@@ -1,0 +1,5 @@
+AI 반도체 서밋 2026 (AI Semiconductor Summit Korea)
+
+과학기술정보통신부 후원으로, 한국반도체산업협회가 주최하는 행사입니다.
+2026년 12월 3일부터 4일까지 판교에서 개최됩니다.
+자세한 내용은 https://aisemi.example.kr 참고.
