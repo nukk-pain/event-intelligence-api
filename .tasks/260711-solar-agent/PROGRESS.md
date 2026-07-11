@@ -2,8 +2,13 @@
 
 ## Current focus
 
-준비 단계(선정 대기). 브랜치 `feat/solar-agent`에 PLAN + `.env.example` 스캐폴드만
-올림. 실제 구현은 Upstage Solar Agent Partner 선정 후 Stage 1(7/17~7/31)에 시작.
+**여행 제약**: 사용자 7/17부터 10일 여행(~7/27 복귀) → Stage 1(7/17~7/31)을 거의
+덮음. 제출물은 7/31 마감(매일 활동 불필요). 그래서 **여행 전에 핵심 에이전트를
+로컬(qwen36-dwq)로 완성·검증**해 두고, 복귀 후 4일은 "Solar 붙이기→측정→튜닝→후기"만.
+복귀 후 절차는 `RUNBOOK.md` 참조.
+
+핵심 에이전트(루프 ② 추출+멀티홉 보강)는 여행 전 구현 완료. Solar는 7/17에만
+붙일 수 있으므로 Solar-agnostic(OpenAI 호환)으로 구현 — 키만 넣으면 전환됨.
 
 ## Status
 
@@ -11,8 +16,14 @@
 - [x] 지원 repo(event-intelligence-api) 공개 + MIT.
 - [x] 작업 브랜치 `feat/solar-agent` + `.tasks/260711-solar-agent/` PLAN 스캐폴드.
 - [x] `.env.example`에 Solar env 템플릿.
-- [ ] 신청서 제출(마감 7/15) — 워크스페이스 문서 §5 체크리스트.
-- [ ] (선정 시) Stage 1 구현 시작.
+- [x] 신청서 제출 완료(2026-07-11).
+- [x] 핵심 에이전트 구현(로컬 검증): `internal/agent`(추출+멀티홉 보강),
+      `cmd/eventagent`(CLI), `cmd/abbench`(A/B). 준수사항 코드 반영.
+- [x] 로컬 baseline 측정·저장(qwen36-dwq).
+- [x] 복귀 후 절차 `RUNBOOK.md` 작성.
+- [ ] (7/17~) Solar 키 발급 → A/B 측정 → 프롬프트 튜닝.
+- [ ] (~7/31) 후기 수치 채우기 → 제출.
+- [ ] 스트레치: 루프 ① 자율 소스 발견, 루프 ③ MCP 노출.
 
 ## Evidence
 

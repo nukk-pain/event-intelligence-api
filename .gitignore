@@ -24,3 +24,5 @@ coverage.out
 .env
 .env.local
 .env.*.local
+/abbench
+/eventagent
