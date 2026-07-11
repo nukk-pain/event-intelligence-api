@@ -11,8 +11,9 @@
 //	               model-free lookup runs. This keeps the data lookup LLM-free
 //	               while showcasing the model as the natural-language front door.
 //
-// Events are loaded from a fixture (-events) for offline use; in production this
-// would query the store / events.nukk.net read API instead.
+// Events are loaded from the live read API (events.nukk.net) by default, so the
+// MCP tools serve the real deployed data. Use -source <file> to load a fixture
+// instead (offline).
 //
 // Only JSON-RPC messages go to stdout; logs go to stderr.
 package main
@@ -32,28 +33,48 @@ import (
 const protocolVersion = "2025-06-18"
 
 var (
-	events    []agent.Event
+	// query runs a Filter against the data source (live API or fixture) and
+	// returns matching events. Set in main once the source is chosen.
+	query     func(agent.Filter) ([]agent.Event, error)
 	refDate   string
 	maxTokens = 3000
 	timeout   = 90 * time.Second
 )
 
 func main() {
-	eventsFile := flag.String("events", "cmd/eventmcp/fixtures/events.json", "event dataset (JSON array)")
+	source := flag.String("source", "api", `"api" (live read API) or a fixture file path`)
+	apiBase := flag.String("api-base", getenv("EVENTSINTEL_API_BASE", "https://events.nukk.net"), "read API base URL when -source=api")
+	max := flag.Int("max", 200, "max events to pull per query")
 	flag.StringVar(&refDate, "today", time.Now().Format("2006-01-02"), "reference date for relative queries")
 	flag.Parse()
 
-	raw, err := os.ReadFile(*eventsFile)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "load events:", err)
-		os.Exit(1)
+	if *source == "api" {
+		query = func(f agent.Filter) ([]agent.Event, error) {
+			return agent.QueryEvents(context.Background(), *apiBase, f, *max, 20*time.Second)
+		}
+		fmt.Fprintf(os.Stderr, "eventmcp: querying live API %s, ready on stdio\n", *apiBase)
+	} else {
+		raw, err := os.ReadFile(*source)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "load events:", err)
+			os.Exit(1)
+		}
+		var fixture []agent.Event
+		if err := json.Unmarshal(raw, &fixture); err != nil {
+			fmt.Fprintln(os.Stderr, "parse events:", err)
+			os.Exit(1)
+		}
+		query = func(f agent.Filter) ([]agent.Event, error) { return agent.Match(fixture, f), nil }
+		fmt.Fprintf(os.Stderr, "eventmcp: loaded %d fixture events, ready on stdio\n", len(fixture))
 	}
-	if err := json.Unmarshal(raw, &events); err != nil {
-		fmt.Fprintln(os.Stderr, "parse events:", err)
-		os.Exit(1)
-	}
-	fmt.Fprintf(os.Stderr, "eventmcp: loaded %d events, ready on stdio\n", len(events))
 	serve(os.Stdin, os.Stdout)
+}
+
+func getenv(k, def string) string {
+	if v := os.Getenv(k); v != "" {
+		return v
+	}
+	return def
 }
 
 type rpcReq struct {
@@ -164,7 +185,11 @@ func callTool(params json.RawMessage) (any, *rpcErr, bool) {
 	case "search_events":
 		var f agent.Filter
 		_ = json.Unmarshal(p.Arguments, &f)
-		return toolResult(agent.Match(events, f), nil), nil, false
+		matched, err := query(f)
+		if err != nil {
+			return toolError("query events: " + err.Error()), nil, false
+		}
+		return toolResult(matched, nil), nil, false
 	case "ask_events":
 		var a struct {
 			Question string `json:"question"`
@@ -185,7 +210,10 @@ func askEvents(question string) (any, *rpcErr, bool) {
 	if err != nil {
 		return toolError("parse question: " + err.Error()), nil, false
 	}
-	matched := agent.Match(events, f)
+	matched, err := query(f)
+	if err != nil {
+		return toolError("query events: " + err.Error()), nil, false
+	}
 	return toolResult(matched, &f), nil, false
 }
 

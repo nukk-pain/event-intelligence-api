@@ -13,19 +13,27 @@ stdio, newline-delimited, no external dependencies.
   the same LLM-free lookup runs. This keeps data lookup model-free while making
   the model the natural-language front door.
 
-Events load from `fixtures/events.json` for offline use; in production this
-would query the store / events.nukk.net read API.
+By default the tools query the **live read API** (events.nukk.net) — real
+deployed data. Category/date bounds are pushed to the server (with a category
+alias, e.g. robotics -> humanoid-robotics); no date bound defaults to upcoming
+events. Use `-source <file>` for an offline fixture, `-api-base <url>` /
+`EVENTSINTEL_API_BASE` to point elsewhere.
 
-## Try it (offline, no LLM needed for search_events)
+## Try it (search_events needs no LLM)
 
 ```sh
+# live API (default)
 printf '%s\n' \
   '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \
   '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
   '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search_events","arguments":{"category":"robotics"}}}' \
   | go run ./cmd/eventmcp
+
+# offline fixture
+go run ./cmd/eventmcp -source cmd/eventmcp/fixtures/events.json < requests.jsonl
 ```
 
 `ask_events` uses the LLM backend (local qwen36-dwq by default; Solar once
-`EVENTSINTEL_SOLAR_API_KEY` is set). Register with an MCP client by pointing it
-at the built `eventmcp` binary over stdio.
+`EVENTSINTEL_SOLAR_API_KEY` is set) to parse the question into a filter, then
+queries the same data source. Register with an MCP client by pointing it at the
+built `eventmcp` binary over stdio.
