@@ -36,10 +36,17 @@ go run ./cmd/abbench -v -fixtures cmd/abbench/fixtures
 ## 3. 에이전트 Solar로 실행
 
 ```sh
+# 루프 ② 멀티홉 보강 (한 행사 깊이 파기)
 go run ./cmd/eventagent -case cmd/eventagent/fixtures/ai-conf -backend solar
+
+# 루프 ① 자율 소스 발견 (fixture 검색으로 로직 확인)
+go run ./cmd/eventscout -backend solar -rounds 2
 ```
 
-- 3콜(추출→링크선택→보강)이 Solar로 돌며 founder brief JSON 출력.
+- eventagent: 3콜(추출→링크선택→보강)이 Solar로 돌며 founder brief JSON 출력.
+- eventscout: 라운드마다 2콜(질의 제안→소스 판별). fixture 검색이라 오프라인 동작.
+  **실검색 연결**: `agent.SearchTool`을 구현한 실제 웹검색 어댑터를 만들어
+  `cmd/eventscout`의 `fixtureSearch` 대신 주입. robots·공개데이터 준수 유지.
 
 ## 4. 튜닝 (반나절)
 

@@ -19,11 +19,14 @@
 - [x] 신청서 제출 완료(2026-07-11).
 - [x] 핵심 에이전트 구현(로컬 검증): `internal/agent`(추출+멀티홉 보강),
       `cmd/eventagent`(CLI), `cmd/abbench`(A/B). 준수사항 코드 반영.
+- [x] **루프 ① 자율 소스 발견 구현**: `internal/agent/discover.go`(질의 제안 →
+      검색 툴 → 소스 판별 루프, 다음 행동을 모델이 결정), `cmd/eventscout`(CLI +
+      fixture 검색). 검색은 `SearchTool` 인터페이스로 추상화 → 7/17에 실검색 교체.
 - [x] 로컬 baseline 측정·저장(qwen36-dwq).
 - [x] 복귀 후 절차 `RUNBOOK.md` 작성.
-- [ ] (7/17~) Solar 키 발급 → A/B 측정 → 프롬프트 튜닝.
+- [ ] (7/17~) Solar 키 발급 → A/B 측정 → 프롬프트 튜닝 → 실검색 툴 연결(루프 ①).
 - [ ] (~7/31) 후기 수치 채우기 → 제출.
-- [ ] 스트레치: 루프 ① 자율 소스 발견, 루프 ③ MCP 노출.
+- [ ] 스트레치 잔여: 루프 ③ MCP 노출.
 
 ## Evidence
 

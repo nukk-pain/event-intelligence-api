@@ -1,0 +1,21 @@
+{
+  "groups": [
+    {
+      "keywords": ["ai", "인공지능", "행사", "컨퍼런스"],
+      "results": [
+        {"title": "코엑스 전시 일정", "url": "https://www.coex.co.kr/exhibitions", "snippet": "코엑스에서 열리는 전시회와 컨퍼런스 일정을 월별로 안내합니다. AI, IT, 바이오 등 산업별 행사 목록."},
+        {"title": "인공지능산업협회 행사 안내", "url": "https://www.k-ai.or.kr/events", "snippet": "협회가 주최·후원하는 AI 컨퍼런스, 세미나, 전시 일정과 참가 신청 안내."},
+        {"title": "\"생성형 AI가 바꾼 우리 회사\" 후기 - 개인 블로그", "url": "https://blog.example.com/ai-conf-review", "snippet": "지난주 다녀온 AI 컨퍼런스 개인 후기. 세션이 알찼고 점심이 맛있었다."},
+        {"title": "AI타임스 - 오늘의 AI 뉴스", "url": "https://www.aitimes.com/news/12345", "snippet": "업스테이지가 신규 모델을 공개했다. 이번 발표는..."}
+      ]
+    },
+    {
+      "keywords": ["로봇", "robot", "킨텍스", "자동화"],
+      "results": [
+        {"title": "킨텍스 행사 캘린더", "url": "https://www.kintex.com/kr/calendar", "snippet": "킨텍스 제1·2전시장 행사 일정. 로봇, 자동화, 제조 전시회 목록과 부스 신청 링크."},
+        {"title": "한국로봇산업진흥원 사업공고", "url": "https://www.kiria.org/notice", "snippet": "로봇 전시회, 국제로봇산업대전, 스타트업 지원 프로그램 공고 및 일정."},
+        {"title": "로봇 청소기 추천 TOP5", "url": "https://shop.example.com/robot-vacuum", "snippet": "가성비 좋은 로봇 청소기 순위와 최저가 비교. 구매는 아래 링크에서."}
+      ]
+    }
+  ]
+}
