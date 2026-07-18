@@ -60,7 +60,7 @@ func LoadBackends() []Backend {
 // Chat sends a system+user prompt and returns the assistant content, token
 // usage, and latency.
 func (b Backend) Chat(ctx context.Context, system, user string, maxTokens int, timeout time.Duration) (string, Usage, time.Duration, error) {
-	body, _ := json.Marshal(map[string]any{
+	payload := map[string]any{
 		"model":       b.Model,
 		"temperature": 0,
 		"max_tokens":  maxTokens,
@@ -68,7 +68,11 @@ func (b Backend) Chat(ctx context.Context, system, user string, maxTokens int, t
 			{"role": "system", "content": system},
 			{"role": "user", "content": user},
 		},
-	})
+	}
+	if strings.EqualFold(b.Model, "solar-open2") {
+		payload["reasoning_effort"] = "minimal"
+	}
+	body, _ := json.Marshal(payload)
 
 	cctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
