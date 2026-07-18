@@ -105,7 +105,7 @@ func Discover(ctx context.Context, be Backend, goal string, tool SearchTool, max
 
 func proposeQuery(ctx context.Context, be Backend, goal string, tried, foundOrder []string, found map[string]DiscoveredSource, maxTokens int, timeout time.Duration) (query string, done bool, u Usage, err error) {
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "Goal: %s\n\nQueries already tried:\n", goal)
+	fmt.Fprintf(&sb, "Goal: %s\n\nQueries already tried:\n", StripContacts(goal))
 	if len(tried) == 0 {
 		sb.WriteString("(none yet)\n")
 	}

@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -23,34 +24,64 @@ import (
 func main() {
 	goal := flag.String("goal", "국내 AI·로봇·바이오·의료기기 산업 행사를 목록으로 제공하는 소스 찾기", "discovery goal")
 	searchFile := flag.String("search", "cmd/eventscout/fixtures/search.json", "fixture search dataset")
+	searchProvider := flag.String("search-provider", "fixture", "search provider (fixture or tavily)")
 	backendName := flag.String("backend", "", "backend name (default: first configured)")
 	rounds := flag.Int("rounds", 3, "max discovery rounds")
 	maxTokens := flag.Int("max-tokens", 3000, "max completion tokens")
 	timeout := flag.Duration("timeout", 90*time.Second, "per-request timeout")
 	flag.Parse()
 
+	tool, err := newSearchTool(searchConfig{
+		Provider:    *searchProvider,
+		FixturePath: *searchFile,
+		TavilyKey:   os.Getenv("EVENTSINTEL_TAVILY_API_KEY"),
+		Client:      &http.Client{Timeout: *timeout},
+	})
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	be, err := pickBackend(*backendName)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	tool, err := loadFixtureSearch(*searchFile)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "load search fixture:", err)
-		os.Exit(1)
-	}
 
-	fmt.Printf("source discovery — backend=%s(%s) rounds=%d\ngoal: %s\n\n", be.Name, be.Model, *rounds, *goal)
+	fmt.Printf("source discovery — backend=%s(%s) search=%s rounds=%d\ngoal: %s\n\n", be.Name, be.Model, *searchProvider, *rounds, *goal)
 	start := time.Now()
 	sources, tr, err := agent.Discover(context.Background(), be, *goal, tool, *rounds, *maxTokens, *timeout)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "discover:", err)
-		// still print whatever was found
 	}
 	out, _ := json.MarshalIndent(sources, "", "  ")
 	fmt.Printf("discovered %d source(s):\n%s\n", len(sources), string(out))
 	fmt.Printf("\n%d model call(s), %d in + %d out tokens, %dms total\n",
 		tr.Calls, tr.Usage.PromptTokens, tr.Usage.CompletionTokens, time.Since(start).Milliseconds())
+	if err != nil {
+		os.Exit(1)
+	}
+}
+
+type searchConfig struct {
+	Provider    string
+	FixturePath string
+	TavilyKey   string
+	Client      *http.Client
+}
+
+func newSearchTool(cfg searchConfig) (agent.SearchTool, error) {
+	switch cfg.Provider {
+	case "fixture":
+		tool, err := loadFixtureSearch(cfg.FixturePath)
+		if err != nil {
+			return nil, fmt.Errorf("load search fixture: %w", err)
+		}
+		return tool, nil
+	case "tavily":
+		return agent.NewTavilySearch(cfg.TavilyKey, cfg.Client)
+	default:
+		return nil, fmt.Errorf("unknown search provider %q", cfg.Provider)
+	}
 }
 
 func pickBackend(name string) (agent.Backend, error) {
