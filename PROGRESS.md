@@ -557,6 +557,29 @@ without turning the product into a generic event portal.
   `deploy/verify.sh` printed `ALL CHECKS PASSED`; public API
   `list=benchmark&limit=100` returned 43 benchmark rows including all 11 new
   academic additions, with ICLR 2027 date fields empty as expected.
+- Solar Open 2 Stage 1 verification (2026-07-17): direct model access confirmed,
+  and an omitted `reasoning_effort` failure was isolated with API toggle proof.
+  The client now sends `minimal` for `solar-open2`, protected by an httptest
+  regression. Final extraction scored 54/54 fields across 6 Korean event cases
+  with 118 average output tokens and 1.9s average latency. Solar-backed
+  `eventagent`, `eventscout`, and live-API `eventmcp` scenarios all completed.
+  Reproducible evidence is in
+  `.tasks/260711-solar-agent/abbench-solar-open2-20260717.md`.
+- Solar live-search judgment evaluation (2026-07-17): ran the three Korean
+  queries proposed by Solar through a real web-search tool, then passed 12
+  returned hits to the unchanged Solar source judge. It accepted all 8 labeled
+  official event/venue sources and rejected all 4 report/admissions negatives
+  (12/12; 720 input + 808 output tokens; 12.42 seconds). Direct opens verified
+  representative organizer and venue schedules. A Bing RSS retrieval attempt
+  scored 0/5 relevance and was removed. Evidence and the manual-bridge caveat
+  are in `.tasks/260711-solar-agent/eventscout-live-search-eval-20260717.md`.
+- Automated Tavily source discovery (2026-07-18): added the credential-backed
+  Tavily `SearchTool`, CLI provider selection, bounded HTTP handling, outbound
+  contact redaction, result sanitization, and fixture-preserving regression
+  coverage in `db70d64`. Targeted and full race tests plus missing-key fail-fast
+  checks pass. A real Solar+Tavily transcript remains pending until the user
+  completes the authorized GitHub/Tavily account flow; no credential has been
+  stored or exposed.
 
 ## Validation Notes
 
@@ -572,8 +595,10 @@ No product validation has been run yet. Current evidence level is Low.
 
 ## Next Action
 
-Choose the first 3-5 benchmark sources that need source-specific deadline,
-exhibitor, and program extraction.
+Finish the Solar Agent Partner Stage 1 public README/review, commit and push the
+verified `feat/solar-agent` branch, then submit the repository link and review
+before 2026-07-31. The previous benchmark-source enrichment choice remains the
+next core-product action after the Solar submission.
 
 ## Decision Needed
 

@@ -37,18 +37,21 @@ Upstage Solar Agent Partner 프로그램(신청 마감 2026-07-15, Stage 1 빌�
 
 ### Stage 1 (7/17~7/31) — 우선 구현
 
-- [ ] **Solar 클라이언트** — `internal/llm/solar` (OpenAI 호환 `api.upstage.ai/v1`).
-      structured output(JSON schema) 강제. 키는 `EVENTSINTEL_SOLAR_API_KEY` 등
-      `EVENTSINTEL_*` env로만 주입(secret은 `json:"-"`). `.env.example` 참조.
+- [x] **Solar 클라이언트** — `internal/agent`의 OpenAI 호환 클라이언트로
+      `api.upstage.ai/v1` 연결. `solar-open2`는 문서상 JSON schema 지원 대상이
+      아니어서 프롬프트 유도 + 직접 JSON 파싱을 사용하고, 키는
+      `EVENTSINTEL_SOLAR_API_KEY` env로만 주입. `reasoning_effort=minimal` 명시.
 - [ ] **루프 ① 소스 자율 발견** — 목표(예: 국내 AI·로봇 행사)만 주면 Solar가
       검색→신규 주최사/학회 페이지 발견→행사 소스 여부 판단→다음 크롤 대상 결정.
-      후보는 기존 `fetch` allowlist/robots 경계 안에서만 확장.
-- [ ] **루프 ② 한 행사 멀티홉 깊이 파기** — 잡은 행사에서 링크 추적으로 등록 마감·
+      후보는 기존 `fetch` allowlist/robots 경계 안에서만 확장. Tavily 정식 검색 API
+      어댑터와 CLI 선택, 개인정보 경계, fixture 회귀까지 구현·검증했고, 신규 계정의
+      API 키를 이용한 실제 Solar+Tavily E2E 증거만 남았다.
+- [x] **루프 ② 한 행사 멀티홉 깊이 파기** — 잡은 행사에서 링크 추적으로 등록 마감·
       부스 신청·스타트업 프로그램 창을 캐고 여러 출처 교차검증 → 창업자용 액션
       브리핑 조립. 실패/불명은 빈 칸으로 정직하게 표시(기존 missing_fields 관례).
-- [ ] **A/B 벤치마크** — 동일 입력에 대해 결정적 파서 / 로컬 Qwen3.6 / Solar Open 2
+- [x] **A/B 벤치마크** — 동일 입력에 대해 결정적 파서 / 로컬 Qwen3.6 / Solar Open 2
       추출 정확도 + 건당 토큰 비용 측정. 결과는 후기 + `model-registry.json` 반영.
-- [ ] **200자+ 후기** 초안 완성(수치 채움). 초안: 위 워크스페이스 문서 §4-1.
+- [x] **200자+ 후기** 초안 완성(수치 채움). 공개 `README.md`에 반영.
 
 ### Stretch / Stage 2 (8/6~) — 미룸
 

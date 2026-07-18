@@ -31,9 +31,22 @@
       13건·ask_events 6건 실데이터 반환 검증. → 토이 아님, 라이브 시스템 위 에이전트.
 - [x] 로컬 baseline 측정·저장(qwen36-dwq).
 - [x] 복귀 후 절차 `RUNBOOK.md` 작성.
-- [ ] (7/17~) Solar 키 발급 → A/B 측정 → 프롬프트 튜닝 → 실검색 툴 연결(루프 ①).
+- [x] (7/17) Solar Open 2 키 연결 → A/B 측정 → 프롬프트 튜닝 완료.
+      `reasoning_effort=minimal` 명시 후 6케이스 54/54(100%), 평균 출력 118토큰,
+      평균 지연 1.9초. 결과: `abbench-solar-open2-20260717.md`.
+- [x] Solar Open 2로 세 루프 실행 검증: eventagent 멀티홉 브리핑, eventscout
+      소스 발견, eventmcp 자연어→필터→라이브 events.nukk.net 6건 조회.
+- [x] (7/17) Solar가 제안한 3개 질의를 실제 웹검색에 실행하고 결과 12건을 기존
+      판정 프롬프트에 투입: 공식 소스 8/8 채택, 비소스 4/4 제외(12/12, 100%).
+      대표 공식 페이지 직접 열람 검증. Bing RSS는 검색 품질 0/5라 폐기.
+      결과: `eventscout-live-search-eval-20260717.md`.
+- [x] (7/18) 루프 ①에 자격증명 기반 Tavily 정식 검색 API 어댑터를 추가하고
+      `-search-provider fixture|tavily`로 연결. fixture는 기본값으로 보존했다.
+      연락처는 검색 전·결과 후 제거하고, 사설망·localhost·userinfo·연락처 포함 URL을
+      차단한다. race 테스트, 전체 회귀, missing-key 조기 실패를 검증했다(`db70d64`).
+- [ ] 신규 사용자 계정으로 Tavily 키를 발급해 Solar+Tavily 2-round 실제 E2E를
+      실행하고, 키와 개인정보가 없는 redacted transcript를 증거로 남긴다.
 - [ ] (~7/31) 후기 수치 채우기 → 제출.
-- [ ] 프로덕션 연결(선택): eventmcp 데이터소스를 fixture → store/read API로 교체.
 
 ## Evidence
 
@@ -41,10 +54,10 @@
 
 ## Blockers
 
-- Solar Open 2 Early Access 미개시(7/17 시작). 그전까지 로컬 Qwen3.6로 A/B 하네스
-  선구현 가능.
-- 선정 여부 미확정.
+- 자동 실검색 구현에는 차단점이 없다. 실제 E2E는 GitHub 신규 계정 생성 과정의
+  사용자 이메일·비밀번호·CAPTCHA/인증 입력과 Tavily API 키 발급을 기다린다.
 
 ## Next action
 
-신청서 제출(7/15). 선정되면 PLAN의 Stage 1 체크리스트 순서대로 착수.
+사용자 인증 후 Tavily 키를 로컬 환경에만 저장하고 Solar+Tavily 실제 E2E를 실행한다.
+그 뒤 전체 검증과 개인정보 스캔을 다시 수행해 `feat/solar-agent`를 마무리한다.

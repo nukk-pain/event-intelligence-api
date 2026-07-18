@@ -1,8 +1,8 @@
-# RUNBOOK — 복귀 후(~7/27) Solar 마무리 절차
+# RUNBOOK — Solar Stage 1 마무리 절차
 
-여행(7/17~~7/27) 동안 Stage 1이 진행된다. 제출물은 **7/31 마감**이고 매일 활동은
-필요 없다. 핵심 에이전트는 여행 전에 로컬(qwen36-dwq)로 완성·검증해 두었으므로,
-복귀 후 남는 일은 **Solar 붙이기 → 측정 → 튜닝 → 후기**뿐이다. 순서대로 실행.
+제출물은 **7/31 마감**이다. 핵심 에이전트는 로컬(qwen36-dwq)로 먼저 완성했고,
+2026-07-17에 Solar Open 2 연결·측정·튜닝과 세 루프 실행 검증까지 완료했다.
+남은 필수 작업은 공개 README/후기, 커밋·푸시, 제출이다.
 
 ## 0. 사전 상태 (여행 전 완료됨)
 
@@ -14,8 +14,8 @@
 
 ## 1. Solar 키 발급 (7/17 이후, 5분)
 
-1. console.upstage.ai 로그인(가입 이메일 `nukkpain@gmail.com`).
-2. Open 2 Early Access API 키 발급. 모델 id 확인(예: `solar-open-2-...`).
+1. console.upstage.ai에 승인된 사용자 계정으로 로그인.
+2. Open 2 Early Access API 키 발급. 확인된 모델 ID는 `solar-open2`.
 3. 로컬에서만 export (커밋 금지):
 
    ```sh
@@ -47,6 +47,37 @@ go run ./cmd/eventscout -backend solar -rounds 2
 - eventscout: 라운드마다 2콜(질의 제안→소스 판별). fixture 검색이라 오프라인 동작.
   **실검색 연결**: `agent.SearchTool`을 구현한 실제 웹검색 어댑터를 만들어
   `cmd/eventscout`의 `fixtureSearch` 대신 주입. robots·공개데이터 준수 유지.
+- 2026-07-17 실제 웹검색 수동 브리지 평가에서는 공식 소스 8/8 채택, 비소스
+  4/4 제외(12/12). 상세 결과는 `eventscout-live-search-eval-20260717.md`.
+  Bing 공개 RSS는 세 질의 모두 일반적인 한국 링크를 반복해 0/5였으므로 사용하지
+  않는다. 자동화할 때는 문서화된 정식 검색 API와 자격증명을 사용한다.
+
+### Tavily 정식 검색 API 자동 실행 (2026-07-18 구현)
+
+Tavily 공식 문서 기준 무료 한도는 월 1,000 credits이며 basic search는 1 credit이다.
+신용카드는 필요하지 않다. 계정과 키는 https://app.tavily.com 에서 만들되, 실제 키는
+반드시 무시되는 로컬 `.env` 또는 현재 프로세스 환경에만 저장한다. 문서·터미널 캡처·
+로그·커밋에는 키를 넣지 않는다.
+
+```sh
+export EVENTSINTEL_SOLAR_API_KEY=...   # secret
+export EVENTSINTEL_TAVILY_API_KEY=...  # secret
+
+go run ./cmd/eventscout \
+  -backend solar \
+  -search-provider tavily \
+  -rounds 2 \
+  -goal '2026년 이후 한국 AI 로봇 바이오 의료기기 공식 행사 소스 찾기'
+```
+
+질의는 Tavily에 전송되고 검색 인덱스 제공자와 일부 공유될 수 있으므로 공개 행사 조사
+문구만 넣는다. 전화·이메일·환자·임상·계정·사설 데이터는 목표에 넣지 않는다. 구현은
+연락처를 외부 검색 전에 제거하고 검색 결과도 다시 정제하지만, 이 경계를 민감정보
+전송 허가로 해석해서는 안 된다.
+
+- Credits: https://docs.tavily.com/documentation/api-credits
+- Search API: https://docs.tavily.com/documentation/api-reference/endpoint/search
+- Privacy: https://www.tavily.com/privacy
 
 ```sh
 # 루프 ③ MCP 서버 — ask_events가 Solar로 자연어 파싱
@@ -65,8 +96,17 @@ printf '%s\n' \
 
 - Solar가 틀리는 필드에 맞춰 `internal/agent/extract.go`의 `ExtractPrompt`,
   `enrich.go`의 프롬프트를 조정. 로컬용에 맞춘 문구가 Solar엔 최적이 아닐 수 있음.
-- structured output(JSON schema)·function-calling을 Solar가 지원하면 그 경로로
-  강화(콘솔 docs 참고). read 경로 LLM-free 원칙은 유지.
+- **`response_format`(JSON schema 구조화 출력)은 공식 API Reference에
+  "solar-pro-2 모델에서만 호환"이라고 명시되어 있음 — `solar-open2`는 지원 문서가
+  없어 안 될 확률이 높다(2026-07-16 확인, console.upstage.ai/api/chat).
+  구조화 출력 경로로 강화를 시도하지 말고, 현재처럼 프롬프트 유도 + 직접 파싱
+  방식을 유지할 것. function-calling(`tools`/`tool_choice`)은 일반적으로 지원
+  문서화되어 있으니 그쪽은 시도 가능. read 경로 LLM-free 원칙은 유지.
+- `solar-open2`에서는 `reasoning_effort`를 생략하면 실제 API가 hidden reasoning을
+  사용했다. 짧은 요청은 completion 예산을 전부 reasoning에 써 `content=null`로
+  끝나기도 했다. 추출·질의처럼 짧은 구조화 응답이 목적이면 반드시
+  `reasoning_effort=minimal`을 명시한다. 2026-07-17 직접 비교에서 생략 시 간단한
+  JSON 요청에 reasoning 726토큰, `minimal` 명시 시 reasoning 0토큰이었다.
 - fixture 몇 개 더 추가해 통계 신뢰도 보강(선택).
 
 ## 5. 후기 작성 (200자+)
