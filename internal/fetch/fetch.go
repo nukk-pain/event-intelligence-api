@@ -27,25 +27,6 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// Sentinel errors returned by Fetch so callers (and tests) can branch on cause.
-var (
-	// ErrHostNotAllowed means the destination host is not on the allowlist.
-	ErrHostNotAllowed = errors.New("fetch: host not allowed")
-	// ErrBlockedAddress means the resolved destination IP is private/loopback/
-	// link-local/metadata and was rejected by the SSRF guard.
-	ErrBlockedAddress = errors.New("fetch: blocked destination address")
-	// ErrBadScheme means the URL scheme is not http or https.
-	ErrBadScheme = errors.New("fetch: scheme must be http or https")
-	// ErrBodyTooLarge means the response body exceeded the configured cap
-	// (either declared via Content-Length or observed while streaming).
-	ErrBodyTooLarge = errors.New("fetch: response body too large")
-	// ErrRobotsDisallowed means robots.txt forbids the configured UA from the
-	// requested path.
-	ErrRobotsDisallowed = errors.New("fetch: path disallowed by robots.txt")
-	// ErrTooManyRedirects means the redirect cap was exceeded.
-	ErrTooManyRedirects = errors.New("fetch: too many redirects")
-)
-
 // Defaults.
 const (
 	defaultTimeout      = 20 * time.Second
@@ -54,7 +35,6 @@ const (
 	defaultMaxRetries   = 2
 	defaultRetryBackoff = 500 * time.Millisecond
 	defaultMaxRedirects = 3
-	defaultRobotsTTL    = 24 * time.Hour
 )
 
 // Conditional carries best-effort validators for conditional GET plus an
@@ -74,7 +54,7 @@ type Result struct {
 	URL          string // final URL after redirects
 	StatusCode   int
 	ContentType  string
-	Body         []byte // UTF-8 (transcoded if the source declared another charset)
+	Body         []byte // UTF-8 text, or the original bytes for strict gzip documents
 	ETag         string // ETag from the response, if any
 	LastModified string // Last-Modified from the response, if any
 	NotModified  bool   // true when the server answered 304
@@ -92,13 +72,16 @@ type CDPFetcher interface {
 
 // Fetcher performs rate-limited, SSRF-guarded HTTP GETs.
 type Fetcher struct {
-	client       *http.Client
-	ua           string
-	timeout      time.Duration
-	maxBodyBytes int64
-	maxRetries   int
-	retryBackoff time.Duration
-	maxRedirects int
+	client            *http.Client
+	robotsClient      *http.Client
+	ua                string
+	timeout           time.Duration
+	maxBodyBytes      int64
+	maxRetries        int
+	retryBackoff      time.Duration
+	maxRedirects      int
+	strictPublicCrawl bool
+	crawlBudget       *CrawlBudget
 
 	limiterMu sync.Mutex
 	perMinute int
@@ -148,8 +131,15 @@ func NewFetcher(opts ...Option) (*Fetcher, error) {
 	for _, o := range opts {
 		o(f)
 	}
+	if f.strictPublicCrawl && !f.crawlBudget.valid() {
+		return nil, ErrInvalidCrawlBudget
+	}
 
-	f.client = f.newHTTPClient()
+	f.client = f.newHTTPClient(true)
+	f.robotsClient = f.client
+	if f.strictPublicCrawl {
+		f.robotsClient = f.newHTTPClient(false)
+	}
 	return f, nil
 }
 
@@ -164,6 +154,9 @@ func (f *Fetcher) hostAllowed(host string) bool {
 
 // validateURL checks scheme and host allowlist (no network).
 func (f *Fetcher) validateURL(u *url.URL) error {
+	if f.strictPublicCrawl && u.User != nil {
+		return ErrURLUserinfo
+	}
 	if u.Scheme != "http" && u.Scheme != "https" {
 		return fmt.Errorf("%w: %q", ErrBadScheme, u.Scheme)
 	}
@@ -174,10 +167,14 @@ func (f *Fetcher) validateURL(u *url.URL) error {
 }
 
 // Fetch retrieves rawURL after applying the SSRF guard, rate limit, robots
-// gate, and (best-effort) conditional GET. The returned Body is UTF-8.
+// gate, and (best-effort) conditional GET. Text bodies are returned as UTF-8;
+// strict-mode gzip documents retain their exact compressed bytes.
 func (f *Fetcher) Fetch(ctx context.Context, rawURL string, cond Conditional) (*Result, error) {
 	u, err := url.Parse(rawURL)
 	if err != nil {
+		if f.strictPublicCrawl {
+			return nil, ErrInvalidURL
+		}
 		return nil, fmt.Errorf("fetch: parse url: %w", err)
 	}
 	if err := f.validateURL(u); err != nil {
@@ -223,9 +220,7 @@ func (f *Fetcher) doWithRetry(ctx context.Context, u *url.URL, cond Conditional)
 		if err != nil {
 			lastErr = err
 			// Guard/size/scheme failures are not retryable.
-			if errors.Is(err, ErrBlockedAddress) || errors.Is(err, ErrHostNotAllowed) ||
-				errors.Is(err, ErrBadScheme) || errors.Is(err, ErrBodyTooLarge) ||
-				errors.Is(err, ErrTooManyRedirects) || errors.Is(err, ErrRobotsDisallowed) {
+			if isPublicCrawlBoundaryError(err) {
 				return nil, err
 			}
 			if !retryable {
@@ -264,21 +259,13 @@ func (f *Fetcher) do(ctx context.Context, u *url.URL, cond Conditional) (res *Re
 
 	resp, err := f.client.Do(req)
 	if err != nil {
-		// Unwrap guard errors carried through url.Error.
-		if errors.Is(err, ErrBlockedAddress) {
-			return nil, false, ErrBlockedAddress
+		if !f.strictPublicCrawl {
+			if boundaryErr := legacyClientBoundaryError(err); boundaryErr != nil {
+				return nil, false, boundaryErr
+			}
 		}
-		if errors.Is(err, ErrHostNotAllowed) {
-			return nil, false, ErrHostNotAllowed
-		}
-		if errors.Is(err, ErrBadScheme) {
-			return nil, false, ErrBadScheme
-		}
-		if errors.Is(err, ErrTooManyRedirects) {
-			return nil, false, ErrTooManyRedirects
-		}
-		if errors.Is(err, ErrRobotsDisallowed) {
-			return nil, false, ErrRobotsDisallowed
+		if isPublicCrawlBoundaryError(err) {
+			return nil, false, err
 		}
 		// Network/timeout errors are retryable.
 		return nil, true, fmt.Errorf("fetch: do: %w", err)
@@ -293,7 +280,7 @@ func (f *Fetcher) do(ctx context.Context, u *url.URL, cond Conditional) (res *Re
 		LastModified: resp.Header.Get("Last-Modified"),
 	}
 
-	if resp.StatusCode == http.StatusNotModified {
+	if !f.strictPublicCrawl && resp.StatusCode == http.StatusNotModified {
 		out.NotModified = true
 		return out, false, nil
 	}
@@ -302,7 +289,21 @@ func (f *Fetcher) do(ctx context.Context, u *url.URL, cond Conditional) (res *Re
 	if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500 {
 		// Drain a little so the connection can be reused; ignore errors.
 		_, _ = io.CopyN(io.Discard, resp.Body, 4096)
-		return nil, true, fmt.Errorf("fetch: status %d", resp.StatusCode)
+		if !f.strictPublicCrawl {
+			return nil, true, fmt.Errorf("fetch: status %d", resp.StatusCode)
+		}
+		return nil, true, &StatusError{StatusCode: resp.StatusCode}
+	}
+
+	if f.strictPublicCrawl && (resp.StatusCode < 200 || resp.StatusCode >= 300) {
+		return nil, false, &StatusError{StatusCode: resp.StatusCode}
+	}
+	documentMediaType := ""
+	if f.strictPublicCrawl {
+		documentMediaType, err = parsePublicDocumentMIME(out.ContentType)
+		if err != nil {
+			return nil, false, err
+		}
 	}
 
 	// Reject before reading if Content-Length already exceeds the cap.
@@ -320,11 +321,9 @@ func (f *Fetcher) do(ctx context.Context, u *url.URL, cond Conditional) (res *Re
 		return nil, false, fmt.Errorf("%w: streamed > %d", ErrBodyTooLarge, f.maxBodyBytes)
 	}
 
-	// Transcode to UTF-8 if the source declared (header/meta) another charset.
-	utf8Body, err := toUTF8(raw, out.ContentType)
+	out.Body, err = f.prepareDocumentBody(raw, out.ContentType, documentMediaType)
 	if err != nil {
-		return nil, false, fmt.Errorf("fetch: charset: %w", err)
+		return nil, false, err
 	}
-	out.Body = utf8Body
 	return out, false, nil
 }

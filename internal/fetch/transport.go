@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func (f *Fetcher) newHTTPClient() *http.Client {
+func (f *Fetcher) newHTTPClient(checkRobots bool) *http.Client {
 	baseDialer := &net.Dialer{Timeout: f.timeout, KeepAlive: 30 * time.Second}
 	guardedDial := func(ctx context.Context, network, addr string) (net.Conn, error) {
 		host, port, err := net.SplitHostPort(addr)
@@ -41,35 +41,45 @@ func (f *Fetcher) newHTTPClient() *http.Client {
 		return nil, dialErr
 	}
 
-	transport := &http.Transport{
+	baseTransport := &http.Transport{
 		DialContext:           guardedDial,
-		ForceAttemptHTTP2:     true,
+		ForceAttemptHTTP2:     !f.strictPublicCrawl,
+		DisableKeepAlives:     f.strictPublicCrawl,
 		MaxIdleConns:          20,
 		IdleConnTimeout:       90 * time.Second,
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
+	}
+	// A fresh HTTP/1 connection makes one strict RoundTrip one possible wire
+	// request; net/http can otherwise replay GETs internally on reused streams.
+
+	var transport http.RoundTripper = baseTransport
+	if f.strictPublicCrawl {
+		transport = &budgetRoundTripper{base: baseTransport, budget: f.crawlBudget}
 	}
 
 	return &http.Client{
 		Timeout:   f.timeout,
 		Transport: transport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) >= f.maxRedirects {
+			if f.redirectLimitReached(len(via)) {
 				return fmt.Errorf("%w: %d", ErrTooManyRedirects, len(via))
 			}
 			if err := f.validateURL(req.URL); err != nil {
 				return err
 			}
-			allowed, crawlDelay, err := f.robotsAllows(req.Context(), req.URL)
-			if err != nil {
-				return err
-			}
-			if !allowed {
-				return fmt.Errorf("%w: %s", ErrRobotsDisallowed, req.URL.Path)
-			}
-			f.recordCrawlDelay(req.URL.Hostname(), crawlDelay)
-			if err := f.waitHostCrawlDelay(req.Context(), req.URL.Hostname()); err != nil {
-				return err
+			if checkRobots {
+				allowed, crawlDelay, err := f.robotsAllows(req.Context(), req.URL)
+				if err != nil {
+					return err
+				}
+				if !allowed {
+					return fmt.Errorf("%w: %s", ErrRobotsDisallowed, req.URL.Path)
+				}
+				f.recordCrawlDelay(req.URL.Hostname(), crawlDelay)
+				if err := f.waitHostCrawlDelay(req.Context(), req.URL.Hostname()); err != nil {
+					return err
+				}
 			}
 			if err := f.waitHostRateLimit(req.Context(), req.URL); err != nil {
 				return err
@@ -77,4 +87,11 @@ func (f *Fetcher) newHTTPClient() *http.Client {
 			return nil
 		},
 	}
+}
+
+func (f *Fetcher) redirectLimitReached(viaCount int) bool {
+	if f.strictPublicCrawl {
+		return viaCount > f.maxRedirects
+	}
+	return viaCount >= f.maxRedirects
 }

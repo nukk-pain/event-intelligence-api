@@ -38,6 +38,18 @@ func WithRetryBackoff(d time.Duration) Option { return func(f *Fetcher) { f.retr
 // WithMaxRedirects sets the redirect cap.
 func WithMaxRedirects(n int) Option { return func(f *Fetcher) { f.maxRedirects = n } }
 
+// WithStrictPublicCrawl enables fail-closed public crawling and binds every
+// robots, redirect, retry, and body read to the caller-owned job budget.
+func WithStrictPublicCrawl(budget *CrawlBudget) Option {
+	return func(f *Fetcher) {
+		f.strictPublicCrawl = true
+		f.crawlBudget = budget
+		f.maxBodyBytes = defaultPublicMaxBodyBytes
+		f.maxRetries = defaultPublicMaxRetries
+		f.maxRedirects = defaultPublicMaxRedirects
+	}
+}
+
 // WithAllowedHosts appends hosts to the allowlist.
 func WithAllowedHosts(hosts ...string) Option {
 	return func(f *Fetcher) {

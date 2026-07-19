@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+const defaultRobotsTTL = 24 * time.Hour
+
 type robotsRules struct {
 	disallow   []string
 	allow      []string
@@ -32,6 +34,9 @@ type robotsInflight struct {
 func (f *Fetcher) robotsAllows(ctx context.Context, u *url.URL) (bool, time.Duration, error) {
 	rules, err := f.robotsFor(ctx, u)
 	if err != nil {
+		if f.strictPublicCrawl {
+			return false, 0, err
+		}
 		// Be permissive on robots fetch failure (network/404): allow.
 		return true, 0, nil
 	}
@@ -96,11 +101,29 @@ func (f *Fetcher) fetchRobots(ctx context.Context, u *url.URL, key string) (*rob
 		return nil, err
 	}
 	req.Header.Set("User-Agent", f.ua)
-	resp, err := f.client.Do(req)
+	resp, err := f.robotsClient.Do(req)
 	if err != nil {
+		if f.strictPublicCrawl && !isPublicCrawlBoundaryError(err) {
+			return nil, &RobotsUnavailableError{Cause: err}
+		}
 		return nil, err
 	}
 	defer resp.Body.Close()
+
+	if f.strictPublicCrawl {
+		switch resp.StatusCode {
+		case http.StatusNotFound:
+			return &robotsRules{}, nil
+		case http.StatusOK:
+			rules, err := readStrictRobots(resp, f.ua)
+			if err != nil {
+				return nil, &RobotsUnavailableError{Cause: err}
+			}
+			return rules, nil
+		default:
+			return nil, &RobotsUnavailableError{StatusCode: resp.StatusCode}
+		}
+	}
 
 	var rules *robotsRules
 	if resp.StatusCode == http.StatusOK {
