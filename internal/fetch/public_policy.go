@@ -15,7 +15,9 @@ const (
 
 var publicDocumentMIMETypes = map[string]struct{}{
 	"application/atom+xml":  {},
+	"application/feed+json": {},
 	"application/gzip":      {},
+	"application/json":      {},
 	"application/rss+xml":   {},
 	"application/xhtml+xml": {},
 	"application/x-gzip":    {},

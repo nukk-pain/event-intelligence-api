@@ -6,21 +6,22 @@ import (
 )
 
 var (
-	ErrHostNotAllowed               = errors.New("fetch: host not allowed")
-	ErrBlockedAddress               = errors.New("fetch: blocked destination address")
-	ErrBadScheme                    = errors.New("fetch: scheme must be http or https")
-	ErrInvalidURL                   = errors.New("fetch: invalid URL")
-	ErrURLUserinfo                  = errors.New("fetch: URL userinfo is forbidden")
-	ErrBodyTooLarge                 = errors.New("fetch: response body too large")
-	ErrRobotsDisallowed             = errors.New("fetch: path disallowed by robots.txt")
-	ErrRobotsUnavailable            = errors.New("fetch: robots.txt unavailable in strict crawl mode")
-	ErrTooManyRedirects             = errors.New("fetch: too many redirects")
-	ErrTransportBudgetExhausted     = errors.New("fetch: transport attempt budget exhausted")
-	ErrAggregateBodyBudgetExhausted = errors.New("fetch: aggregate body budget exhausted")
-	ErrInvalidCrawlBudget           = errors.New("fetch: invalid crawl budget")
-	ErrUnexpectedStatus             = errors.New("fetch: unexpected document status")
-	ErrUnsupportedDocumentMIME      = errors.New("fetch: unsupported document MIME type")
-	errMalformedRobots              = errors.New("fetch: malformed robots.txt")
+	ErrHostNotAllowed                = errors.New("fetch: host not allowed")
+	ErrBlockedAddress                = errors.New("fetch: blocked destination address")
+	ErrBadScheme                     = errors.New("fetch: scheme must be http or https")
+	ErrInvalidURL                    = errors.New("fetch: invalid URL")
+	ErrURLUserinfo                   = errors.New("fetch: URL userinfo is forbidden")
+	ErrBodyTooLarge                  = errors.New("fetch: response body too large")
+	ErrRobotsDisallowed              = errors.New("fetch: path disallowed by robots.txt")
+	ErrRobotsUnavailable             = errors.New("fetch: robots.txt unavailable in strict crawl mode")
+	ErrTooManyRedirects              = errors.New("fetch: too many redirects")
+	ErrTransportBudgetExhausted      = errors.New("fetch: transport attempt budget exhausted")
+	ErrAggregateBodyBudgetExhausted  = errors.New("fetch: aggregate body budget exhausted")
+	ErrInvalidCrawlBudget            = errors.New("fetch: invalid crawl budget")
+	ErrUnexpectedStatus              = errors.New("fetch: unexpected document status")
+	ErrUnsupportedDocumentMIME       = errors.New("fetch: unsupported document MIME type")
+	ErrPublicLinkHeaderLimitExceeded = errors.New("fetch: public Link response headers exceed limit")
+	errMalformedRobots               = errors.New("fetch: malformed robots.txt")
 )
 
 // StatusError carries the upstream status without exposing response content.
@@ -89,6 +90,7 @@ func isPublicCrawlBoundaryError(err error) bool {
 		errors.Is(err, ErrTooManyRedirects) ||
 		errors.Is(err, ErrTransportBudgetExhausted) ||
 		errors.Is(err, ErrAggregateBodyBudgetExhausted) ||
+		errors.Is(err, ErrPublicLinkHeaderLimitExceeded) ||
 		errors.Is(err, ErrUnsupportedDocumentMIME)
 }
 

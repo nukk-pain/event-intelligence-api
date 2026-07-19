@@ -58,6 +58,7 @@ type Result struct {
 	ETag         string // ETag from the response, if any
 	LastModified string // Last-Modified from the response, if any
 	NotModified  bool   // true when the server answered 304
+	linkHeaders  []string
 }
 
 // CDPFetcher is the (unimplemented) CDP fallback hook. When a page cannot be
@@ -302,6 +303,9 @@ func (f *Fetcher) do(ctx context.Context, u *url.URL, cond Conditional) (res *Re
 	if f.strictPublicCrawl {
 		documentMediaType, err = parsePublicDocumentMIME(out.ContentType)
 		if err != nil {
+			return nil, false, err
+		}
+		if out.linkHeaders, err = boundedPublicLinkHeaders(resp.Header); err != nil {
 			return nil, false, err
 		}
 	}

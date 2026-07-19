@@ -50,8 +50,11 @@ func (f *Fetcher) newHTTPClient(checkRobots bool) *http.Client {
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 	}
-	// A fresh HTTP/1 connection makes one strict RoundTrip one possible wire
-	// request; net/http can otherwise replay GETs internally on reused streams.
+	// Strict transports bound all response headers and use a fresh HTTP/1
+	// connection so net/http cannot replay a GET inside one charged RoundTrip.
+	if f.strictPublicCrawl {
+		baseTransport.MaxResponseHeaderBytes = defaultPublicMaxResponseHeaderBytes
+	}
 
 	var transport http.RoundTripper = baseTransport
 	if f.strictPublicCrawl {
