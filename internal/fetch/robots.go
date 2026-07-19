@@ -65,7 +65,11 @@ func (f *Fetcher) robotsFor(ctx context.Context, u *url.URL) (*robotsRules, erro
 	f.robotsMu.Unlock()
 
 	robotsURL := *u
-	sharedCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), f.timeout)
+	sharedParent := context.WithoutCancel(ctx)
+	if f.strictPublicCrawl {
+		sharedParent = ctx
+	}
+	sharedCtx, cancel := context.WithTimeout(sharedParent, f.timeout)
 	go func() {
 		defer cancel()
 		rules, err := f.fetchRobots(sharedCtx, &robotsURL, key)
