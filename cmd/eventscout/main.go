@@ -19,24 +19,27 @@ import (
 	"time"
 
 	"github.com/smpain/event-intelligence-api/internal/agent"
+	"github.com/smpain/event-intelligence-api/internal/publicdiscovery"
 )
 
 func main() {
 	goal := flag.String("goal", "국내 AI·로봇·바이오·의료기기 산업 행사를 목록으로 제공하는 소스 찾기", "discovery goal")
 	searchFile := flag.String("search", "cmd/eventscout/fixtures/search.json", "fixture search dataset")
-	searchProvider := flag.String("search-provider", "fixture", "search provider (fixture or tavily)")
+	searchProvider := flag.String("search-provider", "public", "search provider (public, fixture or tavily)")
 	backendName := flag.String("backend", "", "backend name (default: first configured)")
 	rounds := flag.Int("rounds", 3, "max discovery rounds")
 	maxTokens := flag.Int("max-tokens", 3000, "max completion tokens")
 	timeout := flag.Duration("timeout", 90*time.Second, "per-request timeout")
 	flag.Parse()
 
-	tool, err := newSearchTool(searchConfig{
-		Provider:    *searchProvider,
-		FixturePath: *searchFile,
-		TavilyKey:   os.Getenv("EVENTSINTEL_TAVILY_API_KEY"),
-		Client:      &http.Client{Timeout: *timeout},
-	})
+	searchCfg := searchConfig{
+		Provider: *searchProvider, FixturePath: *searchFile,
+		Client: &http.Client{Timeout: *timeout},
+	}
+	if *searchProvider == "tavily" {
+		searchCfg.TavilyKey = os.Getenv("EVENTSINTEL_TAVILY_API_KEY")
+	}
+	tool, err := newSearchTool(searchCfg)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -53,13 +56,37 @@ func main() {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "discover:", err)
 	}
-	out, _ := json.MarshalIndent(sources, "", "  ")
+	out := marshalSources(tool, sources)
 	fmt.Printf("discovered %d source(s):\n%s\n", len(sources), string(out))
 	fmt.Printf("\n%d model call(s), %d in + %d out tokens, %dms total\n",
 		tr.Calls, tr.Usage.PromptTokens, tr.Usage.CompletionTokens, time.Since(start).Milliseconds())
 	if err != nil {
 		os.Exit(1)
 	}
+}
+
+type publicDiscoveryOutput struct {
+	Sources         []agent.DiscoveredSource    `json:"sources"`
+	Provider        string                      `json:"provider"`
+	PublicDiscovery publicdiscovery.BudgetState `json:"public_discovery"`
+}
+
+func marshalSources(tool agent.SearchTool, sources []agent.DiscoveredSource) []byte {
+	if publicTool, ok := tool.(*publicdiscovery.AgentSearchTool); ok {
+		output := publicDiscoveryOutput{
+			Sources: publicTool.RestoreProvenance(sources), Provider: "public",
+			PublicDiscovery: publicTool.Snapshot().Budget,
+		}
+		encoded, err := json.MarshalIndent(output, "", "  ")
+		if err == nil {
+			return encoded
+		}
+	}
+	encoded, err := json.MarshalIndent(sources, "", "  ")
+	if err != nil {
+		return []byte("[]")
+	}
+	return encoded
 }
 
 type searchConfig struct {
@@ -70,22 +97,31 @@ type searchConfig struct {
 }
 
 func newSearchTool(cfg searchConfig) (agent.SearchTool, error) {
-	switch cfg.Provider {
+	provider := cfg.Provider
+	if provider == "" {
+		provider = "public"
+	}
+	switch provider {
 	case "fixture":
 		tool, err := loadFixtureSearch(cfg.FixturePath)
 		if err != nil {
 			return nil, fmt.Errorf("load search fixture: %w", err)
 		}
 		return tool, nil
+	case "public":
+		return publicdiscovery.NewAgentSearchTool()
 	case "tavily":
 		return agent.NewTavilySearch(cfg.TavilyKey, cfg.Client)
 	default:
-		return nil, fmt.Errorf("unknown search provider %q", cfg.Provider)
+		return nil, fmt.Errorf("unknown search provider %q (want public, fixture, or tavily)", cfg.Provider)
 	}
 }
 
 func pickBackend(name string) (agent.Backend, error) {
-	backends := agent.LoadBackends()
+	return selectBackend(name, agent.LoadBackends())
+}
+
+func selectBackend(name string, backends []agent.Backend) (agent.Backend, error) {
 	if len(backends) == 0 {
 		return agent.Backend{}, fmt.Errorf("no backends configured (set EVENTSINTEL_LOCAL_BASE_URL or EVENTSINTEL_SOLAR_API_KEY)")
 	}
@@ -94,6 +130,9 @@ func pickBackend(name string) (agent.Backend, error) {
 	}
 	for _, b := range backends {
 		if b.Name == name {
+			if name == "solar" && strings.TrimSpace(b.APIKey) == "" {
+				return agent.Backend{}, fmt.Errorf("backend %q not configured (set EVENTSINTEL_SOLAR_API_KEY)", name)
+			}
 			return b, nil
 		}
 	}

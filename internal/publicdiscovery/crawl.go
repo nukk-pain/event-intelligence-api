@@ -1,0 +1,102 @@
+package publicdiscovery
+
+import (
+	"context"
+	"errors"
+	"net/http"
+
+	"github.com/smpain/event-intelligence-api/internal/fetch"
+)
+
+func (provider *Provider) crawl(ctx context.Context) ([]Candidate, BudgetState) {
+	jobContext, cancel := context.WithTimeout(ctx, provider.limits.Timeout)
+	defer cancel()
+	state := newCrawlState(provider)
+	for _, seed := range provider.catalog.Seeds {
+		if state.stopped {
+			break
+		}
+		state.bootstrapSeed(jobContext, seed)
+	}
+	state.processProtocolQueue(jobContext)
+	state.processHTMLQueue(jobContext)
+	state.syncFetchUsage()
+	candidates := state.validatedCandidates()
+	state.budget.Usage.Candidates = len(candidates)
+	return candidates, cloneBudget(state.budget)
+}
+
+func (state *crawlState) bootstrapSeed(ctx context.Context, seed Seed) {
+	state.budget.Usage.Seeds++
+	robotsURL := originDocumentURL(seed.URL, "/robots.txt")
+	result, err := state.provider.fetcher.Fetch(ctx, robotsURL, fetch.Conditional{})
+	state.syncFetchUsage()
+	declared := []string{}
+	if err == nil {
+		declared = parseRobotsSitemaps(result.Body)
+	} else {
+		var statusError *fetch.StatusError
+		robotsNotFound := errors.As(err, &statusError) && statusError.StatusCode == http.StatusNotFound
+		if !robotsNotFound && !errors.Is(err, fetch.ErrRobotsDisallowed) {
+			state.recordFetchError(ctx, err)
+			if state.stopped || errors.Is(err, fetch.ErrRobotsUnavailable) {
+				return
+			}
+		}
+	}
+	queuedSitemap := false
+	for _, rawURL := range declared {
+		before := len(state.protocolQueue)
+		state.enqueue(frontierItem{
+			rawURL: rawURL, seed: seed, parentURL: robotsURL,
+			relation: ProtocolRobotsSitemap, depth: 0, kind: documentSitemap,
+		})
+		queuedSitemap = queuedSitemap || len(state.protocolQueue) > before
+	}
+	if !queuedSitemap {
+		state.enqueue(frontierItem{
+			rawURL: originDocumentURL(seed.URL, "/sitemap.xml"), seed: seed,
+			parentURL: robotsURL, relation: ProtocolRobotsSitemap, depth: 0, kind: documentSitemap,
+		})
+	}
+	state.enqueue(frontierItem{
+		rawURL: seed.URL, seed: seed, relation: ProtocolSeed, depth: 0, kind: documentHTML,
+	})
+}
+
+func (state *crawlState) processProtocolQueue(ctx context.Context) {
+	for len(state.protocolQueue) > 0 && !state.stopped {
+		if state.budget.Usage.ProtocolDocuments >= state.provider.limits.MaxProtocolDocuments {
+			state.addReason(TruncationProtocolDocumentLimit)
+			state.protocolQueue = nil
+			return
+		}
+		item := state.protocolQueue[0]
+		state.protocolQueue = state.protocolQueue[1:]
+		state.budget.Usage.ProtocolDocuments++
+		result, ok := state.fetchDocument(ctx, item)
+		if !ok {
+			continue
+		}
+		state.processProtocolResult(item, result)
+	}
+}
+
+func (state *crawlState) processHTMLQueue(ctx context.Context) {
+	for len(state.htmlQueue) > 0 && !state.stopped {
+		if state.budget.Usage.HTMLPages >= state.provider.limits.MaxHTMLPages {
+			state.addReason(TruncationHTMLPageLimit)
+			state.htmlQueue = nil
+			return
+		}
+		item := state.htmlQueue[0]
+		state.htmlQueue = state.htmlQueue[1:]
+		state.budget.Usage.HTMLPages++
+		result, ok := state.fetchDocument(ctx, item)
+		if !ok {
+			continue
+		}
+		state.processHTMLResult(item, result)
+		state.processProtocolQueue(ctx)
+	}
+}
