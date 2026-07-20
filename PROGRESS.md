@@ -589,8 +589,9 @@ operator-only Solar startup, and reproducible no-third-party-key smoke path.
   service limits and stable error behavior, plus the operator-only Solar key
   startup requirement. Structured server logs are documented as metadata-only;
   the normal cache-first read API remains unchanged. A zero-third-party-key
-  local smoke invocation and source/config/link verification are recorded in
-  `.omo/evidence/task-6-docs-governance.txt`.
+  local smoke invocation, the bounded operator script
+  (`scripts/smoke-solar-public-discovery.sh`), and source/config/link
+  verification are recorded in `.omo/evidence/solar-accountless-public-agent/task-6.txt`.
 
 ## Validation Notes
 

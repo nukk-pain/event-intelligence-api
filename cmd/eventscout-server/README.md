@@ -25,8 +25,8 @@ export EVENTSINTEL_SOLAR_API_KEY='...'
 export EVENTSINTEL_SOLAR_BASE_URL='https://api.upstage.ai/v1' # optional override
 export EVENTSINTEL_SOLAR_MODEL='solar-open2'                  # optional override
 
-# eventscout-server reads EVENTSINTEL_HTTP_ADDR; its default is 127.0.0.1:8081.
-EVENTSINTEL_HTTP_ADDR='127.0.0.1:8081' \
+# eventscout-server reads EVENTSCOUT_HTTP_ADDR; its default is 127.0.0.1:8081.
+EVENTSCOUT_HTTP_ADDR='127.0.0.1:8081' \
   go run ./cmd/eventscout-server
 ```
 
@@ -45,6 +45,11 @@ env -u EVENTSINTEL_SOLAR_API_KEY \
 
 For a no-third-party-key test smoke that does not intentionally start the
 Solar-gated binary, see [`cmd/eventscout/README.md`](../eventscout/README.md).
+For the non-gating operator Solar + curated-public smoke, run
+`./scripts/smoke-solar-public-discovery.sh` from the repository root. It skips
+cleanly when the operator key is unavailable and never prints the key,
+authorization material, or goal; with a key it applies a bounded wall-clock
+timeout and reports a sanitized pass/fail result.
 
 ## HTTP contract
 

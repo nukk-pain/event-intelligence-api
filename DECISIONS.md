@@ -425,5 +425,6 @@ contract and must not acquire live LLM work as a side effect.
 - Source checks: `internal/eventscoutserver/config.go`, `handler.go`,
   `middleware.go`, `quota.go`, `internal/publicdiscovery/catalog.go`,
   `canonical.go`, `types.go`, and `internal/api` router tests.
-- Documentation/config checks and the zero-third-party-key smoke are recorded in
-  `.omo/evidence/task-6-docs-governance.txt`.
+- Documentation/config checks, the zero-third-party-key smoke, and the bounded
+  operator script (`scripts/smoke-solar-public-discovery.sh`) are recorded in
+  `.omo/evidence/solar-accountless-public-agent/task-6.txt`.

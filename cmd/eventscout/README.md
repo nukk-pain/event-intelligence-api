@@ -107,6 +107,19 @@ The command is intentionally a test smoke, not a production-server startup:
 local backend is configured. See the server runbook for that explicit failure
 and for the anonymous `POST /v1/discover` contract.
 
+For the non-gating operator check that runs Solar against the curated `public`
+provider, use [`scripts/smoke-solar-public-discovery.sh`](../../scripts/smoke-solar-public-discovery.sh)
+from the repository root:
+
+```sh
+./scripts/smoke-solar-public-discovery.sh
+```
+
+It exits `0` with `SKIPPED_CREDENTIAL_UNAVAILABLE` when
+`EVENTSINTEL_SOLAR_API_KEY` is absent. With the operator key present, it runs
+one bounded Solar round, forces `-search-provider public`, redacts captured
+output, and exits non-zero on timeout or an unexpected provider/result.
+
 ## Privacy and scope
 
 The public service accepts only a goal string. Do not put secrets or personal
