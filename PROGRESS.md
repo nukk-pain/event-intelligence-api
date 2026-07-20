@@ -6,12 +6,13 @@
 - Current Stage: Shape
 - Owner: smpain
 - Started: 2026-06-21
-- Last Updated: 2026-07-06
+- Last Updated: 2026-07-20
 
 ## Current Focus
 
-Expand benchmark source coverage beyond the COEX/KINTEX domestic venue wedge,
-without turning the product into a generic event portal.
+Finish the Solar Agent Partner Stage 1 public surface without changing the
+normal cache-first event API: document the anonymous public-discovery boundary,
+operator-only Solar startup, and reproducible no-third-party-key smoke path.
 
 ## Completed
 
@@ -580,6 +581,16 @@ without turning the product into a generic event portal.
   checks pass. A real Solar+Tavily transcript remains pending until the user
   completes the authorized GitHub/Tavily account flow; no credential has been
   stored or exposed.
+- Anonymous discovery documentation/governance (2026-07-20): `eventscout` now
+  documents the keyless `public` provider as the default, with `fixture` and
+  Tavily as explicit optional modes. The separate `eventscout-server` runbook
+  documents anonymous goal-only requests, no signup/arbitrary URLs/private
+  networking, the exact 4 KiB/800-rune/2-per-10-minute/24-per-day/2-active/60s
+  service limits and stable error behavior, plus the operator-only Solar key
+  startup requirement. Structured server logs are documented as metadata-only;
+  the normal cache-first read API remains unchanged. A zero-third-party-key
+  local smoke invocation and source/config/link verification are recorded in
+  `.omo/evidence/task-6-docs-governance.txt`.
 
 ## Validation Notes
 

@@ -42,8 +42,11 @@ go run ./cmd/eventagent \
   -case cmd/eventagent/fixtures/ai-conf \
   -backend solar
 
-# 자율 소스 발견 루프 (재현 가능한 fixture가 기본값)
+# 자율 소스 발견 루프 (keyless public provider가 기본값; Tavily 키 불필요)
 go run ./cmd/eventscout -backend solar -rounds 2
+
+# 재현 가능한 fixture 검색 (명시적 offline 옵션)
+go run ./cmd/eventscout -backend solar -search-provider fixture -rounds 2
 
 # 정식 Tavily 검색 API를 쓰는 완전 자동 소스 발견 루프
 export EVENTSINTEL_TAVILY_API_KEY='...'
@@ -58,9 +61,11 @@ EVENTSINTEL_LOCAL_BASE_URL=off \
   go run ./cmd/abbench -v -fixtures cmd/abbench/fixtures
 ```
 
-`eventscout`는 재현 가능한 fixture 검색을 기본값으로 유지하면서 정식 Tavily 검색
-API도 선택할 수 있습니다. Tavily 키는 `EVENTSINTEL_TAVILY_API_KEY` 환경변수에만
-주입하며, 없으면 외부 요청 전에 실패합니다. 2026-07-18 기준 공식 문서상 무료
+`eventscout`는 서버가 관리하는 공개 seed를 순회하는 `public` 검색 provider를
+기본으로 사용합니다. 재현 가능한 fixture 검색은 `-search-provider fixture`를
+지정할 때만 사용하며, 정식 Tavily 검색 API도 명시적으로 선택할 수 있습니다.
+Tavily 키는 `EVENTSINTEL_TAVILY_API_KEY` 환경변수에만 주입하며, 없으면 외부
+요청 전에 실패합니다. 2026-07-18 기준 공식 문서상 무료
 한도는 월 1,000 credits이고 기본 검색은 1 credit입니다. 검색 질의는 외부 공급자에
 전송되므로 공개 행사 조사 문구만 사용해야 합니다. 연락처 형태는 전송 전에 제거하고,
 결과의 제목·요약과 URL도 같은 개인정보·사설망 경계를 통과한 것만 모델에 전달합니다.

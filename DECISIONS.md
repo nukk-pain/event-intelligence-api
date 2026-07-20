@@ -359,3 +359,71 @@ events, the binary issues a best-effort `purge_everything`
   Zone→Cache Rules (the existing DNS-only token is insufficient).
 - Markdown-by-`Accept`-header is not edge-cached (collision guard); `?format=md`
   is a distinct cache key and unaffected.
+
+---
+
+## Decision: Isolate Anonymous Public Discovery From The Read API
+
+- Status: accepted
+- Date: 2026-07-20
+- Decision Maker: smpain
+- Scope: `cmd/eventscout`, `cmd/eventscout-server`, and their public-discovery boundary
+
+### Context
+
+The Solar-backed source-discovery loop now has two different operating surfaces.
+The command-line tool is useful for local experiments, while a public HTTP
+surface must be safe to call without an account or a caller-supplied provider.
+The existing `eventsintel` API already has a separate read-only, cache-first
+contract and must not acquire live LLM work as a side effect.
+
+### Decision
+
+- `eventscout` defaults to the keyless `public` search provider. It crawls only
+  the six server-owned public seeds and follows bounded, robots-aware public
+  HTTP(S) discovery. `fixture` is an explicit offline option; Tavily is an
+  explicit credential-backed option. Fixture is not the default.
+- `eventscout-server` is a separate binary exposing only the anonymous
+  `POST /v1/discover` operation plus health/readiness routes. Callers submit
+  exactly a goal string; there is no signup, API key, URL seed, backend,
+  profile, or arbitrary-network request surface. Private, loopback, link-local,
+  metadata, and credential-bearing URLs are rejected by the public crawl.
+- Solar is an operator-only backend credential. `eventscout-server` must find a
+  configured Solar backend and key at startup and fails closed when it is absent,
+  even if a local backend is configured. The key is never accepted from callers,
+  returned in responses, or written to structured logs.
+- The anonymous service limits are fixed and documented: 4 KiB body, 1–800
+  Unicode-rune goal, 2 requests per 10 minutes and 24 per day per client, 2
+  active jobs, and a 60-second server deadline. Exceeded limits return stable
+  `400`, `429` (with bounded `Retry-After`), `503`, or `504` error envelopes.
+  The public crawl and model loop retain their independent hard caps and report
+  truncation rather than expanding work.
+- The service logs request metadata only (request ID, status, duration, and
+  fixed limit counters). It does not log user goals, fetched page text, Solar or
+  Tavily secrets, or upstream error bodies. The local interactive CLI may print
+  its own goal to its terminal, so secrets and personal data remain forbidden in
+  CLI goals as well.
+- The normal `eventsintel` read API remains unchanged: read-only, cache-first,
+  no live LLM generation, and no `/v1/discover` route in `api.Router`.
+
+### Consequences
+
+- A caller can use the public provider without Tavily or Solar credentials, but
+  only the operator can run the public HTTP server because Solar startup is an
+  explicit deployment requirement.
+- Offline fixture tests remain reproducible without third-party network access;
+  real Tavily search is opt-in and its query/privacy boundary is documented.
+- Anonymous service quota numbers are intentionally different from the normal
+  API's existing per-IP `60/min` and `2,000/day` read quotas. The two surfaces
+  must not be conflated in runbooks or monitoring.
+- The public HTTP service is isolated as its own listener/process. Deploying it
+  is a separate operational decision and does not change normal API caching or
+  data reads.
+
+### Verification
+
+- Source checks: `internal/eventscoutserver/config.go`, `handler.go`,
+  `middleware.go`, `quota.go`, `internal/publicdiscovery/catalog.go`,
+  `canonical.go`, `types.go`, and `internal/api` router tests.
+- Documentation/config checks and the zero-third-party-key smoke are recorded in
+  `.omo/evidence/task-6-docs-governance.txt`.

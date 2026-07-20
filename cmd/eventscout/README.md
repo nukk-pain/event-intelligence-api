@@ -1,27 +1,68 @@
 # eventscout — autonomous source-discovery agent (loop ①)
 
 Given a goal, the model proposes search queries, a search tool runs them, and the
-model judges which results are real event-listing sources worth crawling —
-deciding the next action itself each round. This is the most agentic loop:
-the model, not a person, decides what to search and what to crawl.
+model judges which results are real event-listing sources worth crawling. The
+model chooses the next search action for each round; the caller cannot supply a
+seed URL, backend, profile, or crawl budget through the search goal.
 
-## Run
+## Provider selection
+
+`public` is the default search provider. It is keyless for the caller and uses a
+server-owned catalog of six public event sites (COEX, KINTEX, CES, NVIDIA GTC,
+BIO International, and MEDICA). It follows only public HTTP(S) links discovered
+from those seeds, checks robots.txt, and rejects private/loopback/link-local/
+metadata destinations and URL userinfo. A goal containing a URL is still only
+text; it does not inject an arbitrary crawl seed.
+
+The other providers are explicit, optional modes:
+
+| `-search-provider` | Use | Credential |
+| --- | --- | --- |
+| `public` (default) | bounded public crawl from the curated catalog | none for search |
+| `fixture` | deterministic offline keyword fixture at `cmd/eventscout/fixtures/search.json` | none |
+| `tavily` | credential-backed Tavily web-index search | `EVENTSINTEL_TAVILY_API_KEY` |
+
+Fixture is not the default. Use it when an offline, repeatable transcript is
+needed; use Tavily only when a real third-party search is intentionally desired.
+The public HTTP service described in [`cmd/eventscout-server/README.md`](../eventscout-server/README.md)
+uses `public` internally and does not expose this provider flag to callers.
+
+## Run the CLI
+
+The local model backend is selected first by default (`EVENTSINTEL_LOCAL_BASE_URL`
+defaults to `http://127.0.0.1:18900/v1`). Solar is an explicit operator choice;
+set `EVENTSINTEL_SOLAR_API_KEY` and pass `-backend solar` when using it. The key
+belongs in the process environment only, never in a goal, fixture, transcript,
+or committed file.
 
 ```sh
-go run ./cmd/eventscout                       # local backend, fixture search
-go run ./cmd/eventscout -backend solar        # after 2026-07-17
-go run ./cmd/eventscout -rounds 2 -goal "..." # tune
+# Curated public crawl (default provider; no Tavily key)
+go run ./cmd/eventscout \
+  -goal '2026년 이후 한국 AI 로봇 바이오 의료기기 공식 행사 소스 찾기'
+
+# Deterministic offline fixture (explicit opt-in; no third-party network)
+go run ./cmd/eventscout \
+  -search-provider fixture \
+  -backend local \
+  -rounds 2 \
+  -goal '한국 AI 로봇 행사 공식 소스 찾기'
 ```
 
-Search is pluggable (`agent.SearchTool`). This CLI ships a fixture-backed search
-(`fixtures/search.json`: keyword groups → canned results) so the loop runs
-offline. The fixture deliberately mixes real event sources (venue calendars,
-organizer pages) with noise (a news article, a personal blog, a shopping page)
-so the model's judgment is exercised.
+The effective discovery guardrails are server-owned and hard-clamped even when
+larger CLI flags are supplied: at most 2 rounds, 4 model calls, 4,000 total
+completion tokens (1,000 reserved per call by default), 30 candidates total and
+5 candidates per source, an 800-rune goal, and a 20-second per-model-call
+default (never above 60 seconds). The public crawler adds 6 seeds, depth 2, 12
+protocol documents, 24 HTML pages, 64 transport attempts, 30 candidates, 6 MiB
+aggregate response bytes, 512 KiB per response, two redirects, and 30 requests
+per host per minute. Truncation is reported in the public CLI provider's
+`public_discovery.truncation_reasons` and in the server response's
+`meta.truncation_reasons`; it is not a reason to accept an unvalidated URL.
 
-For a fully automated live-search run, select the Tavily adapter and provide the
-credential only through the process environment or an ignored local `.env`
-file:
+## Tavily mode (optional)
+
+For a fully automated third-party search, provide the credential only through the
+process environment or an ignored local `.env` file:
 
 ```sh
 export EVENTSINTEL_SOLAR_API_KEY='...'
@@ -34,18 +75,43 @@ go run ./cmd/eventscout \
   -goal '2026년 이후 한국 AI 로봇 바이오 의료기기 공식 행사 소스 찾기'
 ```
 
-As of 2026-07-18, Tavily documents 1,000 free API credits per month without a
-credit card; a basic search costs one credit. See the official
-[API credit documentation](https://docs.tavily.com/documentation/api-credits)
+Without `EVENTSINTEL_TAVILY_API_KEY`, selecting `tavily` fails before a model or
+search request is sent. As of 2026-07-18, Tavily documents 1,000 free API credits
+per month without a credit card; a basic search costs one credit. See the
+official [API credit documentation](https://docs.tavily.com/documentation/api-credits)
 and [search endpoint](https://docs.tavily.com/documentation/api-reference/endpoint/search).
 
-Only public event-discovery queries belong in this mode. Before a query leaves
-the process, contact-like text is redacted. Result titles and snippets are also
-redacted, and malformed, private-network, localhost, credential-bearing, or
-contact-bearing URLs are rejected. Tavily's privacy policy says it collects
-search queries and may share parts with search-index providers, so never place
-private, patient, clinical, account, or other personal data in a goal or query.
-See [Tavily's privacy policy](https://www.tavily.com/privacy).
+Only public event-discovery queries belong in this mode. Contact-like text is
+redacted before a query leaves the process; result titles, snippets, and URLs are
+sanitized, and malformed, private-network, localhost, credential-bearing, or
+contact-bearing URLs are rejected. Tavily's [privacy policy](https://www.tavily.com/privacy)
+says it collects search queries and may share parts with search-index providers,
+so never put private, patient, clinical, account, or other personal data in a
+goal or query.
 
-Fixture remains the default. Choosing `-search-provider tavily` without
-`EVENTSINTEL_TAVILY_API_KEY` fails before any model or search request is sent.
+## Zero-third-party-key smoke
+
+This command exercises provider selection, the anonymous HTTP handler over a
+local `httptest` server, quota/input/privacy tests, and the public-crawl safety
+tests without an Upstage or Tavily credential and without external network
+access:
+
+```sh
+env -u EVENTSINTEL_SOLAR_API_KEY -u EVENTSINTEL_TAVILY_API_KEY \
+  EVENTSINTEL_LOCAL_BASE_URL=off \
+  go test ./cmd/eventscout ./internal/eventscoutserver ./internal/publicdiscovery -count=1
+```
+
+The command is intentionally a test smoke, not a production-server startup:
+`eventscout-server` requires the operator's Solar key at startup even when a
+local backend is configured. See the server runbook for that explicit failure
+and for the anonymous `POST /v1/discover` contract.
+
+## Privacy and scope
+
+The public service accepts only a goal string. Do not put secrets or personal
+data in it. `eventscout-server` structured logs contain request ID, status,
+duration, and fixed limit counters—not the goal, fetched page text, model
+credentials, or provider error details. The interactive CLI prints its local
+goal to its own terminal as part of its normal output, so treat that terminal
+as sensitive and do not redirect it to shared logs.
