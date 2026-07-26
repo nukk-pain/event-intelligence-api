@@ -2,10 +2,10 @@
 # Run the non-gating operator smoke for Solar-backed, curated public discovery.
 #
 # With no Solar key this is an intentional, successful skip. With a key, the
-# command runs in a fresh process group with a bounded wall-clock timeout. Only
-# redacted output is written to the temporary report and printed; the key,
-# authorization material, and goal are never emitted. The temporary directory
-# and any child process are removed by the EXIT/INT/TERM trap.
+# command runs in a fresh process group with a bounded wall-clock timeout. The
+# report contains only fixed scalar fields and a validated count-only trace; it
+# never re-emits child output. The temporary directory and any child process
+# are removed by the EXIT/INT/TERM trap.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -103,20 +103,6 @@ signal.signal(signal.SIGINT, handle_signal)
 signal.signal(signal.SIGTERM, handle_signal)
 
 
-def redact(raw):
-    cleaned = raw
-    if key:
-        cleaned = cleaned.replace(key, "[REDACTED_SOLAR_KEY]")
-    cleaned = cleaned.replace(goal, "[REDACTED_GOAL]")
-    cleaned = re.sub(r"(?im)^.*(?:authorization|api[-_ ]?key|x-api-key).*$", "[REDACTED_CREDENTIAL_LINE]", cleaned)
-    cleaned = re.sub(r"(?i)\bBearer\s+\S+", "Bearer [REDACTED]", cleaned)
-    cleaned = re.sub(r"(?im)^(\s*goal\s*:\s*).*$", r"\1[REDACTED_GOAL]", cleaned)
-    cleaned = re.sub(r'(?i)("goal"\s*:\s*")[^"\r\n]*(")', r"\1[REDACTED_GOAL]\2", cleaned)
-    if len(cleaned) > 16000:
-        cleaned = cleaned[:8000] + "\n...[sanitized output truncated]...\n" + cleaned[-8000:]
-    return cleaned.strip()
-
-
 TRACE_KEYS = {
     "outcome",
     "terminal_reason",
@@ -165,7 +151,6 @@ def extract_yield_trace(output):
 
 def write_result(result, exit_code, timed_out, duration, output, trace, reason=""):
     provider_observed = "search=public" in output or '"provider": "public"' in output or '"provider":"public"' in output
-    cleaned = redact(output)
     with open(result_path, "w", encoding="utf-8") as report:
         report.write(f"result={result}\n")
         report.write("provider=public\n")
@@ -181,10 +166,6 @@ def write_result(result, exit_code, timed_out, duration, output, trace, reason="
         if reason:
             report.write(f"reason={reason}\n")
         report.write("command=go run ./cmd/eventscout -backend solar -search-provider public -rounds 1 -max-tokens 1000 -timeout 20s -goal [REDACTED_GOAL]\n")
-        if cleaned:
-            report.write("sanitized_output_begin\n")
-            report.write(cleaned)
-            report.write("\nsanitized_output_end\n")
     return provider_observed
 
 
