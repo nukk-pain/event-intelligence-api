@@ -428,3 +428,23 @@ contract and must not acquire live LLM work as a side effect.
 - Documentation/config checks, the zero-third-party-key smoke, and the bounded
   operator script (`scripts/smoke-solar-public-discovery.sh`) are recorded in
   `.omo/evidence/solar-accountless-public-agent/task-6.txt`.
+
+### Additive yield-diagnostic governance (2026-07-26)
+
+- A completed successful public-discovery response may include the request-local,
+  count-only `yield_trace` object. Its fixed fields are `outcome`,
+  `terminal_reason`, `crawler_validated`, `offered`, `prefilter_dropped`,
+  `proposal_calls`, `judge_calls`, `judge_entries_parsed`,
+  `judge_entries_dropped`, and `accepted`.
+- `yield_trace` is a classification aid, not a source-data export: it contains
+  no goal, candidate, URL, fetched content, model payload, or credential. Its
+  counters must not be carried from one request to another.
+- Existing error envelopes are unchanged and trace-free. The normal internal
+  cache-first read API also remains unchanged; this diagnostic does not add
+  live model work to normal reads.
+- The Solar credential remains operator-only. No caller key is accepted by the
+  CLI's public-provider contract or by the anonymous HTTP service.
+- The present-key operator smoke is bounded. A classified result with
+  `accepted: 0` is valid observed output and is not a minimum-live-result
+  failure. Without the operator credential, the smoke reports
+  `SKIPPED_CREDENTIAL_UNAVAILABLE` before making a model or network call.

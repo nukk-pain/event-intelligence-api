@@ -62,12 +62,20 @@ The service exposes only these routes:
 | `GET /healthz` | `200` JSON | `{"status":"ok"}` |
 | `GET /readyz` | `200` JSON | `{"status":"ready"}` |
 
-`POST /v1/discover` returns `{ "sources": [...], "meta": {...} }`. The metadata
-always reports `provider: "public"` and the server-selected `profile: "events"`.
+On successful `POST /v1/discover`, the response includes `sources`, `meta`, and
+a request-local, count-only `yield_trace`. `yield_trace` has exactly these
+fields: `outcome`, `terminal_reason`, `crawler_validated`, `offered`,
+`prefilter_dropped`, `proposal_calls`, `judge_calls`, `judge_entries_parsed`,
+`judge_entries_dropped`, and `accepted`. It is classification only: it contains
+no goal, candidate, URL, fetched content, model payload, or credential, and no
+counter is shared across requests. The metadata always reports
+`provider: "public"` and the server-selected `profile: "events"`.
+
 `sources` contains validated public event-source URLs and provenance. The
 response is `Cache-Control: no-store`; it is not part of the internal
 cache-first read API. CORS allows `Origin: *`, `POST, OPTIONS`, and
-`Content-Type`, with no credentialed CORS.
+`Content-Type`, with no credentialed CORS. A caller cannot provide a Solar key;
+the credential remains operator-only.
 
 No arbitrary URL or backend is accepted. The JSON decoder rejects unknown
 fields, arrays, trailing JSON, malformed JSON, wrong content types, and blank
@@ -107,6 +115,11 @@ Errors use a stable JSON envelope:
 ```json
 {"error":{"code":"rate_limited","message":"request quota exceeded","retry_after_seconds":600}}
 ```
+
+Error envelopes are unchanged and trace-free. A successful, bounded operator
+smoke may classify a run with `accepted: 0`; it does not promise a minimum live
+source count. Without the operator credential, the smoke reports
+`SKIPPED_CREDENTIAL_UNAVAILABLE` before any model or network call.
 
 The relevant codes are `invalid_request` (400), `method_not_allowed` (405),
 `not_found` (404), `rate_limited` (429), `server_busy` (503),

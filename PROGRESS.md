@@ -6,13 +6,18 @@
 - Current Stage: Shape
 - Owner: smpain
 - Started: 2026-06-21
-- Last Updated: 2026-07-20
+- Last Updated: 2026-07-26
 
 ## Current Focus
 
 Finish the Solar Agent Partner Stage 1 public surface without changing the
 normal cache-first event API: document the anonymous public-discovery boundary,
 operator-only Solar startup, and reproducible no-third-party-key smoke path.
+
+The additive public yield diagnostics are now governed as successful-response-
+only, request-local, count-only fields. Fresh Todo 6 evidence confirms the
+bounded present-key smoke classification and the no-key no-call skip; the
+normal cache-first API and its error envelopes remain unchanged.
 
 ## Completed
 
@@ -625,3 +630,4 @@ next core-product action after the Solar submission.
 |---|---|---|
 | 2026-06-21 | Initial progress file | Project promoted from idea document |
 | 2026-06-21 | Target user = founders/operators; format = JSONL; created schema + seed prototype | Resolved gating decisions and executed the documented Next Action |
+| 2026-07-26 | Governed public yield diagnostics and smoke semantics | Keep count-only observability request-local and prevent a zero accepted-source classification from being misreported as a failed live result |

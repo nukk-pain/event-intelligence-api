@@ -59,6 +59,20 @@ per host per minute. Truncation is reported in the public CLI provider's
 `public_discovery.truncation_reasons` and in the server response's
 `meta.truncation_reasons`; it is not a reason to accept an unvalidated URL.
 
+## Yield diagnostics
+
+For a completed successful `public` provider run, the CLI may add a
+request-local, count-only `yield_trace` object with exactly these fields:
+`outcome`, `terminal_reason`, `crawler_validated`, `offered`,
+`prefilter_dropped`, `proposal_calls`, `judge_calls`,
+`judge_entries_parsed`, `judge_entries_dropped`, and `accepted`.
+
+The trace classifies the run; it does not expose a goal, candidate, URL,
+fetched content, model payload, or credential, and its counters are never
+reused by another request. It is not a minimum-result assertion: a bounded
+present-key smoke may validly report `accepted: 0` with its outcome and terminal
+reason classification.
+
 ## Tavily mode (optional)
 
 For a fully automated third-party search, provide the credential only through the
@@ -116,9 +130,11 @@ from the repository root:
 ```
 
 It exits `0` with `SKIPPED_CREDENTIAL_UNAVAILABLE` when
-`EVENTSINTEL_SOLAR_API_KEY` is absent. With the operator key present, it runs
-one bounded Solar round, forces `-search-provider public`, redacts captured
-output, and exits non-zero on timeout or an unexpected provider/result.
+`EVENTSINTEL_SOLAR_API_KEY` is absent; that path makes no model or network call.
+With the operator key present, it runs one bounded Solar round, forces
+`-search-provider public`, redacts captured output, and exits non-zero on a
+timeout, unexpected provider, or missing fixed yield classification. Zero
+accepted sources remain a valid classified observed result.
 
 ## Privacy and scope
 
