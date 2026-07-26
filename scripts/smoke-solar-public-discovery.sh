@@ -130,9 +130,25 @@ TERMINAL_REASONS = {
     "malformed_judge_envelope", "model_call_budget", "token_budget", "round_limit",
     "context_canceled", "deadline_exceeded", "invalid_usage", "none",
 }
+CRAWL_COUNT_KEYS = {"validated_candidates", "seed_candidates", "skipped_documents", "malformed_documents"}
+SEED_OUTCOME_KEYS = {
+    "candidate",
+    "robots_disallowed",
+    "http_status",
+    "body_too_large",
+    "unsupported_content",
+    "transport_error",
+    "duplicate",
+    "candidate_cap",
+    "not_attempted",
+}
+TRUNCATION_REASONS = {
+    "depth_limit", "protocol_document_limit", "html_page_limit", "candidate_limit",
+    "http_attempt_limit", "response_body_limit", "time_limit", "context_canceled",
+}
 
 
-def extract_yield_trace(output):
+def decode_discovery_payload(output):
     match = re.search(r"discovered \d+ source\(s\):\s*", output)
     if match is None:
         return None
@@ -140,7 +156,47 @@ def extract_yield_trace(output):
         payload, _ = json.JSONDecoder().raw_decode(output[match.end():].lstrip())
     except (TypeError, ValueError):
         return None
-    trace = payload.get("yield_trace") if isinstance(payload, dict) else None
+    return payload if isinstance(payload, dict) else None
+
+
+def extract_crawl_summary(output):
+    """Count-only crawler state. Only a seed-protocol candidate is guaranteed a
+    title, so this is what separates 'the crawl never reached a seed page' from
+    'the model rejected the seeds'."""
+    payload = decode_discovery_payload(output)
+    if payload is None:
+        return None
+    summary = payload.get("public_discovery")
+    if not isinstance(summary, dict):
+        return None
+    if not CRAWL_COUNT_KEYS.issubset(set(summary)) or "truncated" not in summary:
+        return None
+    if set(summary) - CRAWL_COUNT_KEYS - {"truncated", "truncation_reasons", "seed_outcomes"}:
+        return None
+    outcomes = summary.get("seed_outcomes")
+    if not isinstance(outcomes, dict) or set(outcomes) != SEED_OUTCOME_KEYS:
+        return None
+    if any(type(outcomes[key]) is not int or outcomes[key] < 0 for key in SEED_OUTCOME_KEYS):
+        return None
+    if outcomes["candidate"] != summary["seed_candidates"]:
+        return None
+    if any(type(summary[key]) is not int or summary[key] < 0 for key in CRAWL_COUNT_KEYS):
+        return None
+    if type(summary["truncated"]) is not bool:
+        return None
+    if summary["seed_candidates"] > summary["validated_candidates"]:
+        return None
+    reasons = summary.get("truncation_reasons", [])
+    if not isinstance(reasons, list) or any(reason not in TRUNCATION_REASONS for reason in reasons):
+        return None
+    return summary
+
+
+def extract_yield_trace(output):
+    payload = decode_discovery_payload(output)
+    if payload is None:
+        return None
+    trace = payload.get("yield_trace")
     if not isinstance(trace, dict) or set(trace) != TRACE_KEYS:
         return None
     if trace["outcome"] not in OUTCOMES or trace["terminal_reason"] not in TERMINAL_REASONS:
@@ -165,7 +221,7 @@ def extract_yield_trace(output):
     return trace
 
 
-def write_result(result, exit_code, timed_out, duration, output, trace, reason=""):
+def write_result(result, exit_code, timed_out, duration, output, trace, reason="", crawl=None):
     provider_observed = "search=public" in output or '"provider": "public"' in output or '"provider":"public"' in output
     with open(result_path, "w", encoding="utf-8") as report:
         report.write(f"result={result}\n")
@@ -181,6 +237,14 @@ def write_result(result, exit_code, timed_out, duration, output, trace, reason="
                 report.write(f"yield_{key}={trace[key]}\n")
             for key in sorted(PREFILTER_REASON_KEYS):
                 report.write(f"yield_prefilter_reason_{key}={trace['prefilter_reasons'][key]}\n")
+        if crawl is not None:
+            for key in sorted(CRAWL_COUNT_KEYS):
+                report.write(f"crawl_{key}={crawl[key]}\n")
+            report.write(f"crawl_truncated={'true' if crawl['truncated'] else 'false'}\n")
+            for key in sorted(SEED_OUTCOME_KEYS):
+                report.write(f"crawl_seed_outcome_{key}={crawl['seed_outcomes'][key]}\n")
+            observed = sorted(set(crawl.get("truncation_reasons", [])))
+            report.write(f"crawl_truncation_reasons={','.join(observed) if observed else 'none'}\n")
         if reason:
             report.write(f"reason={reason}\n")
         report.write("command=go run ./cmd/eventscout -backend solar -search-provider public -rounds 1 -max-tokens 1000 -timeout 20s -goal [REDACTED_GOAL]\n")
@@ -250,9 +314,11 @@ finally:
 duration = time.monotonic() - started
 provider_observed = "search=public" in raw or '"provider": "public"' in raw or '"provider":"public"' in raw
 yield_trace = extract_yield_trace(raw)
-result = "PASS" if exit_code == 0 and not timed_out and provider_observed and yield_trace is not None else "FAIL"
-if exit_code == 0 and not timed_out and provider_observed and yield_trace is None and not reason:
-    reason = "successful command omitted fixed bounded yield trace"
+crawl_summary = extract_crawl_summary(raw)
+classified = yield_trace is not None and crawl_summary is not None
+result = "PASS" if exit_code == 0 and not timed_out and provider_observed and classified else "FAIL"
+if exit_code == 0 and not timed_out and provider_observed and not classified and not reason:
+    reason = "successful command omitted fixed bounded yield trace or crawl summary"
 write_result(
     result,
     exit_code,
@@ -261,8 +327,9 @@ write_result(
     raw,
     yield_trace,
     reason,
+    crawl_summary,
 )
-if exit_code == 0 and not timed_out and provider_observed and yield_trace is not None:
+if exit_code == 0 and not timed_out and provider_observed and classified:
     raise SystemExit(0)
 raise SystemExit(1)
 PY

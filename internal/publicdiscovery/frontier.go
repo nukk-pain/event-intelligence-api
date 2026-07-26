@@ -35,6 +35,7 @@ type crawlState struct {
 	validatedURLs  map[string]struct{}
 	protocolQueue  []frontierItem
 	htmlQueue      []frontierItem
+	seedsEnqueued  int
 	stopped        bool
 }
 
@@ -90,23 +91,25 @@ func (state *crawlState) enqueue(item frontierItem) {
 	}
 }
 
-func (state *crawlState) addCandidate(discovery candidateDiscovery) bool {
+// addCandidate reports whether the candidate was stored and, when it was not,
+// which bounded category explains the rejection.
+func (state *crawlState) addCandidate(discovery candidateDiscovery) (bool, SeedOutcome) {
 	if state.stopped || discovery.depth > state.provider.limits.MaxDepth {
 		if discovery.depth > state.provider.limits.MaxDepth {
 			state.addReason(TruncationDepthLimit)
 		}
-		return false
+		return false, SeedOutcomeNotAttempted
 	}
 	canonical, err := CanonicalizeURL(discovery.rawURL)
 	if err != nil || !candidateURLAllowed(canonical, state.provider.allowLocalCandidates) {
-		return false
+		return false, SeedOutcomeUnsupportedContent
 	}
 	if _, seen := state.seenCandidates[canonical]; seen {
-		return false
+		return false, SeedOutcomeDuplicate
 	}
 	if len(state.candidates) >= state.provider.limits.MaxCandidates {
 		state.addReason(TruncationCandidateLimit)
-		return false
+		return false, SeedOutcomeCandidateCap
 	}
 	state.seenCandidates[canonical] = struct{}{}
 	provenanceRawURL := discovery.provenanceRawURL
@@ -124,7 +127,7 @@ func (state *crawlState) addCandidate(discovery candidateDiscovery) bool {
 			FetchedAt: discovery.fetchedAt, Depth: discovery.depth,
 		},
 	})
-	return true
+	return true, ""
 }
 
 func (state *crawlState) validatedCandidates() []Candidate {
@@ -138,7 +141,7 @@ func (state *crawlState) validatedCandidates() []Candidate {
 }
 
 func (state *crawlState) addAndQueue(discovery candidateDiscovery, kind documentKind) {
-	if !state.addCandidate(discovery) {
+	if stored, _ := state.addCandidate(discovery); !stored {
 		return
 	}
 	state.enqueue(frontierItem{

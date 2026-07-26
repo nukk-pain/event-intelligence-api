@@ -70,10 +70,16 @@ request-local, count-only `yield_trace` object with exactly these fields:
 `prefilter_reasons` breaks the prefilter total into fixed count-only keys —
 `invalid_url`, `url_pattern`, `missing_title`, `missing_location`,
 `missing_date`, `past_date` — which always sum to `prefilter_dropped`. The
-`public_discovery` block also reports `seed_candidates`, the number of
-candidates that came straight from a catalog seed. Together they say whether an
-empty offer set came from untitled crawl output, a profile pattern, or a crawl
-that never reached a seed page at all.
+`public_discovery` block also reports `seed_candidates`, `skipped_documents`,
+`malformed_documents`, and `seed_outcomes`. Seed pages are crawled before
+sitemap children and are the only candidates guaranteed a title, so together
+these say whether an empty offer set came from untitled crawl output, a profile
+pattern, or seed pages that were fetched and rejected.
+
+`seed_outcomes` accounts for every enqueued seed with exactly one of
+`candidate`, `robots_disallowed`, `http_status`, `body_too_large`,
+`unsupported_content`, `transport_error`, `duplicate`, `candidate_cap`, or
+`not_attempted`; its `candidate` value always equals `seed_candidates`.
 
 The trace classifies the run; it does not expose a goal, candidate, URL,
 fetched content, model payload, or credential, and its counters are never

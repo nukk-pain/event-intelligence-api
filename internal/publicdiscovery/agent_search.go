@@ -19,7 +19,16 @@ type PublicYieldSnapshot struct {
 	// SeedCandidates counts candidates discovered directly from a catalog seed.
 	// Only this protocol guarantees a title (the seed name is the fallback), so
 	// a zero here explains an empty offer set that the total would hide.
-	SeedCandidates    int                `json:"seed_candidates"`
+	SeedCandidates int `json:"seed_candidates"`
+	// SkippedDocuments and MalformedDocuments count fetches that were dropped
+	// without stopping the crawl. Seed pages are fetched first, so a zero
+	// SeedCandidates alongside a nonzero count here means the seed pages were
+	// reached and rejected rather than never attempted.
+	SkippedDocuments   int `json:"skipped_documents"`
+	MalformedDocuments int `json:"malformed_documents"`
+	// SeedOutcomes accounts for every enqueued seed with exactly one bounded
+	// category, so a zero SeedCandidates names its own cause.
+	SeedOutcomes      SeedOutcomes       `json:"seed_outcomes"`
 	Truncated         bool               `json:"truncated"`
 	TruncationReasons []TruncationReason `json:"truncation_reasons,omitempty"`
 }
@@ -101,6 +110,9 @@ func (tool *AgentSearchTool) YieldSnapshot() PublicYieldSnapshot {
 	return PublicYieldSnapshot{
 		ValidatedCandidates: snapshot.Budget.Usage.Candidates,
 		SeedCandidates:      seeds,
+		SkippedDocuments:    snapshot.Budget.Usage.SkippedDocuments,
+		MalformedDocuments:  snapshot.Budget.Usage.MalformedDocuments,
+		SeedOutcomes:        snapshot.Budget.SeedOutcomes,
 		Truncated:           snapshot.Budget.Truncated,
 		TruncationReasons:   append([]TruncationReason(nil), snapshot.Budget.TruncationReasons...),
 	}

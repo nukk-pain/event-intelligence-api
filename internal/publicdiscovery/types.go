@@ -111,8 +111,71 @@ type Usage struct {
 type BudgetState struct {
 	Limits            Limits             `json:"limits"`
 	Usage             Usage              `json:"usage"`
+	SeedOutcomes      SeedOutcomes       `json:"seed_outcomes"`
 	Truncated         bool               `json:"truncated"`
 	TruncationReasons []TruncationReason `json:"truncation_reasons,omitempty"`
+}
+
+// SeedOutcome classifies what became of one catalog seed page. Seed pages are
+// fetched before any sitemap child and are the only crawl output guaranteed a
+// title, so an empty offer set is only explainable once each seed is accounted
+// for.
+type SeedOutcome string
+
+const (
+	SeedOutcomeCandidate          SeedOutcome = "candidate"
+	SeedOutcomeRobotsDisallowed   SeedOutcome = "robots_disallowed"
+	SeedOutcomeHTTPStatus         SeedOutcome = "http_status"
+	SeedOutcomeBodyTooLarge       SeedOutcome = "body_too_large"
+	SeedOutcomeUnsupportedContent SeedOutcome = "unsupported_content"
+	SeedOutcomeTransportError     SeedOutcome = "transport_error"
+	SeedOutcomeDuplicate          SeedOutcome = "duplicate"
+	SeedOutcomeCandidateCap       SeedOutcome = "candidate_cap"
+	SeedOutcomeNotAttempted       SeedOutcome = "not_attempted"
+)
+
+// SeedOutcomes is a fixed-key, count-only tally with exactly one entry per
+// enqueued seed. It holds no URL, host, or document content.
+type SeedOutcomes struct {
+	Candidate          int `json:"candidate"`
+	RobotsDisallowed   int `json:"robots_disallowed"`
+	HTTPStatus         int `json:"http_status"`
+	BodyTooLarge       int `json:"body_too_large"`
+	UnsupportedContent int `json:"unsupported_content"`
+	TransportError     int `json:"transport_error"`
+	Duplicate          int `json:"duplicate"`
+	CandidateCap       int `json:"candidate_cap"`
+	NotAttempted       int `json:"not_attempted"`
+}
+
+// Total returns the number of accounted seeds.
+func (outcomes SeedOutcomes) Total() int {
+	return outcomes.Candidate + outcomes.RobotsDisallowed + outcomes.HTTPStatus +
+		outcomes.BodyTooLarge + outcomes.UnsupportedContent + outcomes.TransportError +
+		outcomes.Duplicate + outcomes.CandidateCap + outcomes.NotAttempted
+}
+
+func (outcomes *SeedOutcomes) add(outcome SeedOutcome) {
+	switch outcome {
+	case SeedOutcomeCandidate:
+		outcomes.Candidate++
+	case SeedOutcomeRobotsDisallowed:
+		outcomes.RobotsDisallowed++
+	case SeedOutcomeHTTPStatus:
+		outcomes.HTTPStatus++
+	case SeedOutcomeBodyTooLarge:
+		outcomes.BodyTooLarge++
+	case SeedOutcomeUnsupportedContent:
+		outcomes.UnsupportedContent++
+	case SeedOutcomeTransportError:
+		outcomes.TransportError++
+	case SeedOutcomeDuplicate:
+		outcomes.Duplicate++
+	case SeedOutcomeCandidateCap:
+		outcomes.CandidateCap++
+	case SeedOutcomeNotAttempted:
+		outcomes.NotAttempted++
+	}
 }
 
 type Result struct {

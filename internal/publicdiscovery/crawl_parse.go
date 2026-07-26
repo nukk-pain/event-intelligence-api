@@ -73,21 +73,25 @@ func (state *crawlState) processHTMLResult(item frontierItem, result *fetch.Resu
 	mediaType, _, err := mime.ParseMediaType(result.ContentType)
 	if err != nil {
 		state.budget.Usage.MalformedDocuments++
+		state.recordSeedOutcome(item, SeedOutcomeUnsupportedContent)
 		return
 	}
 	mediaType = strings.ToLower(mediaType)
 	if mediaType != "text/html" && mediaType != "application/xhtml+xml" {
+		state.recordSeedOutcome(item, SeedOutcomeUnsupportedContent)
 		state.processProtocolResult(item, result)
 		return
 	}
 	title, links, err := parseHTML(result.Body, result.URL)
 	if err != nil {
 		state.budget.Usage.MalformedDocuments++
+		state.recordSeedOutcome(item, SeedOutcomeUnsupportedContent)
 		return
 	}
 	parentURL, err := CanonicalizeURL(result.URL)
 	if err != nil {
 		state.budget.Usage.MalformedDocuments++
+		state.recordSeedOutcome(item, SeedOutcomeUnsupportedContent)
 		return
 	}
 	fetchedAt := state.provider.now().UTC()
@@ -95,10 +99,15 @@ func (state *crawlState) processHTMLResult(item frontierItem, result *fetch.Resu
 		if title == "" {
 			title = item.seed.Name
 		}
-		state.addCandidate(candidateDiscovery{
+		stored, rejection := state.addCandidate(candidateDiscovery{
 			rawURL: result.URL, title: title, seed: item.seed,
 			protocol: ProtocolSeed, depth: item.depth, fetchedAt: fetchedAt,
 		})
+		if stored {
+			state.recordSeedOutcome(item, SeedOutcomeCandidate)
+		} else {
+			state.recordSeedOutcome(item, rejection)
+		}
 	}
 	state.addParsedLinks(parsedLinkSource{item: item, parentURL: parentURL, fetchedAt: fetchedAt}, links)
 	state.addResultLinks(item, result)

@@ -20,6 +20,7 @@ func (provider *Provider) crawl(ctx context.Context) ([]Candidate, BudgetState) 
 	}
 	state.processProtocolQueue(jobContext)
 	state.processHTMLQueue(jobContext)
+	state.accountUnprocessedSeeds()
 	state.syncFetchUsage()
 	candidates := state.validatedCandidates()
 	state.budget.Usage.Candidates = len(candidates)
@@ -59,9 +60,31 @@ func (state *crawlState) bootstrapSeed(ctx context.Context, seed Seed) {
 			parentURL: robotsURL, relation: ProtocolRobotsSitemap, depth: 0, kind: documentSitemap,
 		})
 	}
+	before := len(state.htmlQueue)
 	state.enqueue(frontierItem{
 		rawURL: seed.URL, seed: seed, relation: ProtocolSeed, depth: 0, kind: documentHTML,
 	})
+	if len(state.htmlQueue) > before {
+		state.seedsEnqueued++
+	}
+}
+
+// recordSeedOutcome attributes one enqueued seed to exactly one category.
+// Non-seed frontier items are ignored.
+func (state *crawlState) recordSeedOutcome(item frontierItem, outcome SeedOutcome) {
+	if item.relation != ProtocolSeed {
+		return
+	}
+	state.budget.SeedOutcomes.add(outcome)
+}
+
+// accountUnprocessedSeeds attributes seeds the crawl never reached, whether it
+// stopped on a budget or truncated the HTML queue.
+func (state *crawlState) accountUnprocessedSeeds() {
+	remaining := state.seedsEnqueued - state.budget.SeedOutcomes.Total()
+	for range remaining {
+		state.budget.SeedOutcomes.add(SeedOutcomeNotAttempted)
+	}
 }
 
 func (state *crawlState) processProtocolQueue(ctx context.Context) {
@@ -74,8 +97,8 @@ func (state *crawlState) processProtocolQueue(ctx context.Context) {
 		item := state.protocolQueue[0]
 		state.protocolQueue = state.protocolQueue[1:]
 		state.budget.Usage.ProtocolDocuments++
-		result, ok := state.fetchDocument(ctx, item)
-		if !ok {
+		result, err := state.fetchDocument(ctx, item)
+		if err != nil {
 			continue
 		}
 		state.processProtocolResult(item, result)
@@ -92,8 +115,9 @@ func (state *crawlState) processHTMLQueue(ctx context.Context) {
 		item := state.htmlQueue[0]
 		state.htmlQueue = state.htmlQueue[1:]
 		state.budget.Usage.HTMLPages++
-		result, ok := state.fetchDocument(ctx, item)
-		if !ok {
+		result, err := state.fetchDocument(ctx, item)
+		if err != nil {
+			state.recordSeedOutcome(item, seedOutcomeForError(err))
 			continue
 		}
 		state.processHTMLResult(item, result)

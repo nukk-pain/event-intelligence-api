@@ -443,10 +443,18 @@ contract and must not acquire live LLM work as a side effect.
   `prefilter_dropped`. A bare total cannot tell a crawler that yields untitled
   candidates apart from a profile whose URL pattern excludes them; both appear
   as a zero-source run.
-- The CLI's `public_discovery` block additionally reports `seed_candidates`, the
-  count of candidates discovered directly from a catalog seed. Only that
-  protocol guarantees a title (the seed name is its fallback), so a zero there
-  explains an empty offer set that the validated total would hide.
+- The CLI's `public_discovery` block additionally reports `seed_candidates`,
+  `skipped_documents`, and `malformed_documents`. Only the seed protocol
+  guarantees a title (the seed name is its fallback), and seed pages are fetched
+  before sitemap children, so a zero `seed_candidates` beside a nonzero
+  skipped/malformed count means the seed pages were reached and rejected rather
+  than never attempted. It also reports `seed_outcomes`, a fixed-key count-only
+  tally with exactly one entry per enqueued seed — `candidate`,
+  `robots_disallowed`, `http_status`, `body_too_large`, `unsupported_content`,
+  `transport_error`, `duplicate`, `candidate_cap`, `not_attempted` — whose `candidate`
+  value always equals `seed_candidates`. The operator smoke reports all of these
+  alongside `truncated` and the fixed `truncation_reasons` enum. None of them
+  carries a URL, host, or document content.
 - `yield_trace` is a classification aid, not a source-data export: it contains
   no goal, candidate, URL, fetched content, model payload, or credential. Its
   counters must not be carried from one request to another.

@@ -10,6 +10,19 @@
   "public_discovery": {
     "validated_candidates": 0,
     "seed_candidates": 0,
+    "skipped_documents": 0,
+    "malformed_documents": 0,
+    "seed_outcomes": {
+      "candidate": 0,
+      "robots_disallowed": 0,
+      "http_status": 0,
+      "body_too_large": 0,
+      "unsupported_content": 0,
+      "transport_error": 0,
+      "duplicate": 0,
+      "candidate_cap": 0,
+      "not_attempted": 0
+    },
     "truncated": false
   },
   "yield_trace": {
