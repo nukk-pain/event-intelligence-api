@@ -77,7 +77,8 @@ these say whether an empty offer set came from untitled crawl output, a profile
 pattern, or seed pages that were fetched and rejected.
 
 `seed_outcomes` accounts for every enqueued seed with exactly one of
-`candidate`, `robots_disallowed`, `http_status`, `body_too_large`,
+`candidate`, `robots_disallowed`, `robots_unavailable`, `http_status`,
+`body_too_large`,
 `unsupported_content`, `transport_error`, `duplicate`, `candidate_cap`, or
 `not_attempted`; its `candidate` value always equals `seed_candidates`.
 

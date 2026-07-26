@@ -35,7 +35,7 @@ type crawlState struct {
 	validatedURLs  map[string]struct{}
 	protocolQueue  []frontierItem
 	htmlQueue      []frontierItem
-	seedsEnqueued  int
+	seedsTotal     int
 	stopped        bool
 }
 
@@ -146,7 +146,7 @@ func (state *crawlState) candidateLimitFor(protocol Protocol) int {
 
 // pendingSeeds counts enqueued seeds that have not yet reached an outcome.
 func (state *crawlState) pendingSeeds() int {
-	return max(state.seedsEnqueued-state.budget.SeedOutcomes.Total(), 0)
+	return max(state.seedsTotal-state.budget.SeedOutcomes.Total(), 0)
 }
 
 func (state *crawlState) validatedCandidates() []Candidate {

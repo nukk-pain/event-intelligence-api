@@ -12,6 +12,9 @@ func (provider *Provider) crawl(ctx context.Context) ([]Candidate, BudgetState) 
 	jobContext, cancel := context.WithTimeout(ctx, provider.limits.Timeout)
 	defer cancel()
 	state := newCrawlState(provider)
+	// The tally is anchored to the catalog, not to how far the crawl reached,
+	// so a seed abandoned during bootstrap is still accounted for.
+	state.seedsTotal = len(provider.catalog.Seeds)
 	for _, seed := range provider.catalog.Seeds {
 		if state.stopped {
 			break
@@ -40,7 +43,14 @@ func (state *crawlState) bootstrapSeed(ctx context.Context, seed Seed) {
 		robotsNotFound := errors.As(err, &statusError) && statusError.StatusCode == http.StatusNotFound
 		if !robotsNotFound && !errors.Is(err, fetch.ErrRobotsDisallowed) {
 			state.recordFetchError(ctx, err)
-			if state.stopped || errors.Is(err, fetch.ErrRobotsUnavailable) {
+			if errors.Is(err, fetch.ErrRobotsUnavailable) {
+				// Strict mode refuses an origin whose robots.txt cannot be read.
+				// The seed is abandoned here and never reaches the HTML queue.
+				state.budget.SeedOutcomes.add(SeedOutcomeRobotsUnavailable)
+				return
+			}
+			if state.stopped {
+				state.budget.SeedOutcomes.add(SeedOutcomeNotAttempted)
 				return
 			}
 		}
@@ -64,8 +74,12 @@ func (state *crawlState) bootstrapSeed(ctx context.Context, seed Seed) {
 	state.enqueue(frontierItem{
 		rawURL: seed.URL, seed: seed, relation: ProtocolSeed, depth: 0, kind: documentHTML,
 	})
-	if len(state.htmlQueue) > before {
-		state.seedsEnqueued++
+	if len(state.htmlQueue) == before {
+		if state.stopped {
+			state.budget.SeedOutcomes.add(SeedOutcomeNotAttempted)
+			return
+		}
+		state.budget.SeedOutcomes.add(SeedOutcomeDuplicate)
 	}
 }
 
@@ -81,7 +95,7 @@ func (state *crawlState) recordSeedOutcome(item frontierItem, outcome SeedOutcom
 // accountUnprocessedSeeds attributes seeds the crawl never reached, whether it
 // stopped on a budget or truncated the HTML queue.
 func (state *crawlState) accountUnprocessedSeeds() {
-	remaining := state.seedsEnqueued - state.budget.SeedOutcomes.Total()
+	remaining := state.seedsTotal - state.budget.SeedOutcomes.Total()
 	for range remaining {
 		state.budget.SeedOutcomes.add(SeedOutcomeNotAttempted)
 	}

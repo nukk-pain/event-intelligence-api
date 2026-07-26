@@ -15,6 +15,7 @@
     "seed_outcomes": {
       "candidate": 0,
       "robots_disallowed": 0,
+      "robots_unavailable": 0,
       "http_status": 0,
       "body_too_large": 0,
       "unsupported_content": 0,

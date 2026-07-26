@@ -125,6 +125,7 @@ type SeedOutcome string
 const (
 	SeedOutcomeCandidate          SeedOutcome = "candidate"
 	SeedOutcomeRobotsDisallowed   SeedOutcome = "robots_disallowed"
+	SeedOutcomeRobotsUnavailable  SeedOutcome = "robots_unavailable"
 	SeedOutcomeHTTPStatus         SeedOutcome = "http_status"
 	SeedOutcomeBodyTooLarge       SeedOutcome = "body_too_large"
 	SeedOutcomeUnsupportedContent SeedOutcome = "unsupported_content"
@@ -139,6 +140,7 @@ const (
 type SeedOutcomes struct {
 	Candidate          int `json:"candidate"`
 	RobotsDisallowed   int `json:"robots_disallowed"`
+	RobotsUnavailable  int `json:"robots_unavailable"`
 	HTTPStatus         int `json:"http_status"`
 	BodyTooLarge       int `json:"body_too_large"`
 	UnsupportedContent int `json:"unsupported_content"`
@@ -150,7 +152,7 @@ type SeedOutcomes struct {
 
 // Total returns the number of accounted seeds.
 func (outcomes SeedOutcomes) Total() int {
-	return outcomes.Candidate + outcomes.RobotsDisallowed + outcomes.HTTPStatus +
+	return outcomes.Candidate + outcomes.RobotsDisallowed + outcomes.RobotsUnavailable + outcomes.HTTPStatus +
 		outcomes.BodyTooLarge + outcomes.UnsupportedContent + outcomes.TransportError +
 		outcomes.Duplicate + outcomes.CandidateCap + outcomes.NotAttempted
 }
@@ -161,6 +163,8 @@ func (outcomes *SeedOutcomes) add(outcome SeedOutcome) {
 		outcomes.Candidate++
 	case SeedOutcomeRobotsDisallowed:
 		outcomes.RobotsDisallowed++
+	case SeedOutcomeRobotsUnavailable:
+		outcomes.RobotsUnavailable++
 	case SeedOutcomeHTTPStatus:
 		outcomes.HTTPStatus++
 	case SeedOutcomeBodyTooLarge:

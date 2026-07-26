@@ -44,7 +44,7 @@ set -euo pipefail
 printf 'invoked\n' >> "$SMOKE_FAKE_GO_INVOCATIONS"
 printf '%s\n' 'source discovery — backend=solar(solar-open2) search=public rounds=1'
 printf '%s\n' 'discovered 1 source(s):'
-printf '%s\n' '{"sources":[{"title":"SMOKE_PRIVATE_SOURCE_MARKER"}],"provider":"public","candidate":"SMOKE_PRIVATE_CANDIDATE_MARKER","model_reason":"SMOKE_PRIVATE_MODEL_REASON_MARKER","public_discovery":{"validated_candidates":2,"seed_candidates":1,"skipped_documents":3,"malformed_documents":0,"seed_outcomes":{"candidate":1,"robots_disallowed":2,"http_status":1,"body_too_large":2,"unsupported_content":0,"transport_error":0,"duplicate":0,"candidate_cap":0,"not_attempted":0},"truncated":true,"truncation_reasons":["protocol_document_limit","time_limit"]},"yield_trace":{"outcome":"accepted","terminal_reason":"proposal_done","crawler_validated":2,"offered":1,"prefilter_dropped":1,"prefilter_reasons":{"invalid_url":0,"url_pattern":0,"missing_title":1,"missing_location":0,"missing_date":0,"past_date":0},"proposal_calls":1,"judge_calls":1,"judge_entries_parsed":1,"judge_entries_dropped":0,"accepted":1}}'
+printf '%s\n' '{"sources":[{"title":"SMOKE_PRIVATE_SOURCE_MARKER"}],"provider":"public","candidate":"SMOKE_PRIVATE_CANDIDATE_MARKER","model_reason":"SMOKE_PRIVATE_MODEL_REASON_MARKER","public_discovery":{"validated_candidates":2,"seed_candidates":1,"skipped_documents":3,"malformed_documents":0,"seed_outcomes":{"candidate":1,"robots_disallowed":2,"robots_unavailable":0,"http_status":1,"body_too_large":2,"unsupported_content":0,"transport_error":0,"duplicate":0,"candidate_cap":0,"not_attempted":0},"truncated":true,"truncation_reasons":["protocol_document_limit","time_limit"]},"yield_trace":{"outcome":"accepted","terminal_reason":"proposal_done","crawler_validated":2,"offered":1,"prefilter_dropped":1,"prefilter_reasons":{"invalid_url":0,"url_pattern":0,"missing_title":1,"missing_location":0,"missing_date":0,"past_date":0},"proposal_calls":1,"judge_calls":1,"judge_entries_parsed":1,"judge_entries_dropped":0,"accepted":1}}'
 FAKE_GO
   chmod 700 "$FAKE_BIN/go"
 }
@@ -110,7 +110,7 @@ fi
 
 # Every enqueued seed must land in exactly one bounded category, otherwise a
 # zero seed count still cannot name its own cause.
-for outcome_key in candidate robots_disallowed http_status body_too_large unsupported_content transport_error duplicate candidate_cap not_attempted; do
+for outcome_key in candidate robots_disallowed robots_unavailable http_status body_too_large unsupported_content transport_error duplicate candidate_cap not_attempted; do
   if ! grep -Eq "^crawl_seed_outcome_${outcome_key}=[0-9]+$" "$PRESENT_REPORT"; then
     fail 'seed_outcome_breakdown_present=false'
   fi
@@ -121,7 +121,7 @@ if ! grep -Fxq 'crawl_seed_outcome_robots_disallowed=2' "$PRESENT_REPORT" ||
   fail 'seed_outcome_attribution_correct=false'
 fi
 
-allowed_report_line='^(result=PASS|provider=public|provider_observed=true|exit_code=0|timed_out=false|duration_seconds=[0-9]+\.[0-9]|yield_outcome=accepted|yield_terminal_reason=proposal_done|yield_(accepted|crawler_validated|judge_calls|judge_entries_dropped|judge_entries_parsed|offered|prefilter_dropped|proposal_calls)=[0-9]+|yield_prefilter_reason_(invalid_url|url_pattern|missing_title|missing_location|missing_date|past_date)=[0-9]+|crawl_(validated_candidates|seed_candidates|skipped_documents|malformed_documents)=[0-9]+|crawl_seed_outcome_(candidate|robots_disallowed|http_status|body_too_large|unsupported_content|transport_error|duplicate|candidate_cap|not_attempted)=[0-9]+|crawl_truncated=(true|false)|crawl_truncation_reasons=(none|[a-z_]+(,[a-z_]+)*)|command=go run \./cmd/eventscout -backend solar -search-provider public -rounds 1 -max-tokens 1000 -timeout 20s -goal \[REDACTED_GOAL\]|cleanup=complete)$'
+allowed_report_line='^(result=PASS|provider=public|provider_observed=true|exit_code=0|timed_out=false|duration_seconds=[0-9]+\.[0-9]|yield_outcome=accepted|yield_terminal_reason=proposal_done|yield_(accepted|crawler_validated|judge_calls|judge_entries_dropped|judge_entries_parsed|offered|prefilter_dropped|proposal_calls)=[0-9]+|yield_prefilter_reason_(invalid_url|url_pattern|missing_title|missing_location|missing_date|past_date)=[0-9]+|crawl_(validated_candidates|seed_candidates|skipped_documents|malformed_documents)=[0-9]+|crawl_seed_outcome_(candidate|robots_disallowed|robots_unavailable|http_status|body_too_large|unsupported_content|transport_error|duplicate|candidate_cap|not_attempted)=[0-9]+|crawl_truncated=(true|false)|crawl_truncation_reasons=(none|[a-z_]+(,[a-z_]+)*)|command=go run \./cmd/eventscout -backend solar -search-provider public -rounds 1 -max-tokens 1000 -timeout 20s -goal \[REDACTED_GOAL\]|cleanup=complete)$'
 if grep -Ev "$allowed_report_line" "$PRESENT_REPORT" >/dev/null; then
   fail 'report_allowlist_only=false'
 fi

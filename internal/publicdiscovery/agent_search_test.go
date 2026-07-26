@@ -152,7 +152,7 @@ func TestAgentSearchToolYieldSnapshot(t *testing.T) {
 	if !snapshot.Truncated || !hasTruncationReason(snapshot.TruncationReasons, TruncationCandidateLimit) || !hasTruncationReason(snapshot.TruncationReasons, TruncationHTMLPageLimit) {
 		t.Fatalf("snapshot = %+v, want candidate and HTML truncation", snapshot)
 	}
-	if got := string(encoded); got != `{"validated_candidates":24,"seed_candidates":1,"skipped_documents":1,"malformed_documents":0,"seed_outcomes":{"candidate":1,"robots_disallowed":0,"http_status":0,"body_too_large":0,"unsupported_content":0,"transport_error":0,"duplicate":0,"candidate_cap":0,"not_attempted":0},"truncated":true,"truncation_reasons":["candidate_limit","html_page_limit"]}` {
+	if got := string(encoded); got != `{"validated_candidates":24,"seed_candidates":1,"skipped_documents":1,"malformed_documents":0,"seed_outcomes":{"candidate":1,"robots_disallowed":0,"robots_unavailable":0,"http_status":0,"body_too_large":0,"unsupported_content":0,"transport_error":0,"duplicate":0,"candidate_cap":0,"not_attempted":0},"truncated":true,"truncation_reasons":["candidate_limit","html_page_limit"]}` {
 		t.Fatalf("serialized snapshot = %s", got)
 	}
 	if strings.Contains(string(encoded), server.URL) {

@@ -134,6 +134,7 @@ CRAWL_COUNT_KEYS = {"validated_candidates", "seed_candidates", "skipped_document
 SEED_OUTCOME_KEYS = {
     "candidate",
     "robots_disallowed",
+    "robots_unavailable",
     "http_status",
     "body_too_large",
     "unsupported_content",

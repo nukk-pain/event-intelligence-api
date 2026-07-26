@@ -450,7 +450,7 @@ contract and must not acquire live LLM work as a side effect.
   skipped/malformed count means the seed pages were reached and rejected rather
   than never attempted. It also reports `seed_outcomes`, a fixed-key count-only
   tally with exactly one entry per enqueued seed — `candidate`,
-  `robots_disallowed`, `http_status`, `body_too_large`, `unsupported_content`,
+  `robots_disallowed`, `robots_unavailable`, `http_status`, `body_too_large`, `unsupported_content`,
   `transport_error`, `duplicate`, `candidate_cap`, `not_attempted` — whose `candidate`
   value always equals `seed_candidates`. The operator smoke reports all of these
   alongside `truncated` and the fixed `truncation_reasons` enum. None of them
