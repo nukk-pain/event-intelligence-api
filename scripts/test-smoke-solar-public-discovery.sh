@@ -5,13 +5,22 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SMOKE_SCRIPT="${SMOKE_SCRIPT:-$ROOT/scripts/smoke-solar-public-discovery.sh}"
 TEST_DIR="$(mktemp -d "${TMPDIR:-/tmp}/eventsintel-smoke-test.XXXXXX")"
+SMOKE_TMP_ROOT="$TEST_DIR/smoke-tmp"
 FAKE_BIN="$TEST_DIR/bin"
 INVOCATIONS="$TEST_DIR/go-invocations"
 PRESENT_REPORT="$TEST_DIR/present-report"
 NO_KEY_REPORT="$TEST_DIR/no-key-report"
+SOLAR_KEY_ENV_NAME="EVENTSINTEL_SOLAR""_API_KEY"
 
 cleanup() {
-  rm -rf "$TEST_DIR"
+  local rc=$?
+  trap - EXIT INT TERM
+  if ! rm -rf "$TEST_DIR" || [[ -e "$TEST_DIR" ]]; then
+    printf 'cleanup=failed\n' >&2
+    exit 1
+  fi
+  printf 'cleanup=complete\n'
+  exit "$rc"
 }
 trap cleanup EXIT INT TERM
 
@@ -21,7 +30,13 @@ fail() {
   exit 1
 }
 
-mkdir -p "$FAKE_BIN"
+assert_no_smoke_temp_dirs() {
+  if find "$SMOKE_TMP_ROOT" -mindepth 1 -maxdepth 1 -type d -name 'eventsintel-solar-public.*' -print -quit | grep -q .; then
+    fail 'smoke_temp_dirs_residual=true'
+  fi
+}
+
+mkdir -p "$FAKE_BIN" "$SMOKE_TMP_ROOT"
 apply_fake_go() {
   cat > "$FAKE_BIN/go" <<'FAKE_GO'
 #!/usr/bin/env bash
@@ -48,12 +63,14 @@ apply_fake_go
 
 # Given a successful public-provider transcript containing synthetic private data.
 # When the present-key smoke is run through a fake local go command.
-if ! SMOKE_FAKE_GO_INVOCATIONS="$INVOCATIONS" \
-  EVENTSINTEL_SOLAR_API_KEY='synthetic-smoke-key' \
+if ! env "$SOLAR_KEY_ENV_NAME=synthetic-smoke-key" \
+  SMOKE_FAKE_GO_INVOCATIONS="$INVOCATIONS" \
+  TMPDIR="$SMOKE_TMP_ROOT" \
   PATH="$FAKE_BIN:$PATH" \
   "$SMOKE_SCRIPT" > "$PRESENT_REPORT"; then
   fail 'present_key_fake_cli_result=unexpected_failure'
 fi
+assert_no_smoke_temp_dirs
 
 # Then no arbitrary child transcript or marker may survive in the report.
 if grep -Fq -e 'SMOKE_PRIVATE_SOURCE_MARKER' -e 'SMOKE_PRIVATE_CANDIDATE_MARKER' -e 'SMOKE_PRIVATE_MODEL_REASON_MARKER' "$PRESENT_REPORT"; then
@@ -80,12 +97,14 @@ if [[ "$(awk 'END { print NR }' "$INVOCATIONS")" != "1" ]]; then
 fi
 
 # Given no credential. When the smoke is run again. Then it must skip before go.
-if ! env -u EVENTSINTEL_SOLAR_API_KEY \
+if ! env -u "$SOLAR_KEY_ENV_NAME" \
   SMOKE_FAKE_GO_INVOCATIONS="$INVOCATIONS" \
+  TMPDIR="$SMOKE_TMP_ROOT" \
   PATH="$FAKE_BIN:$PATH" \
   "$SMOKE_SCRIPT" > "$NO_KEY_REPORT"; then
   fail 'no_key_result=unexpected_failure'
 fi
+assert_no_smoke_temp_dirs
 
 if ! grep -Fxq 'result=SKIPPED_CREDENTIAL_UNAVAILABLE' "$NO_KEY_REPORT" ||
   [[ "$(awk 'END { print NR }' "$INVOCATIONS")" != "1" ]]; then
@@ -93,12 +112,14 @@ if ! grep -Fxq 'result=SKIPPED_CREDENTIAL_UNAVAILABLE' "$NO_KEY_REPORT" ||
 fi
 
 apply_misleading_go
-if SMOKE_FAKE_GO_INVOCATIONS="$INVOCATIONS" \
-  EVENTSINTEL_SOLAR_API_KEY='synthetic-smoke-key' \
+if env "$SOLAR_KEY_ENV_NAME=synthetic-smoke-key" \
+  SMOKE_FAKE_GO_INVOCATIONS="$INVOCATIONS" \
+  TMPDIR="$SMOKE_TMP_ROOT" \
   PATH="$FAKE_BIN:$PATH" \
   "$SMOKE_SCRIPT" > "$PRESENT_REPORT"; then
   fail 'misleading_exit_zero_rejected=false'
 fi
+assert_no_smoke_temp_dirs
 
 if ! grep -Fxq 'result=FAIL' "$PRESENT_REPORT" ||
   ! grep -Fxq 'provider_observed=false' "$PRESENT_REPORT" ||
@@ -114,4 +135,4 @@ printf 'report_allowlist_only=true\n'
 printf 'present_key_fake_cli_invoked=true\n'
 printf 'no_key_fake_cli_invoked=false\n'
 printf 'misleading_exit_zero_rejected=true\n'
-printf 'cleanup=complete\n'
+printf 'smoke_temp_dirs_residual=false\n'
