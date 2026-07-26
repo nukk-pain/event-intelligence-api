@@ -77,64 +77,72 @@ func (session *discoverySession) run(ctx context.Context) (DiscoveryResult, erro
 		request := proposalModelRequest(session.options.Profile, proposalData{
 			goal: session.goal, tried: session.tried, found: session.order,
 		})
+		callsBefore := session.result.Trace.Calls
 		content, err := session.model.call(ctx, request)
+		session.result.YieldTrace.ProposalCalls += session.result.Trace.Calls - callsBefore
 		if errors.Is(err, errModelBudgetReached) {
-			return session.finish(), nil
+			return session.complete(budgetTerminalReason(session.result.Metadata), nil)
 		}
 		if err != nil {
-			return session.finish(), fmt.Errorf("propose query: %w", err)
+			return session.complete(terminalReasonForError(err, YieldTerminalProposalError), fmt.Errorf("propose query: %w", err))
 		}
 		proposal, err := parseProposalResponse(content)
 		if err != nil {
-			return session.finish(), fmt.Errorf("propose query: %w", err)
+			return session.complete(YieldTerminalProposalError, fmt.Errorf("propose query: %w", err))
 		}
 		if proposal.Done {
-			return session.finish(), nil
+			return session.complete(YieldTerminalProposalDone, nil)
 		}
 		if session.result.Trace.Calls >= session.options.MaxModelCalls {
 			session.result.addTruncation(TruncationModelCallBudget)
-			return session.finish(), nil
+			return session.complete(YieldTerminalModelCallBudget, nil)
 		}
 		if session.result.Metadata.Budget.CompletionTokensReserved >= session.options.MaxCompletionTokens {
 			session.result.addTruncation(TruncationCompletionTokenBudget)
-			return session.finish(), nil
+			return session.complete(YieldTerminalTokenBudget, nil)
 		}
 		session.tried = append(session.tried, proposal.Query)
 		results, err := session.tool.Search(ctx, proposal.Query)
 		if err != nil {
-			return session.finish(), fmt.Errorf("search %q: %w", proposal.Query, err)
+			return session.complete(terminalReasonForError(err, YieldTerminalSearchError), fmt.Errorf("search %q: %w", proposal.Query, err))
 		}
 		candidates := session.offerCandidates(results)
 		if len(candidates) == 0 {
 			if session.result.Metadata.CandidatesOffered >= session.options.MaxCandidates {
-				return session.finish(), nil
+				return session.complete(YieldTerminalNone, nil)
 			}
 			continue
 		}
 		request, err = judgeModelRequest(session.options.Profile, candidates)
 		if err != nil {
-			return session.finish(), err
+			return session.complete(YieldTerminalCandidateEncodeError, err)
 		}
+		callsBefore = session.result.Trace.Calls
 		content, err = session.model.call(ctx, request)
+		session.result.YieldTrace.JudgeCalls += session.result.Trace.Calls - callsBefore
 		if errors.Is(err, errModelBudgetReached) {
-			return session.finish(), nil
+			return session.complete(budgetTerminalReason(session.result.Metadata), nil)
 		}
 		if err != nil {
-			return session.finish(), fmt.Errorf("judge results: %w", err)
+			return session.complete(terminalReasonForError(err, YieldTerminalJudgeError), fmt.Errorf("judge results: %w", err))
 		}
-		selections, err := parseJudgeResponse(content, session.options.Profile.OutputLabel)
+		judged, err := parseJudgeResponse(content, session.options.Profile.OutputLabel)
 		if err != nil {
-			return session.finish(), fmt.Errorf("judge results: %w", err)
+			return session.complete(YieldTerminalMalformedJudgeEnvelope, fmt.Errorf("judge results: %w", err))
 		}
-		session.acceptSelections(candidates, selections)
+		session.result.YieldTrace.JudgeEntriesParsed += judged.parsed
+		session.result.YieldTrace.JudgeEntriesDropped += judged.dropped
+		session.acceptSelections(candidates, judged.selections)
 		if session.result.Metadata.Budget.CompletionTokensReserved >= session.options.MaxCompletionTokens ||
-			session.result.Trace.Usage.CompletionTokens >= session.options.MaxCompletionTokens ||
-			session.result.Metadata.CandidatesOffered >= session.options.MaxCandidates {
-			return session.finish(), nil
+			session.result.Trace.Usage.CompletionTokens >= session.options.MaxCompletionTokens {
+			return session.complete(YieldTerminalTokenBudget, nil)
+		}
+		if session.result.Metadata.CandidatesOffered >= session.options.MaxCandidates {
+			return session.complete(YieldTerminalNone, nil)
 		}
 	}
 	session.result.addTruncation(TruncationRoundLimit)
-	return session.finish(), nil
+	return session.complete(YieldTerminalRoundLimit, nil)
 }
 
 func (session *discoverySession) offerCandidates(results []SearchResult) []offeredCandidate {
@@ -142,6 +150,7 @@ func (session *discoverySession) offerCandidates(results []SearchResult) []offer
 	for _, result := range results {
 		candidate, ok := prepareCandidate(result, session.options)
 		if !ok {
+			session.result.YieldTrace.PrefilterDropped++
 			continue
 		}
 		if _, seen := session.offered[candidate.canonicalURL]; seen {
@@ -161,6 +170,7 @@ func (session *discoverySession) offerCandidates(results []SearchResult) []offer
 		session.offered[candidate.canonicalURL] = struct{}{}
 		session.perSourceCandidateUse[candidate.sourceKey]++
 		session.result.Metadata.CandidatesOffered++
+		session.result.YieldTrace.Offered++
 		candidates = append(candidates, candidate)
 	}
 	if session.result.Metadata.CandidatesOffered >= session.options.MaxCandidates {
@@ -177,13 +187,16 @@ func (session *discoverySession) acceptSelections(candidates []offeredCandidate,
 	for _, selection := range selections {
 		canonicalURL, err := canonicalCandidateURL(selection.url)
 		if err != nil || selection.url != canonicalURL {
+			session.result.YieldTrace.JudgeEntriesDropped++
 			continue
 		}
 		candidate, ok := offered[canonicalURL]
 		if !ok {
+			session.result.YieldTrace.JudgeEntriesDropped++
 			continue
 		}
 		if _, seen := session.found[canonicalURL]; seen {
+			session.result.YieldTrace.JudgeEntriesDropped++
 			continue
 		}
 		result := candidate.result
@@ -198,7 +211,30 @@ func (session *discoverySession) acceptSelections(candidates []offeredCandidate,
 		}
 		session.found[canonicalURL] = source
 		session.order = append(session.order, canonicalURL)
+		session.result.YieldTrace.Accepted++
 	}
+}
+
+func (session *discoverySession) complete(reason YieldTerminalReason, err error) (DiscoveryResult, error) {
+	result := session.finish()
+	result.YieldTrace.finish(reason, err != nil)
+	return result, err
+}
+
+func budgetTerminalReason(metadata DiscoveryMetadata) YieldTerminalReason {
+	if containsTruncationReason(metadata.TruncationReasons, TruncationCompletionTokenBudget) {
+		return YieldTerminalTokenBudget
+	}
+	return YieldTerminalModelCallBudget
+}
+
+func containsTruncationReason(reasons []TruncationReason, target TruncationReason) bool {
+	for _, reason := range reasons {
+		if reason == target {
+			return true
+		}
+	}
+	return false
 }
 
 func (session *discoverySession) finish() DiscoveryResult {

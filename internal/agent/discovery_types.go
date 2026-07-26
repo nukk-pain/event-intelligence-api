@@ -156,9 +156,10 @@ type DiscoveryBudget struct {
 
 // DiscoveryResult contains accepted sources plus additive trace and budget metadata.
 type DiscoveryResult struct {
-	Sources  []DiscoveredSource `json:"sources"`
-	Trace    Trace              `json:"trace"`
-	Metadata DiscoveryMetadata  `json:"metadata"`
+	Sources    []DiscoveredSource `json:"sources"`
+	Trace      Trace              `json:"trace"`
+	YieldTrace YieldTrace         `json:"yield_trace"`
+	Metadata   DiscoveryMetadata  `json:"metadata"`
 }
 
 func (result *DiscoveryResult) addTruncation(reason TruncationReason) {

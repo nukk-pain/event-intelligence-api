@@ -36,6 +36,12 @@ type judgedSelection struct {
 	reason string
 }
 
+type judgeResponse struct {
+	selections []judgedSelection
+	parsed     int
+	dropped    int
+}
+
 func (model *discoveryModel) call(ctx context.Context, request modelRequest) (string, error) {
 	if err := ctx.Err(); err != nil {
 		return "", err
@@ -140,34 +146,44 @@ func parseProposalResponse(content string) (proposalResponse, error) {
 	return response, nil
 }
 
-func parseJudgeResponse(content, outputLabel string) ([]judgedSelection, error) {
+func parseJudgeResponse(content, outputLabel string) (judgeResponse, error) {
 	var envelope struct {
 		Sources []json.RawMessage `json:"sources"`
 	}
 	if err := decodeLastModelObject(content, &envelope); err != nil {
-		return nil, err
+		return judgeResponse{}, err
 	}
 	if envelope.Sources == nil {
-		return nil, ErrMalformedModelResponse
+		return judgeResponse{}, ErrMalformedModelResponse
 	}
-	selections := make([]judgedSelection, 0, len(envelope.Sources))
+	response := judgeResponse{selections: make([]judgedSelection, 0, len(envelope.Sources))}
 	for _, raw := range envelope.Sources {
 		var fields map[string]json.RawMessage
 		if err := json.Unmarshal(raw, &fields); err != nil {
+			response.dropped++
 			continue
 		}
 		if len(fields) != 3 || fields["url"] == nil || fields[outputLabel] == nil || fields["reason"] == nil {
+			response.dropped++
 			continue
 		}
 		var selected bool
 		var candidateURL, reason string
 		if json.Unmarshal(fields[outputLabel], &selected) != nil || json.Unmarshal(fields["url"], &candidateURL) != nil ||
-			json.Unmarshal(fields["reason"], &reason) != nil || !selected {
+			json.Unmarshal(fields["reason"], &reason) != nil {
+			response.dropped++
 			continue
 		}
-		selections = append(selections, judgedSelection{url: candidateURL, reason: boundedRedactedText(reason, maxReasonRunes)})
+		response.parsed++
+		if !selected {
+			response.dropped++
+			continue
+		}
+		response.selections = append(response.selections, judgedSelection{
+			url: candidateURL, reason: boundedRedactedText(reason, maxReasonRunes),
+		})
 	}
-	return selections, nil
+	return response, nil
 }
 
 func decodeLastModelObject(content string, target any) error {
