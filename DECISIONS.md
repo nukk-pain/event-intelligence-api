@@ -434,8 +434,19 @@ contract and must not acquire live LLM work as a side effect.
 - A completed successful public-discovery response may include the request-local,
   count-only `yield_trace` object. Its fixed fields are `outcome`,
   `terminal_reason`, `crawler_validated`, `offered`, `prefilter_dropped`,
-  `proposal_calls`, `judge_calls`, `judge_entries_parsed`,
+  `prefilter_reasons`, `proposal_calls`, `judge_calls`, `judge_entries_parsed`,
   `judge_entries_dropped`, and `accepted`.
+- `prefilter_reasons` is a nested, fixed-key, count-only breakdown of
+  `prefilter_dropped` with exactly `invalid_url`, `url_pattern`,
+  `missing_title`, `missing_location`, `missing_date`, and `past_date`. Exactly
+  one reason is attributed per dropped result, so the six values always sum to
+  `prefilter_dropped`. A bare total cannot tell a crawler that yields untitled
+  candidates apart from a profile whose URL pattern excludes them; both appear
+  as a zero-source run.
+- The CLI's `public_discovery` block additionally reports `seed_candidates`, the
+  count of candidates discovered directly from a catalog seed. Only that
+  protocol guarantees a title (the seed name is its fallback), so a zero there
+  explains an empty offer set that the validated total would hide.
 - `yield_trace` is a classification aid, not a source-data export: it contains
   no goal, candidate, URL, fetched content, model payload, or credential. Its
   counters must not be carried from one request to another.

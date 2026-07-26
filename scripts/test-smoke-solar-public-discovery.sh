@@ -44,7 +44,7 @@ set -euo pipefail
 printf 'invoked\n' >> "$SMOKE_FAKE_GO_INVOCATIONS"
 printf '%s\n' 'source discovery — backend=solar(solar-open2) search=public rounds=1'
 printf '%s\n' 'discovered 1 source(s):'
-printf '%s\n' '{"sources":[{"title":"SMOKE_PRIVATE_SOURCE_MARKER"}],"provider":"public","candidate":"SMOKE_PRIVATE_CANDIDATE_MARKER","model_reason":"SMOKE_PRIVATE_MODEL_REASON_MARKER","yield_trace":{"outcome":"accepted","terminal_reason":"proposal_done","crawler_validated":2,"offered":1,"prefilter_dropped":1,"proposal_calls":1,"judge_calls":1,"judge_entries_parsed":1,"judge_entries_dropped":0,"accepted":1}}'
+printf '%s\n' '{"sources":[{"title":"SMOKE_PRIVATE_SOURCE_MARKER"}],"provider":"public","candidate":"SMOKE_PRIVATE_CANDIDATE_MARKER","model_reason":"SMOKE_PRIVATE_MODEL_REASON_MARKER","yield_trace":{"outcome":"accepted","terminal_reason":"proposal_done","crawler_validated":2,"offered":1,"prefilter_dropped":1,"prefilter_reasons":{"invalid_url":0,"url_pattern":0,"missing_title":1,"missing_location":0,"missing_date":0,"past_date":0},"proposal_calls":1,"judge_calls":1,"judge_entries_parsed":1,"judge_entries_dropped":0,"accepted":1}}'
 FAKE_GO
   chmod 700 "$FAKE_BIN/go"
 }
@@ -87,7 +87,18 @@ if ! grep -Fxq 'result=PASS' "$PRESENT_REPORT" ||
   fail 'required_scalar_fields_present=false'
 fi
 
-allowed_report_line='^(result=PASS|provider=public|provider_observed=true|exit_code=0|timed_out=false|duration_seconds=[0-9]+\.[0-9]|yield_outcome=accepted|yield_terminal_reason=proposal_done|yield_(accepted|crawler_validated|judge_calls|judge_entries_dropped|judge_entries_parsed|offered|prefilter_dropped|proposal_calls)=[0-9]+|command=go run \./cmd/eventscout -backend solar -search-provider public -rounds 1 -max-tokens 1000 -timeout 20s -goal \[REDACTED_GOAL\]|cleanup=complete)$'
+# The per-reason breakdown is the only thing that tells a zero-source run apart
+# from a run the model rejected, so its absence must fail the smoke.
+for reason_key in invalid_url url_pattern missing_title missing_location missing_date past_date; do
+  if ! grep -Eq "^yield_prefilter_reason_${reason_key}=[0-9]+$" "$PRESENT_REPORT"; then
+    fail 'prefilter_reason_breakdown_present=false'
+  fi
+done
+if ! grep -Fxq 'yield_prefilter_reason_missing_title=1' "$PRESENT_REPORT"; then
+  fail 'prefilter_reason_attribution_correct=false'
+fi
+
+allowed_report_line='^(result=PASS|provider=public|provider_observed=true|exit_code=0|timed_out=false|duration_seconds=[0-9]+\.[0-9]|yield_outcome=accepted|yield_terminal_reason=proposal_done|yield_(accepted|crawler_validated|judge_calls|judge_entries_dropped|judge_entries_parsed|offered|prefilter_dropped|proposal_calls)=[0-9]+|yield_prefilter_reason_(invalid_url|url_pattern|missing_title|missing_location|missing_date|past_date)=[0-9]+|command=go run \./cmd/eventscout -backend solar -search-provider public -rounds 1 -max-tokens 1000 -timeout 20s -goal \[REDACTED_GOAL\]|cleanup=complete)$'
 if grep -Ev "$allowed_report_line" "$PRESENT_REPORT" >/dev/null; then
   fail 'report_allowlist_only=false'
 fi

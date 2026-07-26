@@ -64,8 +64,16 @@ per host per minute. Truncation is reported in the public CLI provider's
 For a completed successful `public` provider run, the CLI may add a
 request-local, count-only `yield_trace` object with exactly these fields:
 `outcome`, `terminal_reason`, `crawler_validated`, `offered`,
-`prefilter_dropped`, `proposal_calls`, `judge_calls`,
+`prefilter_dropped`, `prefilter_reasons`, `proposal_calls`, `judge_calls`,
 `judge_entries_parsed`, `judge_entries_dropped`, and `accepted`.
+
+`prefilter_reasons` breaks the prefilter total into fixed count-only keys —
+`invalid_url`, `url_pattern`, `missing_title`, `missing_location`,
+`missing_date`, `past_date` — which always sum to `prefilter_dropped`. The
+`public_discovery` block also reports `seed_candidates`, the number of
+candidates that came straight from a catalog seed. Together they say whether an
+empty offer set came from untitled crawl output, a profile pattern, or a crawl
+that never reached a seed page at all.
 
 The trace classifies the run; it does not expose a goal, candidate, URL,
 fetched content, model payload, or credential, and its counters are never

@@ -36,6 +36,56 @@ const (
 	YieldTerminalNone                   YieldTerminalReason = "none"
 )
 
+// PrefilterReason identifies why one search result was discarded before the
+// model saw it. Exactly one reason is recorded per dropped result.
+type PrefilterReason string
+
+const (
+	PrefilterInvalidURL      PrefilterReason = "invalid_url"
+	PrefilterURLPattern      PrefilterReason = "url_pattern"
+	PrefilterMissingTitle    PrefilterReason = "missing_title"
+	PrefilterMissingLocation PrefilterReason = "missing_location"
+	PrefilterMissingDate     PrefilterReason = "missing_date"
+	PrefilterPastDate        PrefilterReason = "past_date"
+)
+
+// PrefilterReasons breaks the prefilter total into fixed, count-only
+// categories. A bare total cannot distinguish a crawler that yields untitled
+// candidates from a profile whose URL pattern excludes them, so the two look
+// identical in a zero-source run. The key set is fixed so consumers can
+// validate it strictly.
+type PrefilterReasons struct {
+	InvalidURL      int `json:"invalid_url"`
+	URLPattern      int `json:"url_pattern"`
+	MissingTitle    int `json:"missing_title"`
+	MissingLocation int `json:"missing_location"`
+	MissingDate     int `json:"missing_date"`
+	PastDate        int `json:"past_date"`
+}
+
+// Total returns the attributed drop count. It equals YieldTrace.PrefilterDropped.
+func (reasons PrefilterReasons) Total() int {
+	return reasons.InvalidURL + reasons.URLPattern + reasons.MissingTitle +
+		reasons.MissingLocation + reasons.MissingDate + reasons.PastDate
+}
+
+func (reasons *PrefilterReasons) add(reason PrefilterReason) {
+	switch reason {
+	case PrefilterInvalidURL:
+		reasons.InvalidURL++
+	case PrefilterURLPattern:
+		reasons.URLPattern++
+	case PrefilterMissingTitle:
+		reasons.MissingTitle++
+	case PrefilterMissingLocation:
+		reasons.MissingLocation++
+	case PrefilterMissingDate:
+		reasons.MissingDate++
+	case PrefilterPastDate:
+		reasons.PastDate++
+	}
+}
+
 // YieldTrace contains counts only. It must never contain candidate data or request content.
 type YieldTrace struct {
 	Outcome             YieldOutcome        `json:"outcome"`
@@ -43,6 +93,7 @@ type YieldTrace struct {
 	CrawlerValidated    int                 `json:"crawler_validated"`
 	Offered             int                 `json:"offered"`
 	PrefilterDropped    int                 `json:"prefilter_dropped"`
+	PrefilterReasons    PrefilterReasons    `json:"prefilter_reasons"`
 	ProposalCalls       int                 `json:"proposal_calls"`
 	JudgeCalls          int                 `json:"judge_calls"`
 	JudgeEntriesParsed  int                 `json:"judge_entries_parsed"`

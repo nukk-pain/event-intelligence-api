@@ -152,7 +152,7 @@ func TestAgentSearchToolYieldSnapshot(t *testing.T) {
 	if !snapshot.Truncated || !hasTruncationReason(snapshot.TruncationReasons, TruncationCandidateLimit) || !hasTruncationReason(snapshot.TruncationReasons, TruncationHTMLPageLimit) {
 		t.Fatalf("snapshot = %+v, want candidate and HTML truncation", snapshot)
 	}
-	if got := string(encoded); got != `{"validated_candidates":24,"truncated":true,"truncation_reasons":["candidate_limit","html_page_limit"]}` {
+	if got := string(encoded); got != `{"validated_candidates":24,"seed_candidates":1,"truncated":true,"truncation_reasons":["candidate_limit","html_page_limit"]}` {
 		t.Fatalf("serialized snapshot = %s", got)
 	}
 	if strings.Contains(string(encoded), server.URL) {

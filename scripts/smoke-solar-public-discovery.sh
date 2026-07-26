@@ -109,11 +109,20 @@ TRACE_KEYS = {
     "crawler_validated",
     "offered",
     "prefilter_dropped",
+    "prefilter_reasons",
     "proposal_calls",
     "judge_calls",
     "judge_entries_parsed",
     "judge_entries_dropped",
     "accepted",
+}
+PREFILTER_REASON_KEYS = {
+    "invalid_url",
+    "url_pattern",
+    "missing_title",
+    "missing_location",
+    "missing_date",
+    "past_date",
 }
 OUTCOMES = {"accepted", "error", "budget_stopped", "candidate_empty", "offered_empty", "judge_empty"}
 TERMINAL_REASONS = {
@@ -136,8 +145,15 @@ def extract_yield_trace(output):
         return None
     if trace["outcome"] not in OUTCOMES or trace["terminal_reason"] not in TERMINAL_REASONS:
         return None
-    count_keys = TRACE_KEYS - {"outcome", "terminal_reason"}
+    reasons = trace["prefilter_reasons"]
+    if not isinstance(reasons, dict) or set(reasons) != PREFILTER_REASON_KEYS:
+        return None
+    if any(type(reasons[key]) is not int or reasons[key] < 0 for key in PREFILTER_REASON_KEYS):
+        return None
+    count_keys = TRACE_KEYS - {"outcome", "terminal_reason", "prefilter_reasons"}
     if any(type(trace[key]) is not int or trace[key] < 0 for key in count_keys):
+        return None
+    if sum(reasons.values()) != trace["prefilter_dropped"]:
         return None
     candidate_counts = {"crawler_validated", "offered", "prefilter_dropped", "accepted"}
     if any(trace[key] > 30 for key in candidate_counts):
@@ -161,8 +177,10 @@ def write_result(result, exit_code, timed_out, duration, output, trace, reason="
         if trace is not None:
             report.write(f"yield_outcome={trace['outcome']}\n")
             report.write(f"yield_terminal_reason={trace['terminal_reason']}\n")
-            for key in sorted(TRACE_KEYS - {"outcome", "terminal_reason"}):
+            for key in sorted(TRACE_KEYS - {"outcome", "terminal_reason", "prefilter_reasons"}):
                 report.write(f"yield_{key}={trace[key]}\n")
+            for key in sorted(PREFILTER_REASON_KEYS):
+                report.write(f"yield_prefilter_reason_{key}={trace['prefilter_reasons'][key]}\n")
         if reason:
             report.write(f"reason={reason}\n")
         report.write("command=go run ./cmd/eventscout -backend solar -search-provider public -rounds 1 -max-tokens 1000 -timeout 20s -goal [REDACTED_GOAL]\n")

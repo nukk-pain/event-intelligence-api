@@ -148,9 +148,10 @@ func (session *discoverySession) run(ctx context.Context) (DiscoveryResult, erro
 func (session *discoverySession) offerCandidates(results []SearchResult) []offeredCandidate {
 	candidates := make([]offeredCandidate, 0, len(results))
 	for _, result := range results {
-		candidate, ok := prepareCandidate(result, session.options)
+		candidate, reason, ok := prepareCandidate(result, session.options)
 		if !ok {
 			session.result.YieldTrace.PrefilterDropped++
+			session.result.YieldTrace.PrefilterReasons.add(reason)
 			continue
 		}
 		if _, seen := session.offered[candidate.canonicalURL]; seen {

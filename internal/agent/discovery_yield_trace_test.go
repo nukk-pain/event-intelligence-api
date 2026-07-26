@@ -65,7 +65,7 @@ func TestDiscoverWithOptionsYieldTrace(t *testing.T) {
 	if marshalErr != nil {
 		t.Fatalf("marshal yield trace: %v", marshalErr)
 	}
-	wantWire := `{"outcome":"accepted","terminal_reason":"round_limit","crawler_validated":0,"offered":1,"prefilter_dropped":0,"proposal_calls":1,"judge_calls":1,"judge_entries_parsed":1,"judge_entries_dropped":0,"accepted":1}`
+	wantWire := `{"outcome":"accepted","terminal_reason":"round_limit","crawler_validated":0,"offered":1,"prefilter_dropped":0,"prefilter_reasons":{"invalid_url":0,"url_pattern":0,"missing_title":0,"missing_location":0,"missing_date":0,"past_date":0},"proposal_calls":1,"judge_calls":1,"judge_entries_parsed":1,"judge_entries_dropped":0,"accepted":1}`
 	if string(wire) != wantWire {
 		t.Fatalf("serialized yield trace = %s, want %s", wire, wantWire)
 	}

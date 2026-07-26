@@ -15,9 +15,13 @@ var ErrInvalidAgentSearchTool = errors.New("public discovery: invalid agent sear
 // orchestration may merge with its agent-side yield trace. It intentionally
 // excludes candidates and all crawl URLs.
 type PublicYieldSnapshot struct {
-	ValidatedCandidates int                `json:"validated_candidates"`
-	Truncated           bool               `json:"truncated"`
-	TruncationReasons   []TruncationReason `json:"truncation_reasons,omitempty"`
+	ValidatedCandidates int `json:"validated_candidates"`
+	// SeedCandidates counts candidates discovered directly from a catalog seed.
+	// Only this protocol guarantees a title (the seed name is the fallback), so
+	// a zero here explains an empty offer set that the total would hide.
+	SeedCandidates    int                `json:"seed_candidates"`
+	Truncated         bool               `json:"truncated"`
+	TruncationReasons []TruncationReason `json:"truncation_reasons,omitempty"`
 }
 
 // AgentSearchTool adapts one request-local public crawl to agent.SearchTool.
@@ -88,8 +92,15 @@ func (tool *AgentSearchTool) Snapshot() Result {
 // public discovery orchestration without exposing candidates or crawl URLs.
 func (tool *AgentSearchTool) YieldSnapshot() PublicYieldSnapshot {
 	snapshot := tool.Snapshot()
+	seeds := 0
+	for _, candidate := range snapshot.Candidates {
+		if candidate.Provenance.Protocol == ProtocolSeed {
+			seeds++
+		}
+	}
 	return PublicYieldSnapshot{
 		ValidatedCandidates: snapshot.Budget.Usage.Candidates,
+		SeedCandidates:      seeds,
 		Truncated:           snapshot.Budget.Truncated,
 		TruncationReasons:   append([]TruncationReason(nil), snapshot.Budget.TruncationReasons...),
 	}

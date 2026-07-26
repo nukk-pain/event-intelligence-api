@@ -65,8 +65,12 @@ The service exposes only these routes:
 On successful `POST /v1/discover`, the response includes `sources`, `meta`, and
 a request-local, count-only `yield_trace`. `yield_trace` has exactly these
 fields: `outcome`, `terminal_reason`, `crawler_validated`, `offered`,
-`prefilter_dropped`, `proposal_calls`, `judge_calls`, `judge_entries_parsed`,
-`judge_entries_dropped`, and `accepted`. It is classification only: it contains
+`prefilter_dropped`, `prefilter_reasons`, `proposal_calls`, `judge_calls`,
+`judge_entries_parsed`, `judge_entries_dropped`, and `accepted`.
+`prefilter_reasons` is a nested fixed-key count-only breakdown —
+`invalid_url`, `url_pattern`, `missing_title`, `missing_location`,
+`missing_date`, `past_date` — whose values always sum to `prefilter_dropped`.
+It is classification only: it contains
 no goal, candidate, URL, fetched content, model payload, or credential, and no
 counter is shared across requests. The metadata always reports
 `provider: "public"` and the server-selected `profile: "events"`.

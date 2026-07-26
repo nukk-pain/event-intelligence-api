@@ -21,17 +21,17 @@ type offeredCandidate struct {
 	result       SearchResult
 }
 
-func prepareCandidate(result SearchResult, options validatedDiscoverOptions) (offeredCandidate, bool) {
+func prepareCandidate(result SearchResult, options validatedDiscoverOptions) (offeredCandidate, PrefilterReason, bool) {
 	canonicalURL, err := canonicalCandidateURL(result.URL)
 	if err != nil {
-		return offeredCandidate{}, false
+		return offeredCandidate{}, PrefilterInvalidURL, false
 	}
 	parsed, err := url.Parse(canonicalURL)
 	if err != nil {
-		return offeredCandidate{}, false
+		return offeredCandidate{}, PrefilterInvalidURL, false
 	}
 	if !matchesAny(options.urlPatterns, canonicalURL) || !matchesAny(options.domainPatterns, parsed.Hostname()) {
-		return offeredCandidate{}, false
+		return offeredCandidate{}, PrefilterURLPattern, false
 	}
 	result.URL = canonicalURL
 	result.Title = boundedRedactedText(result.Title, maxCandidateTitleRunes)
@@ -40,36 +40,36 @@ func prepareCandidate(result SearchResult, options validatedDiscoverOptions) (of
 	result.Location = boundedRedactedText(result.Location, maxCandidateMetadataRunes)
 	result.Locale = boundedRedactedText(result.Locale, maxCandidateMetadataRunes)
 	result.Language = boundedRedactedText(result.Language, maxCandidateMetadataRunes)
-	if !candidateMeetsRequirements(result, options) {
-		return offeredCandidate{}, false
+	if reason, ok := candidateMeetsRequirements(result, options); !ok {
+		return offeredCandidate{}, reason, false
 	}
 	result.Provenance = validProvenance(canonicalURL, result.Provenance)
-	return offeredCandidate{canonicalURL: canonicalURL, sourceKey: strings.ToLower(parsed.Hostname()), result: result}, true
+	return offeredCandidate{canonicalURL: canonicalURL, sourceKey: strings.ToLower(parsed.Hostname()), result: result}, "", true
 }
 
-func candidateMeetsRequirements(result SearchResult, options validatedDiscoverOptions) bool {
+func candidateMeetsRequirements(result SearchResult, options validatedDiscoverOptions) (PrefilterReason, bool) {
 	requirements := options.Profile.Requirements
 	if requirements.Title && result.Title == "" {
-		return false
+		return PrefilterMissingTitle, false
 	}
 	if requirements.Source && result.URL == "" {
-		return false
+		return PrefilterInvalidURL, false
 	}
 	if requirements.Location && result.Location == "" {
-		return false
+		return PrefilterMissingLocation, false
 	}
 	date, hasDate := parseCandidateDate(result.Date)
 	if requirements.Date && !hasDate {
-		return false
+		return PrefilterMissingDate, false
 	}
 	if options.Profile.PastDatePolicy == PastDatesRejected && hasDate {
 		reference := options.ReferenceTime.UTC()
 		referenceDate := time.Date(reference.Year(), reference.Month(), reference.Day(), 0, 0, 0, 0, time.UTC)
 		if date.Before(referenceDate) {
-			return false
+			return PrefilterPastDate, false
 		}
 	}
-	return true
+	return "", true
 }
 
 func parseCandidateDate(raw string) (time.Time, bool) {
