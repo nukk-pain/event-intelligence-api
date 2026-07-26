@@ -2,13 +2,16 @@
 
 ## Current focus
 
-**여행 제약**: 사용자 7/17부터 10일 여행(~7/27 복귀) → Stage 1(7/17~7/31)을 거의
-덮음. 제출물은 7/31 마감(매일 활동 불필요). 그래서 **여행 전에 핵심 에이전트를
-로컬(qwen36-dwq)로 완성·검증**해 두고, 복귀 후 4일은 "Solar 붙이기→측정→튜닝→후기"만.
-복귀 후 절차는 `RUNBOOK.md` 참조.
+**(2026-07-26 기준)** Stage 1 코드 작업은 끝났다. 3겹 에이전트 루프 + Solar Open 2
+연결 + 계정 없는 공개 탐색 + 수확량 진단까지 구현·검증했고, `feat/solar-agent`를
+`main`에 머지해 origin에 푸시했다(`2bb0082`). 남은 것은 **7/31 전 Upstage 채널에
+저장소 링크와 후기를 제출**하는 일뿐이다. 후기는 `README.md`의
+"Solar Agent Partner 후기" 절에 실측 수치와 함께 들어 있다.
 
-핵심 에이전트(루프 ② 추출+멀티홉 보강)는 여행 전 구현 완료. Solar는 7/17에만
-붙일 수 있으므로 Solar-agnostic(OpenAI 호환)으로 구현 — 키만 넣으면 전환됨.
+과거 진행 배경: 사용자 7/17~10일 여행이 Stage 1 기간을 거의 덮어, 여행 전에 핵심
+에이전트를 로컬(qwen36-dwq)로 완성해 두고 복귀 후 "Solar 붙이기→측정→튜닝→후기"만
+남기는 순서로 갔다. 그래서 `internal/agent`는 Solar-agnostic(OpenAI 호환)이고 키만
+바꾸면 백엔드가 전환된다. 복귀 후 절차는 `RUNBOOK.md` 참조.
 
 ## Status
 
@@ -44,20 +47,61 @@
       `-search-provider fixture|tavily`로 연결. fixture는 기본값으로 보존했다.
       연락처는 검색 전·결과 후 제거하고, 사설망·localhost·userinfo·연락처 포함 URL을
       차단한다. race 테스트, 전체 회귀, missing-key 조기 실패를 검증했다(`db70d64`).
-- [ ] 신규 사용자 계정으로 Tavily 키를 발급해 Solar+Tavily 2-round 실제 E2E를
-      실행하고, 키와 개인정보가 없는 redacted transcript를 증거로 남긴다.
-- [ ] (~7/31) 후기 수치 채우기 → 제출.
+- **(대체됨)** ~~신규 사용자 계정으로 Tavily 키를 발급해 Solar+Tavily 2-round 실제
+      E2E를 실행한다.~~ → **7/19~20에 폐기**. 계정 발급이 사용자 인증 대기로 막혀 있어,
+      제3자 키가 아예 필요 없는 `public` 프로바이더로 방향을 바꿨다. Tavily 어댑터
+      자체는 선택 모드(`-search-provider tavily`)로 코드에 남아 있으나 실 키 E2E는
+      끝내 실행하지 않았다.
+- [x] (7/19~20) **계정 없는 공개 탐색**: 서버 소유 seed 카탈로그 기반 `public`
+      프로바이더를 기본값으로 만들고, 엄격한 공개 크롤 경계(robots·SSRF·MIME·본문
+      한도)를 붙였다. 익명 HTTP 데모 `cmd/eventscout-server`는 목표 문장만 받고
+      가입·임의 URL·사설망을 허용하지 않으며 4 KiB/800자·2회/10분·24회/일·동시 2건·
+      60초 한도로 묶여 있다. Solar 키는 운영자 전용이라 호출자가 넣을 수 없다.
+- [x] (7/25~26) **수확량 진단(`yield_trace`)**: 라이브 탐색이 소스 0건을 반환할 때
+      어느 단계에서 유실됐는지 알 수 없던 문제를 해결했다. 성공 응답에만 실리는
+      요청-국소·카운트 전용 필드로 크롤러 검증 → 모델 제안 → 판정 → 채택 경계를
+      드러낸다. 목표문·후보·URL·모델 페이로드·자격증명은 담지 않는다.
+- [x] (7/26) `feat/solar-agent`를 `main`에 fast-forward 머지하고 origin에 푸시
+      (`2bb0082`). 푸시 전 `go build`/`go vet`/`go test -race ./...` 전부 통과,
+      추적 파일 시크릿 스캔 0건, `.env.example`은 전 항목 주석 처리 확인.
+- [ ] (~7/31) **제출**: Upstage 채널에 저장소 링크 + 후기 제출. ← 유일한 잔여 작업
 
 ## Evidence
 
 - events.nukk.net 운영 중(COEX/KINTEX/benchmark 인제스트 + read-only API).
+- Solar Open 2 추출 A/B: `abbench-solar-open2-20260717.md` (6케이스 54/54, 평균
+  출력 118토큰, 평균 지연 1.9초 — 로컬 대조군 대비 출력 토큰 약 21배 감소).
+- 실검색 판정 평가: `eventscout-live-search-eval-20260717.md` (12/12).
+- 계정 없는 공개 탐색 검증: `.omo/evidence/solar-accountless-public-agent/task-6.txt`
+  (gitignore이므로 저장소에는 없고 로컬에만 있다).
+- 수확량 진단 검증: `.omo/evidence/solar-live-yield-improvement/` — Todo 1~7 및
+  최종 검증 F1~F4 증거. 마찬가지로 로컬 전용이며 worktree
+  `event-intelligence-api-wt-solar-yield`에 있다.
+
+## Known limitations
+
+- **라이브 공개 탐색의 실제 수확량은 아직 0건이다.** 운영자 스모크의 count-only
+  트레이스는 `crawler_validated=14 → prefilter_dropped=14 → offered=0 →
+  accepted=0`, `outcome=budget_stopped`를 기록한다. 크롤러는 후보를 정상 검증하는데
+  prefilter가 전부 떨어뜨려 모델에 하나도 제안되지 않는다는 뜻이다.
+- 이 경계에 대해 **의도적으로 제품 교정을 하지 않았다**(`correction_decision=
+  NO_PRODUCT_CORRECTION`). 카운트만으로는 "제목 누락"과 "제목 공란/편집"을 구분할 수
+  없어 안전한 교정 대상을 특정할 수 없었고, 후보 내용을 노출하지 않는 새 진단을
+  red-first로 먼저 세우는 것이 전제 조건이기 때문이다. 이번 작업의 산출물은
+  계기판이지 수확량 개선이 아니다.
+- `accepted: 0`은 분류된 정상 관측값이며 스모크 실패가 아니다(`DECISIONS.md`의
+  "Additive yield-diagnostic governance" 참조).
+- Tavily 실 키 E2E는 실행되지 않았다. 위 Status의 대체 항목 참조.
 
 ## Blockers
 
-- 자동 실검색 구현에는 차단점이 없다. 실제 E2E는 GitHub 신규 계정 생성 과정의
-  사용자 이메일·비밀번호·CAPTCHA/인증 입력과 Tavily API 키 발급을 기다린다.
+- 없음. Tavily 계정 발급 대기는 `public` 프로바이더 채택으로 해소됐다.
 
 ## Next action
 
-사용자 인증 후 Tavily 키를 로컬 환경에만 저장하고 Solar+Tavily 실제 E2E를 실행한다.
-그 뒤 전체 검증과 개인정보 스캔을 다시 수행해 `feat/solar-agent`를 마무리한다.
+7/31 전에 Upstage 채널에 저장소 링크(`https://github.com/nukk-pain/event-intelligence-api`,
+기본 브랜치 `main`)와 200자+ 후기를 제출한다. 후기 본문은 `README.md`의
+"Solar Agent Partner 후기" 절에 있다.
+
+이후(Stage 2 후보): 위 Known limitations의 prefilter 유실 경계를 안전하게 구분하는
+진단을 추가하고, 그 근거가 나오면 후보 렌더링 또는 카탈로그를 교정한다.
