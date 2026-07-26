@@ -61,6 +61,14 @@
       어느 단계에서 유실됐는지 알 수 없던 문제를 해결했다. 성공 응답에만 실리는
       요청-국소·카운트 전용 필드로 크롤러 검증 → 모델 제안 → 판정 → 채택 경계를
       드러낸다. 목표문·후보·URL·모델 페이로드·자격증명은 담지 않는다.
+- [x] (7/26~27) **라이브 0건 원인 규명 및 교정**. 유실 사유를 카운트 전용으로
+      분해해(`prefilter_reasons`, `seed_outcomes`) 라이브에서 원인을 확정했다:
+      프로토콜(사이트맵) 큐가 HTML 큐보다 먼저 전부 처리돼 30개 후보 상한을 제목 없는
+      사이트맵 자식으로 채우고, 뒤늦게 정상 fetch된 seed 페이지 5건이 전부
+      `candidate_cap`으로 거부됐다. seed는 이름 폴백 덕에 제목이 보장되는 유일한
+      경로라, 결과적으로 모델에 판정할 후보가 하나도 가지 않았다. 교정은 미처리 seed
+      수만큼 후보 슬롯을 유보하는 것이다. 총 상한은 올리지 않았다 — seed가 바로 그
+      유보분을 쓴다. 교정 후 라이브: `accepted=5`.
 - [x] (7/26) `feat/solar-agent`를 `main`에 fast-forward 머지하고 origin에 푸시
       (`2bb0082`). 푸시 전 `go build`/`go vet`/`go test -race ./...` 전부 통과,
       추적 파일 시크릿 스캔 0건, `.env.example`은 전 항목 주석 처리 확인.
@@ -80,17 +88,18 @@
 
 ## Known limitations
 
-- **라이브 공개 탐색의 실제 수확량은 아직 0건이다.** 운영자 스모크의 count-only
-  트레이스는 `crawler_validated=14 → prefilter_dropped=14 → offered=0 →
-  accepted=0`, `outcome=budget_stopped`를 기록한다. 크롤러는 후보를 정상 검증하는데
-  prefilter가 전부 떨어뜨려 모델에 하나도 제안되지 않는다는 뜻이다.
-- 이 경계에 대해 **의도적으로 제품 교정을 하지 않았다**(`correction_decision=
-  NO_PRODUCT_CORRECTION`). 카운트만으로는 "제목 누락"과 "제목 공란/편집"을 구분할 수
-  없어 안전한 교정 대상을 특정할 수 없었고, 후보 내용을 노출하지 않는 새 진단을
-  red-first로 먼저 세우는 것이 전제 조건이기 때문이다. 이번 작업의 산출물은
-  계기판이지 수확량 개선이 아니다.
-- `accepted: 0`은 분류된 정상 관측값이며 스모크 실패가 아니다(`DECISIONS.md`의
-  "Additive yield-diagnostic governance" 참조).
+- **(해결됨 2026-07-27)** 라이브 공개 탐색이 0건을 반환하던 문제는 원인을 계측으로
+  확정하고 교정했다. 아래 Status의 7/26~27 항목 참조. 교정 후 라이브 스모크는
+  `seed_candidates=5 → offered=5 → judge_calls=1 → accepted=5`,
+  `outcome=accepted`를 기록한다.
+- 사이트맵 자식 후보 14건은 여전히 제목이 없어 prefilter에서 탈락한다
+  (`missing_title=14`). 이는 의도된 동작이다. 제목 없는 URL은 판정 근거가 약하고,
+  제목이 보장된 seed 후보가 이제 모델에 도달하므로 합성 제목을 붙일 이유가 없다.
+- **seed 계정 불일치**: 카탈로그 seed는 6개인데 `seed_outcomes` 합계는 5다. 한 건이
+  enqueue 단계에서 빠진다(정규화·중복·허용 검사 중 하나). 미해결.
+- `accepted: 0`은 여전히 분류된 정상 관측값이며 스모크 실패가 아니다(`DECISIONS.md`의
+  "Additive yield-diagnostic governance" 참조). 교정은 0건이 *구조적으로 불가피한*
+  상태를 없앤 것이지, 매 실행의 최소 건수를 보장하지 않는다.
 - Tavily 실 키 E2E는 실행되지 않았다. 위 Status의 대체 항목 참조.
 
 ## Blockers

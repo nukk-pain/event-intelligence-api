@@ -107,7 +107,7 @@ func (state *crawlState) addCandidate(discovery candidateDiscovery) (bool, SeedO
 	if _, seen := state.seenCandidates[canonical]; seen {
 		return false, SeedOutcomeDuplicate
 	}
-	if len(state.candidates) >= state.provider.limits.MaxCandidates {
+	if len(state.candidates) >= state.candidateLimitFor(discovery.protocol) {
 		state.addReason(TruncationCandidateLimit)
 		return false, SeedOutcomeCandidateCap
 	}
@@ -128,6 +128,25 @@ func (state *crawlState) addCandidate(discovery candidateDiscovery) (bool, SeedO
 		},
 	})
 	return true, ""
+}
+
+// candidateLimitFor holds a slot open for each seed the crawl has enqueued but
+// not yet accounted for. Sitemap children are discovered before seed pages are
+// fetched, so without this they fill the whole list and the seed page — the
+// only candidate guaranteed a title — is rejected for want of a slot, leaving
+// the model nothing it can judge. The total cap is never raised: seeds spend
+// the very slots this withholds.
+func (state *crawlState) candidateLimitFor(protocol Protocol) int {
+	limit := state.provider.limits.MaxCandidates
+	if protocol == ProtocolSeed {
+		return limit
+	}
+	return max(limit-state.pendingSeeds(), 0)
+}
+
+// pendingSeeds counts enqueued seeds that have not yet reached an outcome.
+func (state *crawlState) pendingSeeds() int {
+	return max(state.seedsEnqueued-state.budget.SeedOutcomes.Total(), 0)
 }
 
 func (state *crawlState) validatedCandidates() []Candidate {

@@ -467,3 +467,28 @@ contract and must not acquire live LLM work as a side effect.
   `accepted: 0` is valid observed output and is not a minimum-live-result
   failure. Without the operator credential, the smoke reports
   `SKIPPED_CREDENTIAL_UNAVAILABLE` before making a model or network call.
+
+### Reserve candidate slots for pending seeds (2026-07-27)
+
+- Status: accepted
+- Evidence: three bounded live operator smokes. The diagnostics above attributed
+  every dropped candidate to `missing_title` and every seed to `candidate_cap`,
+  with `robots_disallowed`, `http_status`, `body_too_large`,
+  `unsupported_content`, and `transport_error` all zero.
+- Cause: `crawl` drains the protocol (sitemap) queue before the HTML queue.
+  Sitemap children fill the 30-candidate list with untitled entries, so the seed
+  pages — fetched later and successfully — are rejected for want of a slot. Only
+  the seed protocol guarantees a title, since the seed name is its fallback, so
+  the model received no candidate it could judge and never made a judge call.
+- Decision: `addCandidate` withholds one candidate slot per enqueued seed that
+  has not yet reached an outcome. Seed candidates spend exactly those withheld
+  slots.
+- The total candidate cap is **not** raised, and no crawl, fetch, robots, SSRF,
+  model, or token limit changes. The reservation is released as each seed is
+  accounted for, so a crawl with no pending seed still fills the whole list.
+- Result: the live smoke moved from `offered=0, judge_calls=0, accepted=0,
+  outcome=budget_stopped` to `seed_candidates=5, offered=5, judge_calls=1,
+  accepted=5, outcome=accepted`. Untitled sitemap children are still dropped by
+  the prefilter; that remains intended, and no synthetic title is invented.
+- This does not promise a minimum live result. It removes a structural
+  condition that made zero unavoidable.
