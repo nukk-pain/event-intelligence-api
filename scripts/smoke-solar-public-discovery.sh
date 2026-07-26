@@ -34,12 +34,14 @@ cleanup() {
     wait "$PY_PID" >/dev/null 2>&1 || true
   fi
   rm -rf "$TMP_DIR"
+  printf 'cleanup=complete\n'
   exit "$rc"
 }
 trap cleanup EXIT INT TERM
 
 python3 - "$ROOT" "$TMP_DIR/result.txt" <<'PY' &
 import os
+import json
 import re
 import signal
 import subprocess
@@ -115,7 +117,53 @@ def redact(raw):
     return cleaned.strip()
 
 
-def write_result(result, exit_code, timed_out, duration, output, reason=""):
+TRACE_KEYS = {
+    "outcome",
+    "terminal_reason",
+    "crawler_validated",
+    "offered",
+    "prefilter_dropped",
+    "proposal_calls",
+    "judge_calls",
+    "judge_entries_parsed",
+    "judge_entries_dropped",
+    "accepted",
+}
+OUTCOMES = {"accepted", "error", "budget_stopped", "candidate_empty", "offered_empty", "judge_empty"}
+TERMINAL_REASONS = {
+    "proposal_done", "proposal_error", "search_error", "candidate_encode_error", "judge_error",
+    "malformed_judge_envelope", "model_call_budget", "token_budget", "round_limit",
+    "context_canceled", "deadline_exceeded", "invalid_usage", "none",
+}
+
+
+def extract_yield_trace(output):
+    match = re.search(r"discovered \d+ source\(s\):\s*", output)
+    if match is None:
+        return None
+    try:
+        payload, _ = json.JSONDecoder().raw_decode(output[match.end():].lstrip())
+    except (TypeError, ValueError):
+        return None
+    trace = payload.get("yield_trace") if isinstance(payload, dict) else None
+    if not isinstance(trace, dict) or set(trace) != TRACE_KEYS:
+        return None
+    if trace["outcome"] not in OUTCOMES or trace["terminal_reason"] not in TERMINAL_REASONS:
+        return None
+    count_keys = TRACE_KEYS - {"outcome", "terminal_reason"}
+    if any(type(trace[key]) is not int or trace[key] < 0 for key in count_keys):
+        return None
+    candidate_counts = {"crawler_validated", "offered", "prefilter_dropped", "accepted"}
+    if any(trace[key] > 30 for key in candidate_counts):
+        return None
+    if trace["judge_entries_parsed"] > 1000 or trace["judge_entries_dropped"] > 1000:
+        return None
+    if trace["proposal_calls"] > 2 or trace["judge_calls"] > 2:
+        return None
+    return trace
+
+
+def write_result(result, exit_code, timed_out, duration, output, trace, reason=""):
     provider_observed = "search=public" in output or '"provider": "public"' in output or '"provider":"public"' in output
     cleaned = redact(output)
     with open(result_path, "w", encoding="utf-8") as report:
@@ -125,6 +173,11 @@ def write_result(result, exit_code, timed_out, duration, output, reason=""):
         report.write(f"exit_code={exit_code}\n")
         report.write(f"timed_out={'true' if timed_out else 'false'}\n")
         report.write(f"duration_seconds={duration:.1f}\n")
+        if trace is not None:
+            report.write(f"yield_outcome={trace['outcome']}\n")
+            report.write(f"yield_terminal_reason={trace['terminal_reason']}\n")
+            for key in sorted(TRACE_KEYS - {"outcome", "terminal_reason"}):
+                report.write(f"yield_{key}={trace[key]}\n")
         if reason:
             report.write(f"reason={reason}\n")
         report.write("command=go run ./cmd/eventscout -backend solar -search-provider public -rounds 1 -max-tokens 1000 -timeout 20s -goal [REDACTED_GOAL]\n")
@@ -197,16 +250,20 @@ finally:
 
 duration = time.monotonic() - started
 provider_observed = "search=public" in raw or '"provider": "public"' in raw or '"provider":"public"' in raw
-result = "PASS" if exit_code == 0 and not timed_out and provider_observed else "FAIL"
+yield_trace = extract_yield_trace(raw)
+result = "PASS" if exit_code == 0 and not timed_out and provider_observed and yield_trace is not None else "FAIL"
+if exit_code == 0 and not timed_out and provider_observed and yield_trace is None and not reason:
+    reason = "successful command omitted fixed bounded yield trace"
 write_result(
     result,
     exit_code,
     timed_out,
     duration,
     raw,
+    yield_trace,
     reason,
 )
-if exit_code == 0 and not timed_out and provider_observed:
+if exit_code == 0 and not timed_out and provider_observed and yield_trace is not None:
     raise SystemExit(0)
 raise SystemExit(1)
 PY

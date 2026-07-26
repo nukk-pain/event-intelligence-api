@@ -66,6 +66,7 @@ type DiscoveryOutput struct {
 	ModelCalls        int
 	PromptTokens      int
 	CompletionTokens  int
+	YieldTrace        agent.YieldTrace
 }
 
 // HandlerOptions contains server-owned controls. Callers cannot override them over HTTP.
@@ -85,8 +86,9 @@ type HandlerDependencies struct {
 }
 
 type discoverResponse struct {
-	Sources []agent.DiscoveredSource `json:"sources"`
-	Meta    discoverMeta             `json:"meta"`
+	Sources    []agent.DiscoveredSource `json:"sources"`
+	Meta       discoverMeta             `json:"meta"`
+	YieldTrace agent.YieldTrace         `json:"yield_trace"`
 }
 
 type discoverMeta struct {

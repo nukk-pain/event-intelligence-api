@@ -1,0 +1,26 @@
+{
+  "sources": [
+    {
+      "url": "https://events.example/calendar",
+      "title": "",
+      "reason": ""
+    }
+  ],
+  "provider": "public",
+  "public_discovery": {
+    "validated_candidates": 0,
+    "truncated": false
+  },
+  "yield_trace": {
+    "outcome": "accepted",
+    "terminal_reason": "proposal_done",
+    "crawler_validated": 0,
+    "offered": 1,
+    "prefilter_dropped": 0,
+    "proposal_calls": 2,
+    "judge_calls": 1,
+    "judge_entries_parsed": 1,
+    "judge_entries_dropped": 0,
+    "accepted": 1
+  }
+}

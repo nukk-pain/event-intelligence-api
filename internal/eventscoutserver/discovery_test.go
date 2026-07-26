@@ -48,6 +48,13 @@ func (tool *fixturePublicTool) Snapshot() publicdiscovery.Result {
 	}}
 }
 
+func (tool *fixturePublicTool) YieldSnapshot() publicdiscovery.PublicYieldSnapshot {
+	return publicdiscovery.PublicYieldSnapshot{
+		ValidatedCandidates: 1, Truncated: true,
+		TruncationReasons: []publicdiscovery.TruncationReason{publicdiscovery.TruncationDepthLimit},
+	}
+}
+
 func (tool *fixturePublicTool) RestoreProvenance(sources []agent.DiscoveredSource) []agent.DiscoveredSource {
 	return append([]agent.DiscoveredSource(nil), sources...)
 }
@@ -126,6 +133,10 @@ func TestSolarDiscoveryRunner_uses_fresh_public_tool_and_event_profile_per_reque
 		}
 		if len(output.TruncationReasons) != 1 || output.TruncationReasons[0] != "depth_limit" {
 			t.Fatalf("truncation reasons = %#v", output.TruncationReasons)
+		}
+		if output.YieldTrace.CrawlerValidated != 1 || output.YieldTrace.Accepted != 1 ||
+			output.YieldTrace.Outcome != agent.YieldOutcomeAccepted {
+			t.Fatalf("yield trace = %#v, want merged crawler and agent counts", output.YieldTrace)
 		}
 	}
 }

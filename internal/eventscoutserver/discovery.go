@@ -11,6 +11,7 @@ import (
 type publicSearchTool interface {
 	agent.SearchTool
 	Snapshot() publicdiscovery.Result
+	YieldSnapshot() publicdiscovery.PublicYieldSnapshot
 	RestoreProvenance([]agent.DiscoveredSource) []agent.DiscoveredSource
 }
 
@@ -61,9 +62,11 @@ func (runner *SolarDiscoveryRunner) Discover(ctx context.Context, goal Goal) (Di
 	}
 	result.Sources = tool.RestoreProvenance(result.Sources)
 	reasons := mergeTruncationReasons(tool.Snapshot(), result.Metadata.TruncationReasons)
+	yieldTrace := result.YieldTrace.WithCrawlerValidated(tool.YieldSnapshot().ValidatedCandidates)
 	return DiscoveryOutput{
 		Sources: result.Sources, TruncationReasons: reasons, ModelCalls: result.Trace.Calls,
 		PromptTokens: result.Trace.Usage.PromptTokens, CompletionTokens: result.Trace.Usage.CompletionTokens,
+		YieldTrace: yieldTrace,
 	}, nil
 }
 

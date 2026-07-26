@@ -52,37 +52,55 @@ func main() {
 
 	fmt.Printf("source discovery — backend=%s(%s) search=%s rounds=%d\ngoal: %s\n\n", be.Name, be.Model, *searchProvider, *rounds, *goal)
 	start := time.Now()
-	sources, tr, err := agent.Discover(context.Background(), be, *goal, tool, *rounds, *maxTokens, *timeout)
+	profile, err := agent.NamedDiscoveryProfile(agent.DiscoveryProfileEvents)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	options := agent.DefaultDiscoverOptions(profile)
+	options.MaxRounds = *rounds
+	options.MaxTokensPerCall = *maxTokens
+	options.PerCallTimeout = *timeout
+	result, err := agent.DiscoverWithOptions(context.Background(), agent.DiscoverRequest{
+		Backend: be, Goal: *goal, Tool: tool, Options: options,
+	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "discover:", err)
 	}
-	out := marshalSources(tool, sources)
-	fmt.Printf("discovered %d source(s):\n%s\n", len(sources), string(out))
+	out := marshalDiscovery(tool, result, err == nil)
+	fmt.Printf("discovered %d source(s):\n%s\n", len(result.Sources), string(out))
 	fmt.Printf("\n%d model call(s), %d in + %d out tokens, %dms total\n",
-		tr.Calls, tr.Usage.PromptTokens, tr.Usage.CompletionTokens, time.Since(start).Milliseconds())
+		result.Trace.Calls, result.Trace.Usage.PromptTokens, result.Trace.Usage.CompletionTokens, time.Since(start).Milliseconds())
 	if err != nil {
 		os.Exit(1)
 	}
 }
 
 type publicDiscoveryOutput struct {
-	Sources         []agent.DiscoveredSource    `json:"sources"`
-	Provider        string                      `json:"provider"`
-	PublicDiscovery publicdiscovery.BudgetState `json:"public_discovery"`
+	Sources         []agent.DiscoveredSource            `json:"sources"`
+	Provider        string                              `json:"provider"`
+	PublicDiscovery publicdiscovery.PublicYieldSnapshot `json:"public_discovery"`
+	YieldTrace      *agent.YieldTrace                   `json:"yield_trace,omitempty"`
 }
 
-func marshalSources(tool agent.SearchTool, sources []agent.DiscoveredSource) []byte {
+func marshalDiscovery(tool agent.SearchTool, result agent.DiscoveryResult, completed bool) []byte {
 	if publicTool, ok := tool.(*publicdiscovery.AgentSearchTool); ok {
+		snapshot := publicTool.YieldSnapshot()
+		var yieldTrace *agent.YieldTrace
+		if completed {
+			merged := result.YieldTrace.WithCrawlerValidated(snapshot.ValidatedCandidates)
+			yieldTrace = &merged
+		}
 		output := publicDiscoveryOutput{
-			Sources: publicTool.RestoreProvenance(sources), Provider: "public",
-			PublicDiscovery: publicTool.Snapshot().Budget,
+			Sources: publicTool.RestoreProvenance(result.Sources), Provider: "public",
+			PublicDiscovery: snapshot, YieldTrace: yieldTrace,
 		}
 		encoded, err := json.MarshalIndent(output, "", "  ")
 		if err == nil {
 			return encoded
 		}
 	}
-	encoded, err := json.MarshalIndent(sources, "", "  ")
+	encoded, err := json.MarshalIndent(result.Sources, "", "  ")
 	if err != nil {
 		return []byte("[]")
 	}

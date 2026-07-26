@@ -11,6 +11,15 @@ import (
 
 var ErrInvalidAgentSearchTool = errors.New("public discovery: invalid agent search tool")
 
+// PublicYieldSnapshot is the count-only crawler state that public discovery
+// orchestration may merge with its agent-side yield trace. It intentionally
+// excludes candidates and all crawl URLs.
+type PublicYieldSnapshot struct {
+	ValidatedCandidates int                `json:"validated_candidates"`
+	Truncated           bool               `json:"truncated"`
+	TruncationReasons   []TruncationReason `json:"truncation_reasons,omitempty"`
+}
+
 // AgentSearchTool adapts one request-local public crawl to agent.SearchTool.
 // The provider is intentionally owned by the adapter so callers can create a
 // fresh frontier for each discovery request.
@@ -73,6 +82,17 @@ func (tool *AgentSearchTool) Snapshot() Result {
 	tool.mu.RLock()
 	defer tool.mu.RUnlock()
 	return cloneResult(tool.last)
+}
+
+// YieldSnapshot returns the bounded, request-local crawler metadata needed by
+// public discovery orchestration without exposing candidates or crawl URLs.
+func (tool *AgentSearchTool) YieldSnapshot() PublicYieldSnapshot {
+	snapshot := tool.Snapshot()
+	return PublicYieldSnapshot{
+		ValidatedCandidates: snapshot.Budget.Usage.Candidates,
+		Truncated:           snapshot.Budget.Truncated,
+		TruncationReasons:   append([]TruncationReason(nil), snapshot.Budget.TruncationReasons...),
+	}
 }
 
 // RestoreProvenance replaces validated adapter provenance with the original

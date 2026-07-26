@@ -29,6 +29,9 @@ func TestHandler_sanitizes_internal_errors_and_logs_no_goal_or_secret(t *testing
 		t.Fatal("response is missing X-Request-ID")
 	}
 	combined := recorder.Body.String() + logs.String()
+	if strings.Contains(recorder.Body.String(), `"yield_trace"`) {
+		t.Fatalf("error envelope exposed yield trace: %s", recorder.Body.String())
+	}
 	if strings.Contains(combined, goal) || strings.Contains(combined, secret) || strings.Contains(combined, "upstream rejected") {
 		t.Fatalf("response/log output leaked sensitive marker: %s", combined)
 	}

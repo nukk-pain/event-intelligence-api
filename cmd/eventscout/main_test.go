@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -118,7 +120,13 @@ func TestMarshalSources_public_reports_provider_and_budget(t *testing.T) {
 	}
 
 	// When
-	wire := marshalSources(tool, []agent.DiscoveredSource{{URL: "https://events.example/calendar"}})
+	wire := marshalDiscovery(tool, agent.DiscoveryResult{
+		Sources: []agent.DiscoveredSource{{URL: "https://events.example/calendar"}},
+		YieldTrace: agent.YieldTrace{
+			Outcome: agent.YieldOutcomeAccepted, TerminalReason: agent.YieldTerminalProposalDone,
+			Offered: 1, ProposalCalls: 2, JudgeCalls: 1, JudgeEntriesParsed: 1, Accepted: 1,
+		},
+	}, true)
 
 	// Then
 	var output struct {
@@ -135,6 +143,31 @@ func TestMarshalSources_public_reports_provider_and_budget(t *testing.T) {
 	}
 	if output.PublicDiscovery.Truncated {
 		t.Fatal("fresh public budget unexpectedly truncated")
+	}
+	golden, err := os.ReadFile(filepath.Join("testdata", "public-yield-trace.json"))
+	if err != nil {
+		t.Fatalf("read golden: %v", err)
+	}
+	if !bytes.Equal(wire, bytes.TrimSuffix(golden, []byte("\n"))) {
+		t.Fatalf("public output differs from golden\ngot:  %s\nwant: %s", wire, golden)
+	}
+}
+
+func TestMarshalSources_public_omits_yield_trace_when_discovery_fails(t *testing.T) {
+	// Given
+	tool, err := publicdiscovery.NewAgentSearchTool()
+	if err != nil {
+		t.Fatalf("new public tool: %v", err)
+	}
+
+	// When
+	wire := marshalDiscovery(tool, agent.DiscoveryResult{YieldTrace: agent.YieldTrace{
+		Outcome: agent.YieldOutcomeError, TerminalReason: agent.YieldTerminalJudgeError,
+	}}, false)
+
+	// Then
+	if bytes.Contains(wire, []byte(`"yield_trace"`)) {
+		t.Fatalf("failed discovery exposed yield trace: %s", wire)
 	}
 }
 

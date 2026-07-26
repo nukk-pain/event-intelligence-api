@@ -122,7 +122,7 @@ func (handler *applicationHandler) runDiscovery(writer http.ResponseWriter, requ
 	if elapsed < 0 {
 		elapsed = 0
 	}
-	writeDiscoveryResponse(writer, discoverResponse{Sources: sources, Meta: discoverMeta{
+	writeDiscoveryResponse(writer, discoverResponse{Sources: sources, YieldTrace: output.YieldTrace, Meta: discoverMeta{
 		Provider: "public", Profile: agent.DiscoveryProfileEvents,
 		TruncationReasons: append([]string{}, reasons...), ModelCalls: output.ModelCalls,
 		PromptTokens: output.PromptTokens, CompletionTokens: output.CompletionTokens,

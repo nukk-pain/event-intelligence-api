@@ -1,9 +1,12 @@
 package eventscoutserver
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -15,6 +18,11 @@ func TestHandler_returns_discovery_envelope_when_goal_is_valid(t *testing.T) {
 	runner := &stubRunner{output: DiscoveryOutput{
 		Sources:           []agent.DiscoveredSource{{URL: "https://events.example/robotics", Title: "Robotics Expo", Reason: "official"}},
 		TruncationReasons: []string{"depth_limit"}, ModelCalls: 3, PromptTokens: 120, CompletionTokens: 45,
+		YieldTrace: agent.YieldTrace{
+			Outcome: agent.YieldOutcomeAccepted, TerminalReason: agent.YieldTerminalProposalDone,
+			CrawlerValidated: 2, Offered: 1, PrefilterDropped: 1, ProposalCalls: 2, JudgeCalls: 1,
+			JudgeEntriesParsed: 1, JudgeEntriesDropped: 0, Accepted: 1,
+		},
 	}}
 	handler, _ := newTestHandler(t, runner, defaultTestHandlerSettings())
 
@@ -48,6 +56,13 @@ func TestHandler_returns_discovery_envelope_when_goal_is_valid(t *testing.T) {
 	}
 	if recorder.Header().Get("Access-Control-Allow-Credentials") != "" {
 		t.Fatalf("credentialed CORS unexpectedly enabled")
+	}
+	golden, err := os.ReadFile(filepath.Join("testdata", "public-yield-trace.json"))
+	if err != nil {
+		t.Fatalf("read golden: %v", err)
+	}
+	if !bytes.Equal(recorder.Body.Bytes(), bytes.TrimSuffix(golden, []byte("\n"))) {
+		t.Fatalf("server output differs from golden\ngot:  %s\nwant: %s", recorder.Body.Bytes(), golden)
 	}
 }
 
