@@ -2,6 +2,7 @@ package publicdiscovery
 
 import (
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -147,6 +148,27 @@ func (state *crawlState) candidateLimitFor(protocol Protocol) int {
 // pendingSeeds counts enqueued seeds that have not yet reached an outcome.
 func (state *crawlState) pendingSeeds() int {
 	return max(state.seedsTotal-state.budget.SeedOutcomes.Total(), 0)
+}
+
+// backfillCandidateTitle gives a stored candidate the title of the page the
+// crawler already fetched. Sitemaps and bare links carry no title, so without
+// this those candidates stay untitled and a profile that requires a title
+// discards every one of them before the model can judge it. A title the
+// discovery protocol already supplied is authoritative and is never replaced.
+func (state *crawlState) backfillCandidateTitle(canonicalURL, title string) {
+	title = strings.TrimSpace(title)
+	if title == "" || canonicalURL == "" {
+		return
+	}
+	for index := range state.candidates {
+		if state.candidates[index].URL != canonicalURL {
+			continue
+		}
+		if state.candidates[index].Title == "" {
+			state.candidates[index].Title = title
+		}
+		return
+	}
 }
 
 func (state *crawlState) validatedCandidates() []Candidate {

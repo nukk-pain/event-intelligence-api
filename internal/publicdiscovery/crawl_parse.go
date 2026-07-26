@@ -108,6 +108,8 @@ func (state *crawlState) processHTMLResult(item frontierItem, result *fetch.Resu
 		} else {
 			state.recordSeedOutcome(item, rejection)
 		}
+	} else {
+		state.backfillCandidateTitle(item.canonicalURL, title)
 	}
 	state.addParsedLinks(parsedLinkSource{item: item, parentURL: parentURL, fetchedAt: fetchedAt}, links)
 	state.addResultLinks(item, result)

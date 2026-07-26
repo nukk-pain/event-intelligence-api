@@ -65,11 +65,11 @@ func TestAgentSearchTool_yieldSnapshotSeedCountIsRequestLocal(t *testing.T) {
 	}
 }
 
-// The live zero-source run could not say whether the crawler produced nothing
-// usable or the model rejected everything. This pins the answer for the real
-// shape that caused it: sitemap children carry no title and die at the
-// prefilter, while the titled seed candidate survives to the model.
-func TestPublicYield_sitemapDropsAreAttributedToMissingTitle(t *testing.T) {
+// Sitemap children used to die at the prefilter for want of a title, which is
+// what starved the model. Now that the crawler backfills each fetched page's
+// title, they reach the model alongside the seed, so discovery can return a
+// source the catalog never named.
+func TestPublicYield_sitemapChildrenReachTheModel(t *testing.T) {
 	// Given
 	mux := http.NewServeMux()
 	server := newFixtureServer(t, mux)
@@ -110,16 +110,19 @@ func TestPublicYield_sitemapDropsAreAttributedToMissingTitle(t *testing.T) {
 		t.Fatalf("DiscoverWithOptions: %v", err)
 	}
 	reasons := run.YieldTrace.PrefilterReasons
-	if reasons != (agent.PrefilterReasons{MissingTitle: 2}) {
-		t.Fatalf("prefilter reasons = %#v, want both sitemap children attributed to a missing title", reasons)
+	if reasons != (agent.PrefilterReasons{}) {
+		t.Fatalf("prefilter reasons = %#v, want no candidate dropped once titles are backfilled", reasons)
 	}
 	if reasons.Total() != run.YieldTrace.PrefilterDropped {
 		t.Fatalf("reason total = %d, want prefilter dropped = %d", reasons.Total(), run.YieldTrace.PrefilterDropped)
 	}
 	snapshot := tool.YieldSnapshot()
-	if snapshot.SeedCandidates != 1 || run.YieldTrace.Offered != 1 {
-		t.Fatalf("seed candidates = %d, offered = %d, want the titled seed candidate to reach the model",
-			snapshot.SeedCandidates, run.YieldTrace.Offered)
+	if snapshot.SeedCandidates != 1 {
+		t.Fatalf("seed candidates = %d, want the seed page stored", snapshot.SeedCandidates)
+	}
+	if run.YieldTrace.Offered != 3 {
+		t.Fatalf("offered = %d, want the seed and both sitemap children offered to the model",
+			run.YieldTrace.Offered)
 	}
 }
 
