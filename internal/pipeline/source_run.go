@@ -238,5 +238,6 @@ func (p *Pipeline) normalizeParsed(ctx context.Context, f *fetch.Fetcher, ref so
 	if nerr != nil {
 		return nil, "normalize", fmt.Errorf("normalize %s: %w", ref.EventID, nerr)
 	}
+	p.runEnricher(ctx, e, parsed)
 	return e, "", nil
 }

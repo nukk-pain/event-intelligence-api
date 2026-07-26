@@ -12,11 +12,13 @@ import (
 	"sort"
 	"time"
 
+	"github.com/smpain/event-intelligence-api/internal/agent"
 	"github.com/smpain/event-intelligence-api/internal/api"
 	"github.com/smpain/event-intelligence-api/internal/cfpurge"
 	"github.com/smpain/event-intelligence-api/internal/config"
 	"github.com/smpain/event-intelligence-api/internal/fetch"
 	"github.com/smpain/event-intelligence-api/internal/pipeline"
+	"github.com/smpain/event-intelligence-api/internal/solarenrich"
 	"github.com/smpain/event-intelligence-api/internal/sources"
 	"github.com/smpain/event-intelligence-api/internal/sources/benchmark"
 	"github.com/smpain/event-intelligence-api/internal/sources/coex"
@@ -173,6 +175,26 @@ func runIngest(cfg config.Config) error {
 		WithSourceConcurrency(cfg.SourceConcurrency).
 		WithDetailWorkers(cfg.DetailWorkers).
 		WithOfficialFetcher(officialFetcher)
+
+	// Solar enrichment is opt-in and ingest-only. Without both the operator key
+	// and the explicit switch, ingest stays exactly as deterministic as before.
+	// A misconfiguration must not silently disable it, so it is a hard error.
+	if cfg.SolarEnrich {
+		enricher, err := solarenrich.New(solarenrich.Config{
+			Backend: agent.Backend{
+				Name: "solar", BaseURL: cfg.SolarBaseURL,
+				Model: cfg.SolarModel, APIKey: cfg.SolarAPIKey,
+			},
+			MaxCalls: cfg.SolarMaxCalls, MaxTokens: 256, CallTimeout: 20 * time.Second,
+		})
+		if err != nil {
+			return fmt.Errorf("solar enrichment: %w", err)
+		}
+		p = p.WithEnricher(enricher)
+		defer func() {
+			log.Printf("solar enrichment: %d call(s), %d event(s) filled", enricher.Calls(), enricher.Filled())
+		}()
+	}
 
 	// WALL-CLOCK DEADLINE: cap the whole crawl so a hung Discover or a slow
 	// cumulative detail fetch can never let one run exceed the cron interval.

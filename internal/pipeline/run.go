@@ -69,6 +69,9 @@ type Pipeline struct {
 	sourceConcurrency int
 	detailWorkers     int
 	officialFetcher   *fetch.Fetcher
+	// enricher optionally resolves fields the deterministic parse could not.
+	// Nil keeps ingest fully deterministic.
+	enricher EventEnricher
 	// now returns the batch verification timestamp (ISO8601). Overridable in
 	// tests for determinism; defaults to time.Now in RFC3339.
 	now func() string

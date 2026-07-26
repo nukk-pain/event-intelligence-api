@@ -492,3 +492,29 @@ contract and must not acquire live LLM work as a side effect.
   the prefilter; that remains intended, and no synthetic title is invented.
 - This does not promise a minimum live result. It removes a structural
   condition that made zero unavoidable.
+
+### Solar enrichment inside batch ingest (2026-07-27)
+
+- Status: accepted
+- Context: the deployed binary never called Solar. `cmd/eventsintel`,
+  `internal/pipeline`, `internal/enrich`, and `internal/normalize` did not
+  import `internal/agent`, so events.nukk.net ran purely on the deterministic
+  crawler and the Solar work lived only in standalone commands.
+- Decision: the pipeline gained an optional `EventEnricher` seam. It runs after
+  normalization, inside batch ingest only, and the pipeline never names a
+  concrete backend, exactly as it never names a concrete source adapter.
+- The concrete `internal/solarenrich` implementation is deliberately narrow. It
+  fills `start_date` and `end_date` and nothing else, because those are
+  checkable against an ISO shape and are what Korean venue pages express most
+  variably. A non-ISO answer is discarded rather than stored.
+- It reads the raw scraped strings the normalizer failed to interpret, so no
+  second fetch is made. Contact patterns are stripped before the text leaves
+  the process.
+- It never overwrites a source-derived value, only clears a field it actually
+  filled, and appends an `eventsintel/solar-enrich` provenance entry with
+  `date_confidence` lowered to `low`.
+- Bounded and opt-in. It requires both `EVENTSINTEL_SOLAR_API_KEY` and
+  `EVENTSINTEL_SOLAR_ENRICH=1`, caps model calls per run, applies a per-call
+  timeout, and treats any error as non-fatal so the deterministic row stands.
+- The read path stays LLM-free. `internal/api` is unchanged and is verified
+  unchanged as a gate.

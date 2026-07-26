@@ -44,6 +44,16 @@ type Config struct {
 	// DetailWorkers caps per-source detail fetch/parse workers.
 	DetailWorkers int `json:"detail_workers"`
 
+	// SolarEnrich turns on ingest-time date enrichment. It requires
+	// SolarAPIKey as well, so a key alone never starts spending.
+	SolarEnrich bool `json:"solar_enrich"`
+	// SolarAPIKey is an operator secret. It is never logged or serialized.
+	SolarAPIKey  string `json:"-"`
+	SolarBaseURL string `json:"solar_base_url"`
+	SolarModel   string `json:"solar_model"`
+	// SolarMaxCalls caps model calls for one ingest run.
+	SolarMaxCalls int `json:"solar_max_calls"`
+
 	// DBPath is the SQLite file path.
 	DBPath string `json:"db_path"`
 
@@ -84,6 +94,9 @@ func Default() Config {
 		RateLimitPerMinute:   30,
 		SourceConcurrency:    2,
 		DetailWorkers:        4,
+		SolarBaseURL:         "https://api.upstage.ai/v1",
+		SolarModel:           "solar-open2",
+		SolarMaxCalls:        40,
 		DBPath:               "eventsintel.db",
 		LockPath:             "eventsintel.lock",
 		HTTPAddr:             ":8080",
@@ -117,6 +130,19 @@ func FromEnv() Config {
 	if v := os.Getenv("EVENTSINTEL_SOURCE_CONCURRENCY"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			c.SourceConcurrency = n
+		}
+	}
+	c.SolarAPIKey = os.Getenv("EVENTSINTEL_SOLAR_API_KEY")
+	c.SolarEnrich = os.Getenv("EVENTSINTEL_SOLAR_ENRICH") == "1" && c.SolarAPIKey != ""
+	if v := os.Getenv("EVENTSINTEL_SOLAR_BASE_URL"); v != "" {
+		c.SolarBaseURL = v
+	}
+	if v := os.Getenv("EVENTSINTEL_SOLAR_MODEL"); v != "" {
+		c.SolarModel = v
+	}
+	if v := os.Getenv("EVENTSINTEL_SOLAR_MAX_CALLS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			c.SolarMaxCalls = n
 		}
 	}
 	if v := os.Getenv("EVENTSINTEL_DETAIL_WORKERS"); v != "" {
