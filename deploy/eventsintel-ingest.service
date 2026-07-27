@@ -18,5 +18,9 @@ Environment=EVENTSINTEL_INGEST_DEADLINE=20m
 # host, never in this unit or the repo. Absent file = enrichment off, which is
 # also the rollback: remove the file and restart nothing.
 EnvironmentFile=-/srv/developer/events-intel/solar.env
+# Cloudflare purge credentials, same host-only pattern. This reference was
+# silently lost once when the unit was overwritten from the repo copy, which is
+# why both env files are now recorded here rather than only on the host.
+EnvironmentFile=-/srv/developer/events-intel/cf-purge.env
 # The binary also takes a flock single-flight lock; the timer + lock together
 # guarantee no overlapping ingest runs.
