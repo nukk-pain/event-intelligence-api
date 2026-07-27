@@ -42,7 +42,7 @@ func TestEnrich_fillsOnlyMissingDatesAndRecordsProvenance(t *testing.T) {
 	if !hasField(event.MissingFields, "summary") {
 		t.Fatalf("missing fields = %v, want unrelated missing fields preserved", event.MissingFields)
 	}
-	if len(event.Sources) != 2 || event.Sources[1].Publisher != "eventsintel/solar-enrich" {
+	if len(event.Sources) != 2 || event.Sources[1].Publisher != ProvenancePublisher {
 		t.Fatalf("sources = %#v, want the enrichment recorded as provenance", event.Sources)
 	}
 	if calls.Load() != 1 {
