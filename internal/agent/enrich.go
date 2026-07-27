@@ -50,10 +50,22 @@ the links most likely to contain: registration/application, registration
 deadline, booth/exhibitor info, or a startup program. Return ONLY JSON:
 {"pick": [<url>, ...]}. Pick only clearly relevant links; pick none if none fit.`
 
-const enrichPrompt = `From the linked page text below, extract founder-actionable
-facts as a JSON object with exactly these keys:
-register_url, register_deadline, booth_info, booth_deadline,
-startup_program.
+// The action facts are asked for in two passes rather than one. A single
+// prompt covering both audiences measurably diluted the attendee fields when
+// the exhibitor ones were added: registration_deadline coverage fell as
+// booth_deadline coverage appeared. Attendee and exhibitor information also
+// tends to live on different pages, so a focused ask reads better.
+const attendeeEnrichPrompt = `From the linked page text below, extract facts an
+ATTENDEE needs, as a JSON object with exactly these keys:
+register_url, register_deadline.
+Rules: use only facts present in the text; null if absent; never invent; keep
+values short and factual. Output the JSON object only.`
+
+const exhibitorEnrichPrompt = `From the linked page text below, extract facts a
+COMPANY CONSIDERING EXHIBITING needs, as a JSON object with exactly these keys:
+booth_info, booth_deadline, startup_program.
+booth_deadline is the exhibitor application cutoff, which is not the attendee
+registration deadline.
 Rules: use only facts present in the text; null if absent; never invent; keep
 values short and factual. Output the JSON object only.`
 
@@ -101,7 +113,8 @@ func Run(ctx context.Context, be Backend, mainText string, links []LinkRef, link
 	if err != nil {
 		return brief, tr, fmt.Errorf("enrich: %w", err)
 	}
-	tr.Calls++
+	// The enrichment step is two focused passes, so it counts as two calls.
+	tr.Calls += 2
 	tr.Usage.PromptTokens += u3.PromptTokens
 	tr.Usage.CompletionTokens += u3.CompletionTokens
 
@@ -150,21 +163,41 @@ func selectLinks(ctx context.Context, be Backend, facts Facts, links []LinkRef, 
 	return chosen, u, nil
 }
 
-// enrich reads the chosen link texts and extracts action facts.
+// enrich reads the chosen link texts and extracts action facts in two focused
+// passes. A failure in either pass keeps whatever the other returned, since a
+// partial brief is more useful than none.
 func enrich(ctx context.Context, be Backend, chosen []LinkRef, maxTokens int, timeout time.Duration) (map[string]any, Usage, error) {
 	var sb strings.Builder
 	for _, l := range chosen {
 		fmt.Fprintf(&sb, "URL: %s\n%s\n\n", l.URL, StripContacts(l.Text))
 	}
-	content, u, _, err := be.Chat(ctx, enrichPrompt, sb.String(), maxTokens, timeout)
-	if err != nil {
-		return nil, u, err
-	}
+	text := sb.String()
 	out := map[string]any{}
-	if js := LastJSONObject(content); js != "" {
-		_ = json.Unmarshal([]byte(js), &out)
+	var usage Usage
+	var firstErr error
+	for _, prompt := range []string{attendeeEnrichPrompt, exhibitorEnrichPrompt} {
+		content, u, _, err := be.Chat(ctx, prompt, text, maxTokens, timeout)
+		usage.PromptTokens += u.PromptTokens
+		usage.CompletionTokens += u.CompletionTokens
+		if err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
+		}
+		if js := LastJSONObject(content); js != "" {
+			pass := map[string]any{}
+			if json.Unmarshal([]byte(js), &pass) == nil {
+				for key, value := range pass {
+					out[key] = value
+				}
+			}
+		}
 	}
-	return out, u, nil
+	if len(out) == 0 && firstErr != nil {
+		return nil, usage, firstErr
+	}
+	return out, usage, nil
 }
 
 func strPtr(v any) *string {
