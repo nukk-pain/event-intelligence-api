@@ -72,6 +72,9 @@ type Pipeline struct {
 	// enricher optionally resolves fields the deterministic parse could not.
 	// Nil keeps ingest fully deterministic.
 	enricher EventEnricher
+	// actionEnricher optionally resolves action signals the deterministic
+	// second-hop extractor could not find.
+	actionEnricher ActionEnricher
 	// now returns the batch verification timestamp (ISO8601). Overridable in
 	// tests for determinism; defaults to time.Now in RFC3339.
 	now func() string

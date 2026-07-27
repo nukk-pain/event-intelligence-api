@@ -3,6 +3,7 @@ package solarenrich
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -163,6 +164,31 @@ func fakeBackend(t *testing.T, content string) (agent.Backend, *atomic.Int32, fu
 	t.Cleanup(server.Close)
 	return agent.Backend{Name: "solar", BaseURL: server.URL, Model: "solar-test"},
 		&calls, func() string { return lastBody.Load().(string) }
+}
+
+// scriptedBackend answers each call in order, which the multi-hop agent loop
+// needs: extraction, then link selection, then action enrichment.
+func scriptedBackend(t *testing.T, responses ...string) (agent.Backend, *atomic.Int32) {
+	t.Helper()
+	var calls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		index := int(calls.Add(1)) - 1
+		content := "{}"
+		if index < len(responses) {
+			content = responses[index]
+		}
+		_, _ = io.Copy(io.Discard, r.Body)
+		response := map[string]any{
+			"choices": []map[string]any{{"message": map[string]string{"content": content}}},
+			"usage":   map[string]int{"prompt_tokens": 1, "completion_tokens": 1},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			http.Error(w, "encode", http.StatusInternalServerError)
+		}
+	}))
+	t.Cleanup(server.Close)
+	return agent.Backend{Name: "solar", BaseURL: server.URL, Model: "solar-test"}, &calls
 }
 
 func hasField(fields []string, key string) bool {

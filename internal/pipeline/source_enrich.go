@@ -28,6 +28,14 @@ func (p *Pipeline) enrichActions(ctx context.Context, f *fetch.Fetcher, parsed *
 		return
 	}
 	parsed.Actions = mergeActionSignals(parsed.Actions, signals)
+	// The deterministic extractor leaves most action fields empty on real venue
+	// pages, which is exactly the gap the multi-hop agent was built to close.
+	// It reads the page already in hand, so nothing is fetched twice.
+	if p.actionEnricher != nil {
+		if enriched, aerr := p.actionEnricher.EnrichActions(ctx, res.URL, res.Body, parsed.Actions); aerr == nil {
+			parsed.Actions = mergeActionSignals(parsed.Actions, enriched)
+		}
+	}
 	parsed.ExtraSources = append(parsed.ExtraSources, sources.ParsedSource{
 		URL:         res.URL,
 		Type:        "organizer",

@@ -518,3 +518,25 @@ contract and must not acquire live LLM work as a side effect.
   timeout, and treats any error as non-fatal so the deterministic row stands.
 - The read path stays LLM-free. `internal/api` is unchanged and is verified
   unchanged as a gate.
+
+### Multi-hop action enrichment in ingest (2026-07-27)
+
+- Status: accepted
+- Evidence: a full scan of the 670 production events showed the date fields the
+  first enricher targeted are 0% missing, while the action fields are 80-100%
+  missing. `registration_deadline` 100%, `exhibitor_deadline` 99.9%,
+  `actions.*` 96-99%, `register_url` 82%, `exhibit_url` 80%, `cost_hint` 80%.
+  The deterministic extractor is already good at dates and poor at actions.
+- Decision: the pipeline gained a second seam, `ActionEnricher`, invoked from
+  the existing official-page second hop. The multi-hop agent loop that already
+  existed as a CLI is now the ingest path for those fields.
+- It reads the page the pipeline already fetched, so it costs no extra request
+  of its own, and it follows links through the caller-supplied official fetcher
+  so it inherits the same allowlist, robots policy, and rate limits.
+- Only signals still nil are filled. A non-ISO deadline is discarded rather
+  than stored, and a deterministic finding is never overwritten.
+- Bounded by the same per-run ceiling and per-call timeout, and any error is
+  non-fatal. One attempt is up to three model calls.
+- Measured on a bounded live run of 40 events: 15 attempts, 4 events filled.
+  The date enricher made 1 attempt and filled nothing, consistent with the
+  scan. It is retained but is effectively inert on current sources.

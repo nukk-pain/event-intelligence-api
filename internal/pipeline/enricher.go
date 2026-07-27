@@ -20,6 +20,24 @@ type EventEnricher interface {
 	Enrich(ctx context.Context, event *model.Event, sourceText string) error
 }
 
+// ActionEnricher resolves action signals the deterministic extractor could not
+// find on an official event page. It runs inside batch ingest only, on a page
+// the pipeline has already fetched, so it costs no extra request of its own
+// beyond the links it chooses to follow.
+//
+// It must fill only signals that are still nil and must never overwrite a
+// deterministic finding. A returned error is not fatal.
+type ActionEnricher interface {
+	EnrichActions(ctx context.Context, pageURL string, body []byte, current sources.ActionSignals) (sources.ActionSignals, error)
+}
+
+// WithActionEnricher attaches an optional second-hop action enricher. Nil keeps
+// action extraction fully deterministic.
+func (p *Pipeline) WithActionEnricher(e ActionEnricher) *Pipeline {
+	p.actionEnricher = e
+	return p
+}
+
 // WithEnricher attaches an optional ingest-time enricher. A nil enricher keeps
 // the pipeline fully deterministic.
 func (p *Pipeline) WithEnricher(e EventEnricher) *Pipeline {

@@ -191,8 +191,32 @@ func runIngest(cfg config.Config) error {
 			return fmt.Errorf("solar enrichment: %w", err)
 		}
 		p = p.WithEnricher(enricher)
+
+		// The action fields are where the deterministic extractor actually
+		// falls short on live venue pages, so this is the enrichment that
+		// carries the run. It reuses the official fetcher and therefore the
+		// same allowlist, robots policy, and rate limits.
+		actions, err := solarenrich.NewActionEnricher(solarenrich.Config{
+			Backend: agent.Backend{
+				Name: "solar", BaseURL: cfg.SolarBaseURL,
+				Model: cfg.SolarModel, APIKey: cfg.SolarAPIKey,
+			},
+			MaxCalls: cfg.SolarMaxCalls, MaxTokens: 512, CallTimeout: 20 * time.Second,
+		}, func(fetchCtx context.Context, pageURL string) (string, error) {
+			res, ferr := officialFetcher.Fetch(fetchCtx, pageURL, fetch.Conditional{})
+			if ferr != nil || res.StatusCode != 200 {
+				return "", ferr
+			}
+			return string(res.Body), nil
+		})
+		if err != nil {
+			return fmt.Errorf("solar action enrichment: %w", err)
+		}
+		p = p.WithActionEnricher(actions)
+
 		defer func() {
-			log.Printf("solar enrichment: %d call(s), %d event(s) filled", enricher.Calls(), enricher.Filled())
+			log.Printf("solar enrichment: dates %d call(s)/%d filled, actions %d call(s)/%d filled",
+				enricher.Calls(), enricher.Filled(), actions.Calls(), actions.Filled())
 		}()
 	}
 
