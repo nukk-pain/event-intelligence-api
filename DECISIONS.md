@@ -556,3 +556,23 @@ contract and must not acquire live LLM work as a side effect.
   rose from 24 to 40, which is 11.1% to 18.5%.
 - The deterministic parser in `internal/normalize` is unchanged. This applies
   only to what the model returns.
+
+### Remote MCP endpoint at events.nukk.net/mcp (2026-07-27)
+
+- Status: accepted
+- Context: the MCP server was the one place a real user could talk to the
+  agent directly, and it required a Go toolchain. That made it developer-only.
+- Decision: `eventmcp -http` serves the streamable HTTP transport as a separate
+  daemon on 127.0.0.1:3008, and Caddy routes only the `/mcp` path to it. The
+  normal read API keeps its own process and its LLM-free guarantee; the hard
+  constraint is untouched because this is a distinct, explicitly-invoked tool
+  endpoint, the same standing the anonymous eventscout demo already has.
+- The server is stateless: no session id, GET answers 405, one POST is one
+  JSON-RPC message. `ask_events` runs on the operator's Solar key, refuses to
+  start without it, and is the only method that draws down the per-client
+  quota (10 per ten minutes, 60 per day, keyed by the Caddy-forwarded client
+  address and only trusted from a loopback peer). `search_events` stays
+  LLM-free and unmetered.
+- Live verification: initialize, tools/list, search_events, and a real
+  ask_events ("다음 달 서울 AI 행사" → ai/서울/2026-08 filter, 7 events)
+  through the public URL, with `deploy/verify.sh` still ALL CHECKS PASSED.

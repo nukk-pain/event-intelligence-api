@@ -35,8 +35,11 @@ const protocolVersion = "2025-06-18"
 var (
 	// query runs a Filter against the data source (live API or fixture) and
 	// returns matching events. Set in main once the source is chosen.
-	query     func(agent.Filter) ([]agent.Event, error)
-	refDate   string
+	query func(agent.Filter) ([]agent.Event, error)
+	// refDateFn returns the reference date for relative queries. The stdio CLI
+	// pins it per process; the HTTP server must not, since it runs for days and
+	// "다음 달" asked in September must not resolve against a July start date.
+	refDateFn func() string
 	maxTokens = 3000
 	timeout   = 90 * time.Second
 )
@@ -45,8 +48,16 @@ func main() {
 	source := flag.String("source", "api", `"api" (live read API) or a fixture file path`)
 	apiBase := flag.String("api-base", getenv("EVENTSINTEL_API_BASE", "https://events.nukk.net"), "read API base URL when -source=api")
 	max := flag.Int("max", 200, "max events to pull per query")
-	flag.StringVar(&refDate, "today", time.Now().Format("2006-01-02"), "reference date for relative queries")
+	today := flag.String("today", "", "reference date for relative queries (default: current date at each query)")
+	httpAddr := flag.String("http", "", "serve MCP over streamable HTTP on this address instead of stdio (requires EVENTSINTEL_SOLAR_API_KEY)")
 	flag.Parse()
+
+	if *today != "" {
+		pinned := *today
+		refDateFn = func() string { return pinned }
+	} else {
+		refDateFn = func() string { return time.Now().Format("2006-01-02") }
+	}
 
 	if *source == "api" {
 		query = func(f agent.Filter) ([]agent.Event, error) {
@@ -66,6 +77,13 @@ func main() {
 		}
 		query = func(f agent.Filter) ([]agent.Event, error) { return agent.Match(fixture, f), nil }
 		fmt.Fprintf(os.Stderr, "eventmcp: loaded %d fixture events, ready on stdio\n", len(fixture))
+	}
+	if *httpAddr != "" {
+		if err := serveHTTP(*httpAddr); err != nil {
+			fmt.Fprintln(os.Stderr, "eventmcp http:", err)
+			os.Exit(1)
+		}
+		return
 	}
 	serve(os.Stdin, os.Stdout)
 }
@@ -206,7 +224,7 @@ func askEvents(question string) (any, *rpcErr, bool) {
 	if len(backends) == 0 {
 		return toolError("no LLM backend configured (set EVENTSINTEL_LOCAL_BASE_URL or EVENTSINTEL_SOLAR_API_KEY)"), nil, false
 	}
-	f, _, err := agent.ParseQuery(context.Background(), backends[0], question, refDate, maxTokens, timeout)
+	f, _, err := agent.ParseQuery(context.Background(), backends[0], question, refDateFn(), maxTokens, timeout)
 	if err != nil {
 		return toolError("parse question: " + err.Error()), nil, false
 	}

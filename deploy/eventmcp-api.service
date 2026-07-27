@@ -1,0 +1,19 @@
+[Unit]
+Description=eventmcp streamable-HTTP MCP server (live event tools for AI agents)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=root
+WorkingDirectory=/srv/developer/events-intel
+ExecStart=/srv/developer/events-intel/eventsintel-mcp -http 127.0.0.1:3008 -api-base http://127.0.0.1:3005
+Restart=on-failure
+RestartSec=5
+# Solar key for ask_events; same host-only file the ingest unit sources.
+# The default local A/B backend does not exist on the VPS; without this the
+# backend picker tries 127.0.0.1:18900 first and every ask fails.
+Environment=EVENTSINTEL_LOCAL_BASE_URL=off
+EnvironmentFile=/srv/developer/events-intel/solar.env
+
+[Install]
+WantedBy=multi-user.target

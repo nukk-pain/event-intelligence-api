@@ -5,5 +5,16 @@
 # Mirrors the existing cold/holiday/calendar.nukk.net reverse-proxy pattern.
 
 events.nukk.net {
-	reverse_proxy 127.0.0.1:3005
+	# MCP transport is a separate daemon so the normal read API stays LLM-free;
+	# only the /mcp path (and its health probe) reaches it.
+	handle /mcp {
+		reverse_proxy 127.0.0.1:3008
+	}
+	handle /mcp/healthz {
+		rewrite * /healthz
+		reverse_proxy 127.0.0.1:3008
+	}
+	handle {
+		reverse_proxy 127.0.0.1:3005
+	}
 }
