@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 	"sync/atomic"
 
 	"github.com/PuerkitoBio/goquery"
@@ -117,10 +118,24 @@ func (a *ActionEnricher) EnrichActions(ctx context.Context, pageURL string, body
 		return out, err
 	}
 	defer a.release()
+	// Collect every page the agent reads. A model-supplied deadline is stored
+	// only when its date literally appears in one of these texts, so nothing
+	// enters the event contract that the read pages cannot support.
+	var readMu sync.Mutex
+	readTexts := []string{text}
+	collecting := func(fetchCtx context.Context, url string) (string, error) {
+		page, ferr := a.fetcher(fetchCtx, url)
+		if ferr == nil && strings.TrimSpace(page) != "" {
+			readMu.Lock()
+			readTexts = append(readTexts, page)
+			readMu.Unlock()
+		}
+		return page, ferr
+	}
 	callCtx, cancel := context.WithTimeout(ctx, a.config.CallTimeout)
 	defer cancel()
 	brief, _, err := agent.Run(callCtx, a.config.Backend, text, links,
-		agent.LinkFetcher(a.fetcher), a.config.MaxTokens, a.config.CallTimeout)
+		agent.LinkFetcher(collecting), a.config.MaxTokens, a.config.CallTimeout)
 	if err != nil {
 		return out, err
 	}
@@ -138,7 +153,7 @@ func (a *ActionEnricher) EnrichActions(ctx context.Context, pageURL string, body
 	// shapes that carry an explicit year, month, and day; anything without one
 	// is still rejected rather than guessed at.
 	if current.RegistrationDeadline == nil {
-		if iso, ok := normalizeDeadline(deref(brief.RegisterDeadline)); ok {
+		if iso, ok := normalizeDeadline(deref(brief.RegisterDeadline)); ok && dateEvidence(readTexts, iso) {
 			out.RegistrationDeadline = &iso
 			changed = true
 		}
@@ -150,7 +165,7 @@ func (a *ActionEnricher) EnrichActions(ctx context.Context, pageURL string, body
 	// The exhibitor cutoff is a different date from the attendee one, and it is
 	// the one a company weighing a booth needs.
 	if current.ExhibitorDeadline == nil {
-		if iso, ok := normalizeDeadline(deref(brief.BoothDeadline)); ok {
+		if iso, ok := normalizeDeadline(deref(brief.BoothDeadline)); ok && dateEvidence(readTexts, iso) {
 			out.ExhibitorDeadline = &iso
 			changed = true
 		}

@@ -168,7 +168,9 @@ func newActionEnricher(t *testing.T, backend agent.Backend, maxCalls int) *Actio
 	t.Helper()
 	enricher, err := NewActionEnricher(Config{
 		Backend: backend, MaxCalls: maxCalls, MaxTokens: 256, CallTimeout: 5 * time.Second,
-	}, func(context.Context, string) (string, error) { return "링크 페이지 본문", nil })
+	}, func(context.Context, string) (string, error) {
+		return "참가 등록 마감 2027년 1월 31일, 부스 신청 2026년 12월 15일까지", nil
+	})
 	if err != nil {
 		t.Fatalf("NewActionEnricher: %v", err)
 	}
@@ -276,5 +278,32 @@ func TestEnrichActions_keepsDeadlinesDistinct(t *testing.T) {
 	}
 	if out.ExhibitorDeadline == nil || *out.ExhibitorDeadline != "2026-12-15" {
 		t.Fatalf("exhibitor deadline = %v, want the booth date", out.ExhibitorDeadline)
+	}
+}
+
+// A deadline the model asserts but no read page contains must be discarded.
+// The accuracy audit found 26 stored deadlines with page evidence for only 3,
+// and one that named the opposite deadline type; this gate is the fix.
+func TestEnrichActions_discardsDeadlineWithoutPageEvidence(t *testing.T) {
+	// Given: the model invents a date that appears on no read page.
+	backend, _ := scriptedBackend(t,
+		`{"name":"2027 AI 로봇 산업전"}`,
+		`{"pick":["https://venue.example/register"]}`,
+		`{"register_deadline":"2027-03-03","booth_deadline":"2027-04-04"}`)
+	enricher := newActionEnricher(t, backend, 4)
+
+	// When
+	out, err := enricher.EnrichActions(context.Background(),
+		"https://venue.example/event", []byte(officialPage), sources.ActionSignals{})
+
+	// Then
+	if err != nil {
+		t.Fatalf("EnrichActions: %v", err)
+	}
+	if out.RegistrationDeadline != nil {
+		t.Fatalf("registration deadline = %q, want an unevidenced date discarded", *out.RegistrationDeadline)
+	}
+	if out.ExhibitorDeadline != nil {
+		t.Fatalf("exhibitor deadline = %q, want an unevidenced date discarded", *out.ExhibitorDeadline)
 	}
 }

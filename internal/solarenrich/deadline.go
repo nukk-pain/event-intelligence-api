@@ -34,3 +34,29 @@ func normalizeDeadline(raw string) (string, bool) {
 	}
 	return fmt.Sprintf("%04d-%02d-%02d", year, month, day), true
 }
+
+// dateEvidence reports whether the ISO date is actually present, in any of the
+// shapes Korean pages write it, in text the agent read. A deadline the model
+// asserts but no read page contains is discarded: an accuracy audit of 26
+// model-supplied deadlines found only 3 with page evidence and 1 that named
+// the opposite deadline type, which is too wrong to store unchecked.
+func dateEvidence(texts []string, iso string) bool {
+	match := isoDate.FindStringSubmatch(iso)
+	if match == nil {
+		return false
+	}
+	parts := strings.SplitN(iso, "-", 3)
+	year, month, day := parts[0], strings.TrimPrefix(parts[1], "0"), strings.TrimPrefix(parts[2], "0")
+	patterns := []*regexp.Regexp{
+		regexp.MustCompile(year + `\s*[-./년]\s*0?` + month + `\s*[-./월]\s*0?` + day),
+		regexp.MustCompile(`(^|[^0-9])0?` + month + `\s*[./월]\s*0?` + day + `($|[^0-9])`),
+	}
+	for _, text := range texts {
+		for _, pattern := range patterns {
+			if pattern.MatchString(text) {
+				return true
+			}
+		}
+	}
+	return false
+}

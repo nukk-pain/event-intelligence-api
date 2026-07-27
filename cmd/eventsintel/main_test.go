@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/smpain/event-intelligence-api/internal/pipeline"
+	"github.com/smpain/event-intelligence-api/internal/solarenrich"
 )
 
 func TestIngestChangedData(t *testing.T) {
@@ -50,5 +51,15 @@ func TestIngestChangedData(t *testing.T) {
 				t.Errorf("ingestChangedData = %v, want %v", got, c.want)
 			}
 		})
+	}
+}
+
+// The pipeline stays backend-agnostic, so it owns its own copy of the
+// enrichment publisher string; this is the one package that knows both sides
+// and may pin their equality.
+func TestEnrichmentPublisherStringsAgree(t *testing.T) {
+	if pipeline.EnrichmentPublisher != solarenrich.ProvenancePublisher {
+		t.Fatalf("pipeline %q != solarenrich %q",
+			pipeline.EnrichmentPublisher, solarenrich.ProvenancePublisher)
 	}
 }

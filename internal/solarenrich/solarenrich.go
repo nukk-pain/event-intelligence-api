@@ -23,6 +23,11 @@ import (
 
 var ErrInvalidConfig = errors.New("solarenrich: invalid configuration")
 
+// ProvenancePublisher marks values written by the evidence-gated enrichers.
+// The /v2 suffix separates them from pre-gate values, which migration 0010
+// revokes by matching the old publisher string exactly.
+const ProvenancePublisher = "eventsintel/solar-enrich/v2"
+
 // isoDate is the only shape an enriched date may take. Anything else is
 // discarded rather than stored, so a model that answers in prose cannot put
 // unparseable text into the event contract.
@@ -124,7 +129,7 @@ func (e *Enricher) Enrich(ctx context.Context, event *model.Event, sourceText st
 	event.Sources = append(event.Sources, model.Source{
 		URL:       primarySourceURL(event),
 		Type:      "venue",
-		Publisher: "eventsintel/solar-enrich",
+		Publisher: ProvenancePublisher,
 	})
 	event.DateConfidence = "low"
 	e.filled.Add(1)

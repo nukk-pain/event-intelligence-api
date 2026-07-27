@@ -136,6 +136,9 @@ CREATE TABLE events (
     missing_fields TEXT,
     updated_at TEXT,
     venue_id TEXT,
+    registration_deadline TEXT,
+    exhibitor_deadline TEXT,
+    sources TEXT NOT NULL DEFAULT '[]',
     excluded INTEGER NOT NULL DEFAULT 0
 )`); err != nil {
 		t.Fatalf("create old events table: %v", err)
@@ -179,6 +182,9 @@ CREATE TABLE events (
     missing_fields TEXT,
     updated_at TEXT,
     venue_id TEXT,
+    registration_deadline TEXT,
+    exhibitor_deadline TEXT,
+    sources TEXT NOT NULL DEFAULT '[]',
     excluded INTEGER NOT NULL DEFAULT 0
 )`); err != nil {
 		t.Fatalf("create existing events table: %v", err)
@@ -460,4 +466,70 @@ func readEventRow(t *testing.T, db *sql.DB, id string) (name, contentHash string
 		t.Fatalf("readEventRow %s: %v", id, err)
 	}
 	return name, ch.String
+}
+
+// Migration 0010 revokes pre-gate Solar deadlines. It must revoke exactly the
+// old-generation values, leave evidence-gated /v2 values standing on every
+// later startup, and never touch a purely scraped row.
+func TestMigrateRevokesOnlyPreGateSolarDeadlines(t *testing.T) {
+	dir := t.TempDir()
+	db, err := store.OpenWrite(filepath.Join(dir, "revoke.db"))
+	if err != nil {
+		t.Fatalf("OpenWrite: %v", err)
+	}
+	defer db.Close()
+	if err := store.Migrate(db); err != nil {
+		t.Fatalf("initial migrate: %v", err)
+	}
+
+	// Given: one pre-gate row, one gated /v2 row, one scraped row.
+	seed := func(id, publisher, deadline string) {
+		srcs := `[{"url":"https://venue.example/e","type":"venue","publisher":"venue","retrieved_at":"2026-07-27T00:00:00Z"}`
+		if publisher != "" {
+			srcs += `,{"url":"https://venue.example/e","type":"organizer","publisher":"` + publisher + `","retrieved_at":"2026-07-27T00:00:00Z"}`
+		}
+		srcs += `]`
+		if _, err := db.Exec(`INSERT INTO events (
+			event_id, schema_version, name, country, categories, sources,
+			last_checked_at, update_state, confidence, missing_fields,
+			registration_deadline, exhibitor_deadline
+		) VALUES (?, '0.1', 'E', 'KR', '["ai"]', ?,
+			'2026-07-27T00:00:00Z', 'new', 'high', '[]', ?, ?)`,
+			id, srcs, deadline, deadline); err != nil {
+			t.Fatalf("seed %s: %v", id, err)
+		}
+	}
+	seed("pre-gate", "eventsintel/solar-enrich", "2026-09-30")
+	seed("gated-v2", "eventsintel/solar-enrich/v2", "2026-10-15")
+	seed("scraped", "", "2026-11-01")
+
+	// When: migrations run twice, as two service startups would.
+	if err := store.Migrate(db); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+	if err := store.Migrate(db); err != nil {
+		t.Fatalf("second migrate: %v", err)
+	}
+
+	// Then
+	check := func(id string, wantNull bool, wantMissing bool) {
+		var reg sql.NullString
+		var missing string
+		if err := db.QueryRow(`SELECT registration_deadline, missing_fields FROM events WHERE event_id=?`, id).
+			Scan(&reg, &missing); err != nil {
+			t.Fatalf("read %s: %v", id, err)
+		}
+		if wantNull && reg.Valid {
+			t.Fatalf("%s deadline = %q, want revoked", id, reg.String)
+		}
+		if !wantNull && !reg.Valid {
+			t.Fatalf("%s deadline revoked, want kept", id)
+		}
+		if wantMissing != strings.Contains(missing, `"registration_deadline"`) {
+			t.Fatalf("%s missing_fields = %s, want restored=%v", id, missing, wantMissing)
+		}
+	}
+	check("pre-gate", true, true)
+	check("gated-v2", false, false)
+	check("scraped", false, false)
 }

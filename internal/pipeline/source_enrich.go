@@ -33,7 +33,20 @@ func (p *Pipeline) enrichActions(ctx context.Context, f *fetch.Fetcher, parsed *
 	// It reads the page already in hand, so nothing is fetched twice.
 	if p.actionEnricher != nil {
 		if enriched, aerr := p.actionEnricher.EnrichActions(ctx, res.URL, res.Body, parsed.Actions); aerr == nil {
+			before := parsed.Actions
 			parsed.Actions = mergeActionSignals(parsed.Actions, enriched)
+			// Every enriched claim carries provenance. Without this the
+			// model-filled signals were indistinguishable from scraped ones,
+			// and migration 0010 relies on the publisher string to tell the
+			// evidence-gated generation apart from the pre-gate one.
+			if parsed.Actions != before {
+				parsed.ExtraSources = append(parsed.ExtraSources, sources.ParsedSource{
+					URL:         res.URL,
+					Type:        "organizer",
+					Publisher:   EnrichmentPublisher,
+					RetrievedAt: now,
+				})
+			}
 		}
 	}
 	parsed.ExtraSources = append(parsed.ExtraSources, sources.ParsedSource{

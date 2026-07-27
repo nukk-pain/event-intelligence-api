@@ -16,6 +16,12 @@ import (
 // An enricher must fill only fields listed in MissingFields, must never
 // overwrite a source-derived value, and must record its own provenance. A
 // returned error is not fatal: the deterministic result stands.
+// EnrichmentPublisher marks provenance rows this pipeline writes for
+// enricher-supplied values. It must equal solarenrich.ProvenancePublisher;
+// the pipeline stays backend-agnostic, so the equality is pinned by a test in
+// cmd/eventsintel, the one package that legitimately knows both.
+const EnrichmentPublisher = "eventsintel/solar-enrich/v2"
+
 type EventEnricher interface {
 	Enrich(ctx context.Context, event *model.Event, sourceText string) error
 }

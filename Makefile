@@ -21,3 +21,6 @@ refresh-fixtures:
 # migrate applies the embedded schema to $(DB) via the ingest path.
 migrate: build
 	./bin/$(BINARY) ingest
+
+eval-report: ## Regenerate the Solar enrichment accuracy summary from audit results
+	python3 eval/audit.py --report
