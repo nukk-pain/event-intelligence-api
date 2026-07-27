@@ -2,6 +2,11 @@ package solarenrich
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -148,4 +153,56 @@ func newActionEnricher(t *testing.T, backend agent.Backend, maxCalls int) *Actio
 		t.Fatalf("NewActionEnricher: %v", err)
 	}
 	return enricher
+}
+
+// Full coverage runs eight detail units at once, which sits within a few
+// percent of Solar's per-minute token ceiling. The enricher must hold its own
+// concurrency below that rather than relying on the model to reject requests.
+func TestEnrichActions_boundsConcurrentModelWork(t *testing.T) {
+	// Given
+	var live, peak atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		now := live.Add(1)
+		for {
+			high := peak.Load()
+			if now <= high || peak.CompareAndSwap(high, now) {
+				break
+			}
+		}
+		time.Sleep(15 * time.Millisecond)
+		live.Add(-1)
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"choices": []map[string]any{{"message": map[string]string{"content": `{"booth_info":"부스"}`}}},
+			"usage":   map[string]int{"prompt_tokens": 1, "completion_tokens": 1},
+		})
+	}))
+	t.Cleanup(server.Close)
+	enricher, err := NewActionEnricher(Config{
+		Backend:  agent.Backend{Name: "solar", BaseURL: server.URL, Model: "solar-test"},
+		MaxCalls: 100, MaxTokens: 256, CallTimeout: 5 * time.Second, MaxConcurrent: 2,
+	}, func(context.Context, string) (string, error) { return "본문", nil })
+	if err != nil {
+		t.Fatalf("NewActionEnricher: %v", err)
+	}
+
+	// When
+	var wg sync.WaitGroup
+	for range 8 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, _ = enricher.EnrichActions(context.Background(),
+				"https://venue.example/event", []byte(officialPage), sources.ActionSignals{})
+		}()
+	}
+	wg.Wait()
+
+	// Then
+	if got := peak.Load(); got > 2 {
+		t.Fatalf("peak concurrent model requests = %d, want the bound of 2 respected", got)
+	}
+	if enricher.Throttled() == 0 {
+		t.Fatal("throttled = 0, want the bound to have made some attempts wait")
+	}
 }

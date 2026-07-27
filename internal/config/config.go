@@ -51,8 +51,13 @@ type Config struct {
 	SolarAPIKey  string `json:"-"`
 	SolarBaseURL string `json:"solar_base_url"`
 	SolarModel   string `json:"solar_model"`
-	// SolarMaxCalls caps model calls for one ingest run.
+	// SolarMaxCalls caps enrichment attempts for one ingest run. The default
+	// covers every event currently missing action fields, so one run reaches full
+	// coverage rather than advancing a backlog.
 	SolarMaxCalls int `json:"solar_max_calls"`
+	// SolarMaxConcurrent bounds simultaneous model work below the per-minute
+	// token ceiling.
+	SolarMaxConcurrent int `json:"solar_max_concurrent"`
 
 	// DBPath is the SQLite file path.
 	DBPath string `json:"db_path"`
@@ -96,7 +101,8 @@ func Default() Config {
 		DetailWorkers:        4,
 		SolarBaseURL:         "https://api.upstage.ai/v1",
 		SolarModel:           "solar-open2",
-		SolarMaxCalls:        40,
+		SolarMaxCalls:        600,
+		SolarMaxConcurrent:   6,
 		DBPath:               "eventsintel.db",
 		LockPath:             "eventsintel.lock",
 		HTTPAddr:             ":8080",
@@ -143,6 +149,11 @@ func FromEnv() Config {
 	if v := os.Getenv("EVENTSINTEL_SOLAR_MAX_CALLS"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			c.SolarMaxCalls = n
+		}
+	}
+	if v := os.Getenv("EVENTSINTEL_SOLAR_MAX_CONCURRENT"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			c.SolarMaxConcurrent = n
 		}
 	}
 	if v := os.Getenv("EVENTSINTEL_DETAIL_WORKERS"); v != "" {

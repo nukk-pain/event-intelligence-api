@@ -202,6 +202,7 @@ func runIngest(cfg config.Config) error {
 				Model: cfg.SolarModel, APIKey: cfg.SolarAPIKey,
 			},
 			MaxCalls: cfg.SolarMaxCalls, MaxTokens: 512, CallTimeout: 20 * time.Second,
+			MaxConcurrent: cfg.SolarMaxConcurrent,
 		}, func(fetchCtx context.Context, pageURL string) (string, error) {
 			res, ferr := officialFetcher.Fetch(fetchCtx, pageURL, fetch.Conditional{})
 			if ferr != nil || res.StatusCode != 200 {
@@ -215,8 +216,8 @@ func runIngest(cfg config.Config) error {
 		p = p.WithActionEnricher(actions)
 
 		defer func() {
-			log.Printf("solar enrichment: dates %d call(s)/%d filled, actions %d call(s)/%d filled",
-				enricher.Calls(), enricher.Filled(), actions.Calls(), actions.Filled())
+			log.Printf("solar enrichment: dates attempts=%d filled=%d, actions attempts=%d filled=%d throttled=%d budget=%d",
+				enricher.Calls(), enricher.Filled(), actions.Calls(), actions.Filled(), actions.Throttled(), cfg.SolarMaxCalls)
 		}()
 	}
 

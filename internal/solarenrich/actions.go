@@ -43,8 +43,12 @@ type PageFetcher func(ctx context.Context, url string) (string, error)
 type ActionEnricher struct {
 	config  Config
 	fetcher PageFetcher
-	calls   atomic.Int64
-	filled  atomic.Int64
+	// slots bounds concurrent model work so a full-coverage run stays under
+	// Solar's per-minute token ceiling. Nil means unbounded.
+	slots     chan struct{}
+	calls     atomic.Int64
+	filled    atomic.Int64
+	throttled atomic.Int64
 }
 
 func NewActionEnricher(config Config, fetcher PageFetcher) (*ActionEnricher, error) {
@@ -52,12 +56,44 @@ func NewActionEnricher(config Config, fetcher PageFetcher) (*ActionEnricher, err
 		config.MaxCalls <= 0 || config.MaxTokens <= 0 || config.CallTimeout <= 0 || fetcher == nil {
 		return nil, ErrInvalidConfig
 	}
-	return &ActionEnricher{config: config, fetcher: fetcher}, nil
+	enricher := &ActionEnricher{config: config, fetcher: fetcher}
+	if config.MaxConcurrent > 0 {
+		enricher.slots = make(chan struct{}, config.MaxConcurrent)
+	}
+	return enricher, nil
+}
+
+// acquire blocks until a model slot frees or the context ends.
+func (a *ActionEnricher) acquire(ctx context.Context) error {
+	if a.slots == nil {
+		return nil
+	}
+	select {
+	case a.slots <- struct{}{}:
+		return nil
+	default:
+	}
+	a.throttled.Add(1)
+	select {
+	case a.slots <- struct{}{}:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (a *ActionEnricher) release() {
+	if a.slots != nil {
+		<-a.slots
+	}
 }
 
 // Calls and Filled report what one ingest run spent and gained. Counts only.
 func (a *ActionEnricher) Calls() int64  { return a.calls.Load() }
 func (a *ActionEnricher) Filled() int64 { return a.filled.Load() }
+
+// Throttled counts attempts that had to wait for a model slot.
+func (a *ActionEnricher) Throttled() int64 { return a.throttled.Load() }
 
 // EnrichActions returns only the signals it resolved. Signals the caller
 // already holds are left untouched, and an empty return means the model added
@@ -77,6 +113,10 @@ func (a *ActionEnricher) EnrichActions(ctx context.Context, pageURL string, body
 	if err != nil || strings.TrimSpace(text) == "" {
 		return out, err
 	}
+	if err := a.acquire(ctx); err != nil {
+		return out, err
+	}
+	defer a.release()
 	callCtx, cancel := context.WithTimeout(ctx, a.config.CallTimeout)
 	defer cancel()
 	brief, _, err := agent.Run(callCtx, a.config.Backend, text, links,

@@ -32,6 +32,12 @@ type Config struct {
 	MaxCalls    int
 	MaxTokens   int
 	CallTimeout time.Duration
+	// MaxConcurrent bounds simultaneous model work. The pipeline runs up to
+	// eight detail units at once, which at the measured per-event token cost
+	// sits within a few percent of Solar's per-minute token ceiling. Holding
+	// enrichment below that leaves headroom instead of relying on retries.
+	// Zero means unbounded.
+	MaxConcurrent int
 }
 
 // Enricher is safe for concurrent use by the pipeline's detail workers.
