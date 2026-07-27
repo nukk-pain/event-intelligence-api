@@ -201,3 +201,56 @@ func hasField(fields []string, key string) bool {
 }
 
 func strPtr(s string) *string { return &s }
+
+// The English name is missing on nine events out of ten, and it is what makes
+// an event findable by an English query. The extraction prompt already returns
+// it, so it costs no call beyond one the event may already need.
+func TestEnrich_fillsEnglishName(t *testing.T) {
+	// Given
+	backend, calls, _ := fakeBackend(t, `{"name_en":"AI Robot Industry Expo 2027"}`)
+	enricher := newEnricher(t, backend, 4)
+	event := &model.Event{
+		Name:          "2027 AI 로봇 산업전",
+		Sources:       []model.Source{{URL: "https://venue.example/expo", Type: "venue"}},
+		MissingFields: []string{"name_en", "start_date"},
+	}
+
+	// When
+	if err := enricher.Enrich(context.Background(), event, "2027 AI 로봇 산업전"); err != nil {
+		t.Fatalf("Enrich: %v", err)
+	}
+
+	// Then
+	if event.NameEn == nil || *event.NameEn != "AI Robot Industry Expo 2027" {
+		t.Fatalf("name_en = %v, want the extracted English name", event.NameEn)
+	}
+	if hasField(event.MissingFields, "name_en") {
+		t.Fatalf("missing fields = %v, want name_en cleared", event.MissingFields)
+	}
+	if calls.Load() != 1 {
+		t.Fatalf("model calls = %d, want one", calls.Load())
+	}
+}
+
+// A model that echoes the Korean title back has added nothing, and accepting it
+// would wrongly mark the field resolved.
+func TestEnrich_rejectsEchoedOrNonLatinName(t *testing.T) {
+	for _, answer := range []string{`{"name_en":"2027 AI 로봇 산업전"}`, `{"name_en":"에이아이 로봇 산업전"}`, `{"name_en":""}`} {
+		backend, _, _ := fakeBackend(t, answer)
+		enricher := newEnricher(t, backend, 4)
+		event := &model.Event{
+			Name:          "2027 AI 로봇 산업전",
+			Sources:       []model.Source{{URL: "https://venue.example/expo", Type: "venue"}},
+			MissingFields: []string{"name_en"},
+		}
+		if err := enricher.Enrich(context.Background(), event, "2027 AI 로봇 산업전"); err != nil {
+			t.Fatalf("Enrich: %v", err)
+		}
+		if event.NameEn != nil {
+			t.Fatalf("answer %s gave name_en = %q, want it rejected", answer, *event.NameEn)
+		}
+		if !hasField(event.MissingFields, "name_en") {
+			t.Fatalf("answer %s cleared name_en without filling it", answer)
+		}
+	}
+}

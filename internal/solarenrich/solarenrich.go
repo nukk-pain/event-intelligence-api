@@ -12,8 +12,10 @@ import (
 	"context"
 	"errors"
 	"regexp"
+	"strings"
 	"sync/atomic"
 	"time"
+	"unicode"
 
 	"github.com/smpain/event-intelligence-api/internal/agent"
 	"github.com/smpain/event-intelligence-api/internal/model"
@@ -67,7 +69,12 @@ func (e *Enricher) Enrich(ctx context.Context, event *model.Event, sourceText st
 	}
 	wantStart := missing(event.MissingFields, "start_date")
 	wantEnd := missing(event.MissingFields, "end_date")
-	if !wantStart && !wantEnd {
+	// The English name is missing on nine events out of ten because venue
+	// adapters rarely distinguish it, yet the extraction prompt already returns
+	// it. Taking it costs nothing beyond the call this event may already need,
+	// and it is what makes an event findable by an English query.
+	wantNameEn := missing(event.MissingFields, "name_en") && event.NameEn == nil
+	if !wantStart && !wantEnd && !wantNameEn {
 		return nil
 	}
 	if e.calls.Add(1) > int64(e.config.MaxCalls) {
@@ -93,6 +100,13 @@ func (e *Enricher) Enrich(ctx context.Context, event *model.Event, sourceText st
 	if wantEnd && event.EndDate == nil {
 		if value, ok := isoValue(facts, "end_date"); ok {
 			event.EndDate = &value
+			changed = true
+		}
+	}
+	if wantNameEn {
+		if value, ok := latinName(facts, "name_en", event.Name); ok {
+			event.NameEn = &value
+			event.MissingFields = without(event.MissingFields, "name_en")
 			changed = true
 		}
 	}
@@ -124,6 +138,37 @@ func primarySourceURL(event *model.Event) string {
 		return ""
 	}
 	return event.Sources[0].URL
+}
+
+// latinName accepts an English name only when it actually reads as one and is
+// not just the Korean title echoed back. A model that repeats the source name
+// adds nothing and would wrongly clear the missing-field marker.
+func latinName(facts agent.Facts, key, sourceName string) (string, bool) {
+	raw, ok := facts[key]
+	if !ok {
+		return "", false
+	}
+	text, ok := raw.(string)
+	if !ok {
+		return "", false
+	}
+	text = strings.TrimSpace(text)
+	if text == "" || strings.EqualFold(text, strings.TrimSpace(sourceName)) {
+		return "", false
+	}
+	letters, latin := 0, 0
+	for _, r := range text {
+		if unicode.IsLetter(r) {
+			letters++
+			if r < unicode.MaxASCII {
+				latin++
+			}
+		}
+	}
+	if letters == 0 || latin*2 < letters {
+		return "", false
+	}
+	return text, true
 }
 
 func isoValue(facts agent.Facts, key string) (string, bool) {
