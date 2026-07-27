@@ -540,3 +540,19 @@ contract and must not acquire live LLM work as a side effect.
 - Measured on a bounded live run of 40 events: 15 attempts, 4 events filled.
   The date enricher made 1 attempt and filled nothing, consistent with the
   scan. It is retained but is effectively inert on current sources.
+
+### Korean deadline shapes in action enrichment (2026-07-27)
+
+- Status: accepted
+- Context: the enricher required an ISO date and discarded everything else, so
+  `registration_deadline` moved from 216 missing to 211 across a 216-event
+  control comparison. Korean venue pages write "2026년 9월 1일" far more often
+  than an ISO date, and that gate rejected all of them.
+- Decision: normalize the shapes carrying an explicit year, month, and day
+  before the check. Text without all three, such as "선착순 마감", is still
+  rejected rather than guessed at, and no component is ever invented.
+- Measured against the same control on the same 216 events: registration
+  deadline missing fell from 216 to 197, and events gaining at least one field
+  rose from 24 to 40, which is 11.1% to 18.5%.
+- The deterministic parser in `internal/normalize` is unchanged. This applies
+  only to what the model returns.

@@ -54,8 +54,9 @@ func TestEnrichActions_fillsOnlyUnknownSignals(t *testing.T) {
 	}
 }
 
-// A deadline in prose must not enter the event contract.
-func TestEnrichActions_rejectsNonISODeadline(t *testing.T) {
+// Korean venue pages write deadlines in their own shape, and those carry a
+// real date that must reach the event contract in ISO form.
+func TestEnrichActions_acceptsKoreanDeadline(t *testing.T) {
 	// Given
 	backend, _ := scriptedBackend(t, `{"name":"2027 AI 로봇 산업전"}`, `{"pick":["https://venue.example/register","https://venue.example/booth"]}`,
 		`{"register_deadline":"2027년 1월 31일까지"}`)
@@ -68,8 +69,27 @@ func TestEnrichActions_rejectsNonISODeadline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EnrichActions: %v", err)
 	}
+	if out.RegistrationDeadline == nil || *out.RegistrationDeadline != "2027-01-31" {
+		t.Fatalf("deadline = %v, want the Korean date normalized to ISO", out.RegistrationDeadline)
+	}
+}
+
+// Text with no date in it must still be rejected rather than guessed at.
+func TestEnrichActions_rejectsDatelessDeadline(t *testing.T) {
+	// Given
+	backend, _ := scriptedBackend(t, `{"name":"2027 AI 로봇 산업전"}`, `{"pick":["https://venue.example/register"]}`,
+		`{"register_deadline":"선착순 마감"}`)
+	enricher := newActionEnricher(t, backend, 4)
+
+	// When
+	out, err := enricher.EnrichActions(context.Background(), "https://venue.example/event", []byte(officialPage), sources.ActionSignals{})
+
+	// Then
+	if err != nil {
+		t.Fatalf("EnrichActions: %v", err)
+	}
 	if out.RegistrationDeadline != nil {
-		t.Fatalf("deadline = %q, want a non-ISO answer discarded", *out.RegistrationDeadline)
+		t.Fatalf("deadline = %q, want text without a date discarded", *out.RegistrationDeadline)
 	}
 }
 

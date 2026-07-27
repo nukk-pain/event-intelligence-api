@@ -133,11 +133,15 @@ func (a *ActionEnricher) EnrichActions(ctx context.Context, pageURL string, body
 		}
 		changed = true
 	}
-	// A deadline that is not an ISO date is discarded rather than stored, so a
-	// model answering in prose cannot corrupt the event contract.
-	if current.RegistrationDeadline == nil && isoDate.MatchString(deref(brief.RegisterDeadline)) {
-		out.RegistrationDeadline = brief.RegisterDeadline
-		changed = true
+	// Korean venue pages write deadlines as "2026년 9월 1일" far more often than
+	// as an ISO date, and the strict gate discarded all of them. Normalize the
+	// shapes that carry an explicit year, month, and day; anything without one
+	// is still rejected rather than guessed at.
+	if current.RegistrationDeadline == nil {
+		if iso, ok := normalizeDeadline(deref(brief.RegisterDeadline)); ok {
+			out.RegistrationDeadline = &iso
+			changed = true
+		}
 	}
 	if current.CanExhibit == nil && nonEmpty(brief.BoothInfo) {
 		out.CanExhibit = boolPtr(true)
