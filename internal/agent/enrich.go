@@ -25,12 +25,16 @@ type LinkFetcher func(ctx context.Context, url string) (string, error)
 // Brief is the founder-actionable output: the core event facts plus the
 // action-oriented facts the agent enriched by reading linked pages.
 type Brief struct {
-	Facts            Facts    `json:"facts"`
-	RegisterURL      *string  `json:"register_url"`
-	RegisterDeadline *string  `json:"register_deadline"`
-	BoothInfo        *string  `json:"booth_info"`
-	StartupProgram   *string  `json:"startup_program"`
-	UsedLinks        []string `json:"used_links"`
+	Facts            Facts   `json:"facts"`
+	RegisterURL      *string `json:"register_url"`
+	RegisterDeadline *string `json:"register_deadline"`
+	BoothInfo        *string `json:"booth_info"`
+	// BoothDeadline is the exhibitor application cutoff, which is a separate
+	// date from the attendee registration one and is what a company deciding
+	// whether to exhibit actually needs.
+	BoothDeadline  *string  `json:"booth_deadline"`
+	StartupProgram *string  `json:"startup_program"`
+	UsedLinks      []string `json:"used_links"`
 }
 
 // Trace records how many model calls the run made and their total token cost,
@@ -48,7 +52,8 @@ deadline, booth/exhibitor info, or a startup program. Return ONLY JSON:
 
 const enrichPrompt = `From the linked page text below, extract founder-actionable
 facts as a JSON object with exactly these keys:
-register_url, register_deadline, booth_info, startup_program.
+register_url, register_deadline, booth_info, booth_deadline,
+startup_program.
 Rules: use only facts present in the text; null if absent; never invent; keep
 values short and factual. Output the JSON object only.`
 
@@ -103,6 +108,7 @@ func Run(ctx context.Context, be Backend, mainText string, links []LinkRef, link
 	brief.RegisterURL = strPtr(action["register_url"])
 	brief.RegisterDeadline = strPtr(action["register_deadline"])
 	brief.BoothInfo = strPtr(action["booth_info"])
+	brief.BoothDeadline = strPtr(action["booth_deadline"])
 	brief.StartupProgram = strPtr(action["startup_program"])
 	for _, l := range chosen {
 		brief.UsedLinks = append(brief.UsedLinks, l.URL)

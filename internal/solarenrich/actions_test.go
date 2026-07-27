@@ -101,7 +101,7 @@ func TestEnrichActions_skipsFullyKnownEvent(t *testing.T) {
 	value := "https://venue.example/x"
 	yes := true
 	current := sources.ActionSignals{
-		RegisterURL: &value, RegistrationDeadline: &value,
+		RegisterURL: &value, RegistrationDeadline: &value, ExhibitorDeadline: &value,
 		CanExhibit: &yes, HasStartupProgram: &yes,
 	}
 
@@ -224,5 +224,57 @@ func TestEnrichActions_boundsConcurrentModelWork(t *testing.T) {
 	}
 	if enricher.Throttled() == 0 {
 		t.Fatal("throttled = 0, want the bound to have made some attempts wait")
+	}
+}
+
+// The exhibitor cutoff is a different date from the attendee one. A company
+// weighing a booth needs it, and it was the one action field the enricher
+// never filled because the agent loop did not ask for it.
+func TestEnrichActions_fillsExhibitorDeadline(t *testing.T) {
+	// Given
+	backend, _ := scriptedBackend(t,
+		`{"name":"2027 AI 로봇 산업전"}`,
+		`{"pick":["https://venue.example/booth"]}`,
+		`{"booth_info":"부스 신청 접수 중","booth_deadline":"2026년 12월 15일까지"}`)
+	enricher := newActionEnricher(t, backend, 4)
+
+	// When
+	out, err := enricher.EnrichActions(context.Background(),
+		"https://venue.example/event", []byte(officialPage), sources.ActionSignals{})
+
+	// Then
+	if err != nil {
+		t.Fatalf("EnrichActions: %v", err)
+	}
+	if out.ExhibitorDeadline == nil || *out.ExhibitorDeadline != "2026-12-15" {
+		t.Fatalf("exhibitor deadline = %v, want the Korean booth cutoff normalized", out.ExhibitorDeadline)
+	}
+	if out.CanExhibit == nil || !*out.CanExhibit {
+		t.Fatalf("can exhibit = %v, want booth info to still imply true", out.CanExhibit)
+	}
+}
+
+// The two deadlines must not be conflated.
+func TestEnrichActions_keepsDeadlinesDistinct(t *testing.T) {
+	// Given
+	backend, _ := scriptedBackend(t,
+		`{"name":"2027 AI 로봇 산업전"}`,
+		`{"pick":["https://venue.example/register"]}`,
+		`{"register_deadline":"2027-01-31","booth_deadline":"2026-12-15"}`)
+	enricher := newActionEnricher(t, backend, 4)
+
+	// When
+	out, err := enricher.EnrichActions(context.Background(),
+		"https://venue.example/event", []byte(officialPage), sources.ActionSignals{})
+
+	// Then
+	if err != nil {
+		t.Fatalf("EnrichActions: %v", err)
+	}
+	if out.RegistrationDeadline == nil || *out.RegistrationDeadline != "2027-01-31" {
+		t.Fatalf("registration deadline = %v, want the attendee date", out.RegistrationDeadline)
+	}
+	if out.ExhibitorDeadline == nil || *out.ExhibitorDeadline != "2026-12-15" {
+		t.Fatalf("exhibitor deadline = %v, want the booth date", out.ExhibitorDeadline)
 	}
 }

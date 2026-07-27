@@ -147,6 +147,14 @@ func (a *ActionEnricher) EnrichActions(ctx context.Context, pageURL string, body
 		out.CanExhibit = boolPtr(true)
 		changed = true
 	}
+	// The exhibitor cutoff is a different date from the attendee one, and it is
+	// the one a company weighing a booth needs.
+	if current.ExhibitorDeadline == nil {
+		if iso, ok := normalizeDeadline(deref(brief.BoothDeadline)); ok {
+			out.ExhibitorDeadline = &iso
+			changed = true
+		}
+	}
 	if current.HasStartupProgram == nil && nonEmpty(brief.StartupProgram) {
 		out.HasStartupProgram = boolPtr(true)
 		changed = true
@@ -161,7 +169,8 @@ func (a *ActionEnricher) EnrichActions(ctx context.Context, pageURL string, body
 // unknown, so a fully extracted event never costs a model call.
 func wantsAction(current sources.ActionSignals) bool {
 	return current.RegisterURL == nil || current.RegistrationDeadline == nil ||
-		current.CanExhibit == nil || current.HasStartupProgram == nil
+		current.ExhibitorDeadline == nil || current.CanExhibit == nil ||
+		current.HasStartupProgram == nil
 }
 
 func pageTextAndLinks(pageURL string, body []byte) (string, []agent.LinkRef, error) {
