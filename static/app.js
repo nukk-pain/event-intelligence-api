@@ -70,7 +70,9 @@
     if (!state.search) return state.events;
     var q = state.search.toLowerCase();
     return state.events.filter(function(e) {
-      return (e.name || "").toLowerCase().indexOf(q) !== -1;
+      // 영문명은 수집 단계에서 보강되므로 영어 검색어도 같은 행사를 찾아야 한다.
+      return (e.name || "").toLowerCase().indexOf(q) !== -1 ||
+        (e.name_en || "").toLowerCase().indexOf(q) !== -1;
     });
   }
 

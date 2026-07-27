@@ -82,7 +82,11 @@
   }
 
   function renderModal(e, badgeHTML) {
+    var nameEn = e.name_en && e.name_en !== e.name
+      ? detailItem("영문명", escapeHtml(e.name_en))
+      : "";
     var hero = [
+      nameEn,
       detailItem("일정", '<span class="num">' + escapeHtml(fmtDateRange(e.start_date, e.end_date)) + '</span>'),
       detailItem("장소", escapeHtml(venueText(e))),
       detailItem("비용", escapeHtml(costText(e))),
