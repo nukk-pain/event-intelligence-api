@@ -41,3 +41,11 @@ if [[ -f "$OUT/seed-candidates.jsonl" ]]; then
 else
   echo "scout-discovery: OK candidates=0 (no accepted sources this run)"
 fi
+
+# With a GitHub token the packet also arrives as a human-review PR; without
+# one this line is a no-op and the packet stays on disk as before. A PR
+# failure must not fail the discovery run that already produced its packet.
+if [[ -n "${EVENTSCOUT_PROMOTE_PR_TOKEN:-}" && -f "$OUT/seed-candidates.jsonl" ]]; then
+  "${EVENTSCOUT_PROMOTE_PR_SCRIPT:-/srv/developer/events-intel/open-promotion-pr.sh}" "$OUT" || \
+    echo "scout-discovery: WARN promotion PR step failed (packet still at $OUT)" >&2
+fi

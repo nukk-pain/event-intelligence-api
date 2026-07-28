@@ -637,3 +637,23 @@ contract and must not acquire live LLM work as a side effect.
   a non-nil discovery error (e.g. a transient search failure after an
   accept), exactly as the round loop did. Changing that means changing the
   governed anonymous error envelope, deliberately out of this change's scope.
+
+### Discovery packets arrive as review PRs (2026-07-28)
+
+- Status: accepted (armed; activates when the operator installs a GitHub token)
+- Context: the weekly timer already produced promotion packets, but they sat
+  on the VPS disk until someone remembered to look. The agent judged sources
+  and then its findings waited on human initiative.
+- Decision: `run-scout-discovery.sh` gains an optional final step. With
+  `EVENTSCOUT_PROMOTE_PR_TOKEN` present (`promote.env`, 0600, fine-grained
+  PAT scoped to this repo with contents+pull-requests write),
+  `open-promotion-pr.sh` commits the packet under `discovery-packets/<date>/`
+  on branch `scout/packet-<date>` and opens a PR. Without the token the step
+  is a no-op and behavior is unchanged.
+- The PR delivers the packet only — merging it changes no runtime behavior.
+  Promoting a source still means a human fills the missing fields and lands
+  catalog/allowlist changes as a normal reviewed commit; the SSRF boundary
+  stays in reviewed code (2026-07-28 promotion decision unchanged).
+- Idempotent by branch: one packet date, one branch; an existing remote
+  branch means delivered, and reruns push nothing and open nothing. A PR
+  failure warns but never fails the discovery run that produced its packet.

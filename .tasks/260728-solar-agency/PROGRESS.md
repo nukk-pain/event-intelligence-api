@@ -67,3 +67,18 @@
 ## 다음 단계
 - Phase 3: Task 3.1 (로컬 전체 게이트) → 3.2 (라이브 스모크) → 3.3 (배포,
   AskUserQuestion 후) → 3.4 (README 후기)
+
+## Phase 3·4 완료 기록 (2026-07-28)
+- [x] Task 3.1 — 전체 게이트 GREEN (full suite, race 3패키지, vet, api/pipeline/store diff 0)
+- [x] Task 3.2 — VPS 라이브 스모크: 8턴 모델 주도, open 3회, 채택 10건(기존 5),
+  출력 590토큰. counts-only 증거 evidence/live-smoke-20260728.md. keyless 스킵 확인
+- [x] Task 3.3 — 커밋 9013146 push, eventscout 바이너리 배포(백업 후 교체,
+  SHA 91b95295...), 주간 서비스 수동 1회 OK candidates=10, deploy/verify.sh
+  ALL CHECKS PASSED
+- [x] Task 3.4 — README 아키텍처·라이브 판정 섹션·후기 전면 갱신 (eventscout 중심)
+- [x] Task 4.2 — open-promotion-pr.sh + run-scout-discovery.sh 훅 + 유닛
+  promote.env 지원, VPS 배포·daemon-reload 완료. 토큰 없으면 기존 동작 그대로
+- [ ] Task 4.1 — 사용자 PAT 대기 (fine-grained, 이 repo 한정,
+  contents+pull_requests write). 주입되면 promote.env 저장 후 E2E 1회
+
+## 상태: 완료 (Task 4.1 토큰 대기만 잔여)

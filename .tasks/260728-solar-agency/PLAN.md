@@ -187,30 +187,30 @@ Tavily provider 동작 변경 없음, 후보 prefilter 요건 완화 없음.
 
 #### Task 3.1: 로컬 전체 게이트 `[Manual]`
 - **작업 내용**:
-  - [ ] `go test ./...`, `go vet ./...`, `go build ./cmd/...`
-  - [ ] `go test -race ./internal/agent/... ./internal/publicdiscovery/... ./internal/eventscoutserver/...`
-  - [ ] `internal/api` diff 0건 확인 (read API 불변 게이트)
+  - [x] `go test ./...`, `go vet ./...`, `go build ./cmd/...`
+  - [x] `go test -race ./internal/agent/... ./internal/publicdiscovery/... ./internal/eventscoutserver/...`
+  - [x] `internal/api` diff 0건 확인 (read API 불변 게이트)
 - **검증 방법**: 전부 GREEN, diff-check 통과
 
 #### Task 3.2: 라이브 스모크 — 주체성의 실증 `[Manual]`
 - **작업 내용**:
-  - [ ] 운영자 키로 bounded 라이브 실행 (`scripts/smoke-solar-public-discovery.sh` 갱신 포함): accepted ≥ 기존 수율(5) 확인
-  - [ ] 모델이 실제로 open을 선택한 실행 기록 1건 확보 → `.tasks/260728-solar-agency/evidence/`에 카운트·terminal_reason만 저장 (URL·본문 미포함, 기존 로그 정책 준수)
-  - [ ] keyless 경로: 키 없이 스모크가 SKIPPED_CREDENTIAL_UNAVAILABLE로 안전 종료
+  - [x] 운영자 키로 bounded 라이브 실행 (`scripts/smoke-solar-public-discovery.sh` 갱신 포함): accepted ≥ 기존 수율(5) 확인
+  - [x] 모델이 실제로 open을 선택한 실행 기록 1건 확보 → `.tasks/260728-solar-agency/evidence/`에 카운트·terminal_reason만 저장 (URL·본문 미포함, 기존 로그 정책 준수)
+  - [x] keyless 경로: 키 없이 스모크가 SKIPPED_CREDENTIAL_UNAVAILABLE로 안전 종료
 - **검증 방법**: 증거 파일 존재 + 수율 회귀 없음
 
 #### Task 3.3: 프로덕션 배포 `[Manual]`
 - ⚠️ 프로덕션 배포 — 착수 직전 AskUserQuestion으로 확인 후 진행
 - **작업 내용**:
-  - [ ] linux/amd64 `eventscout` 빌드 → VPS 교체 (기존 바이너리 백업) — 배포 대상은 주간 타이머(`eventscout-discovery.timer`)가 부르는 CLI 바이너리
-  - [ ] `deploy/run-scout-discovery.sh` 수동 1회 실행으로 신규 루프 동작 확인 (OK candidates=N 출력)
-  - [ ] `deploy/verify.sh` ALL CHECKS PASSED
-  - [ ] 참고: 익명 서버 `/v1/discover`는 현재 공개 라우팅되어 있지 않음 (Caddy는 `/mcp`만 프록시). 공개 노출은 별도 운영 결정(DECISIONS 2026-07-20)이라 이 작업의 범위 외 — `open_calls` 계약은 로컬 서버 테스트(Task 2.3)로 검증
+  - [x] linux/amd64 `eventscout` 빌드 → VPS 교체 (기존 바이너리 백업) — 배포 대상은 주간 타이머(`eventscout-discovery.timer`)가 부르는 CLI 바이너리
+  - [x] `deploy/run-scout-discovery.sh` 수동 1회 실행으로 신규 루프 동작 확인 (OK candidates=N 출력)
+  - [x] `deploy/verify.sh` ALL CHECKS PASSED
+  - [x] 참고: 익명 서버 `/v1/discover`는 현재 공개 라우팅되어 있지 않음 (Caddy는 `/mcp`만 프록시). 공개 노출은 별도 운영 결정(DECISIONS 2026-07-20)이라 이 작업의 범위 외 — `open_calls` 계약은 로컬 서버 테스트(Task 2.3)로 검증
 - **검증 방법**: verify.sh 출력 + 타이머 스크립트 수동 실행 OK
 
 #### Task 3.4: README·후기 갱신 `[Manual]`
 - **작업 내용**:
-  - [ ] README 아키텍처·후기 문단을 새 사실(모델이 행동 선택)로 갱신 — korean-copy 스킬 규칙 적용
+  - [x] README 아키텍처·후기 문단을 새 사실(모델이 행동 선택)로 갱신 — korean-copy 스킬 규칙 적용
 - **검증 방법**: 후기 본문이 코드 사실과 일치 (choreography 테스트 이름 인용 가능 수준)
 
 ### Phase 4 (Stretch): 발견→PR 자동 연결 (예상: M)
@@ -220,12 +220,12 @@ Tavily provider 동작 변경 없음, 후보 prefilter 요건 완화 없음.
 #### Task 4.1: 토큰·권한 확인 `[Manual]`
 - ⚠️ VPS 시크릿 추가 — 착수 전 AskUserQuestion (fine-grained PAT 발급 주체·권한 범위)
 - **작업 내용**:
-  - [ ] contents:write + pull_requests:write 최소 권한 PAT, VPS 환경 파일 0600 저장
+  - [x] contents:write + pull_requests:write 최소 권한 PAT, VPS 환경 파일 0600 저장
 
 #### Task 4.2: run-scout-discovery.sh 확장 `[Manual]`
 - **작업 내용**:
-  - [ ] discovery 채택 소스 → `-promote` 산출물 → 기존 카탈로그·열린 PR과 대조해 신규만 → 브랜치 생성 → PR 오픈 (본문에 Solar 판정 근거 + 산출물 3종)
-  - [ ] 중복 실행 시 새 PR 0건 (idempotent) 확인
+  - [x] discovery 채택 소스 → `-promote` 산출물 → 기존 카탈로그·열린 PR과 대조해 신규만 → 브랜치 생성 → PR 오픈 (본문에 Solar 판정 근거 + 산출물 3종)
+  - [x] 중복 실행 시 새 PR 0건 (idempotent) 확인
 - **검증 방법**: 수동 1회 실행으로 PR 생성 확인, 재실행 시 미생성 확인, DECISIONS 기록
 
 ## 노력도 추정

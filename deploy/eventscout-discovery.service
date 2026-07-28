@@ -8,5 +8,8 @@ Type=oneshot
 WorkingDirectory=/srv/developer/events-intel
 # Operator-only Solar key; absent key means the run skips cleanly (exit 0).
 EnvironmentFile=-/srv/developer/events-intel/solar.env
+# Optional GitHub token for the promotion-PR step; absent file keeps the
+# packet-on-disk behavior.
+EnvironmentFile=-/srv/developer/events-intel/promote.env
 ExecStart=/srv/developer/events-intel/run-scout-discovery.sh
 TimeoutStartSec=10m
