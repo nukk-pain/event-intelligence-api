@@ -13,6 +13,7 @@
 <script defer src="/assets/events.js?v=20260623-filterux"></script>
 <script defer src="/assets/detail.js?v=20260727-nameen"></script>
 <script defer src="/assets/app.js?v=20260727-nameen"></script>
+<script defer src="/assets/ask.js?v=20260728-askui"></script>
 </head>
 <body>
 
@@ -21,6 +22,21 @@
     <h1 class="site-title">AI·로봇·헬스케어 행사 모아보기</h1>
   </div>
 </header>
+
+<section class="ask" aria-label="질문으로 행사 찾기">
+  <div class="ask-inner">
+    <form id="ask-form" class="ask-form">
+      <label for="ask-input" class="ask-lead">궁금한 걸 그대로 물어보세요</label>
+      <div class="ask-row">
+        <input id="ask-input" type="text" maxlength="200"
+               placeholder="다음 달 서울 AI 행사 뭐 있어?" autocomplete="off">
+        <button id="ask-submit" type="submit">행사 찾기</button>
+      </div>
+    </form>
+    <p id="ask-state" class="ask-state" aria-live="polite" hidden></p>
+    <div id="ask-results" class="ask-results" hidden></div>
+  </div>
+</section>
 
 <section class="filters" aria-label="행사 필터">
   <div class="filters-inner">

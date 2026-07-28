@@ -137,9 +137,12 @@ func TestRootIndexHTMLUsesHumanFriendlyCopy(t *testing.T) {
 		"요약 문서",
 		"더 보기",
 		"국내 행사 일정과 글로벌 주요 행사를 분리해 보여줍니다",
+		"궁금한 걸 그대로 물어보세요",
+		"행사 찾기",
 		`href="/assets/index.css?v=`,
 		`src="/assets/events.js?v=`,
 		`src="/assets/app.js?v=`,
+		`src="/assets/ask.js?v=`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("root HTML missing human-friendly copy %q", want)
@@ -162,6 +165,7 @@ func TestRootIndexServesSplitFrontendAssets(t *testing.T) {
 		{path: "/assets/events.js", contentType: "application/javascript", want: "EventIntelEvents"},
 		{path: "/assets/detail.js", contentType: "application/javascript", want: "EventIntelDetail"},
 		{path: "/assets/app.js", contentType: "application/javascript", want: "loadEvents"},
+		{path: "/assets/ask.js", contentType: "application/javascript", want: "EventIntelAsk"},
 	} {
 		t.Run(tc.path, func(t *testing.T) {
 			// Given

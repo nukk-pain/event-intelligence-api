@@ -55,3 +55,6 @@ var DetailJS string
 
 //go:embed app.js
 var AppJS string
+
+//go:embed ask.js
+var AskJS string

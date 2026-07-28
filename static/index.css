@@ -269,3 +269,67 @@ footer.site {
   main { padding: 16px; }
   header.site, .filters { padding-left: 16px; padding-right: 16px; }
 }
+
+/* ask — 자연어 질의 섹션 (헤더 아래, 필터 위) */
+.ask {
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--rule);
+  padding: 16px 24px;
+}
+.ask-inner { max-width: 1200px; margin: 0 auto; }
+.ask-lead {
+  display: block;
+  font-size: 13px;
+  color: var(--ink-2);
+  margin-bottom: 8px;
+}
+.ask-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.ask-row input {
+  flex: 1;
+  min-width: 220px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 8px 10px;
+}
+.ask-row button {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 3px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+.ask-row button:hover { background: var(--accent-2); }
+.ask-row button:disabled, .ask-row input:disabled { opacity: 0.6; cursor: default; }
+.ask-state { margin-top: 8px; font-size: 13.5px; color: var(--ink-2); }
+.ask-results { margin-top: 12px; }
+.ask-count { font-size: 13px; color: var(--ink-3); margin-bottom: 8px; }
+.ask-card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.ask-card-links { margin-top: 6px; display: flex; gap: 14px; }
+.ask-card-links a { font-size: 13px; color: var(--link); }
+.ask-clear {
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink-2);
+  background: none;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+@media (max-width: 640px) {
+  .ask { padding-left: 16px; padding-right: 16px; }
+}

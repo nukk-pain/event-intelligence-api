@@ -46,6 +46,7 @@ func Router(db *sql.DB, cfg MiddlewareConfig) (http.Handler, error) {
 	r.Get("/assets/events.js", staticAsset("application/javascript; charset=utf-8", static.EventsJS))
 	r.Get("/assets/detail.js", staticAsset("application/javascript; charset=utf-8", static.DetailJS))
 	r.Get("/assets/app.js", staticAsset("application/javascript; charset=utf-8", static.AppJS))
+	r.Get("/assets/ask.js", staticAsset("application/javascript; charset=utf-8", static.AskJS))
 	r.Get("/healthz", handleHealthz)
 	RegisterRoutes(r, db)
 
