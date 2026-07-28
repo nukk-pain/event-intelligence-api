@@ -5,6 +5,7 @@ import (
 
 	"github.com/smpain/event-intelligence-api/internal/enrich"
 	"github.com/smpain/event-intelligence-api/internal/fetch"
+	"github.com/smpain/event-intelligence-api/internal/normalize"
 	"github.com/smpain/event-intelligence-api/internal/sources"
 )
 
@@ -55,6 +56,66 @@ func (p *Pipeline) enrichActions(ctx context.Context, f *fetch.Fetcher, parsed *
 		Publisher:   "official event page",
 		RetrievedAt: now,
 	})
+}
+
+// enrichDeadlinesFromActionPages runs the deterministic deadline extractor on
+// the registration/exhibit pages the event already advertises. Deadlines live
+// on enrollment pages far more often than on homepages (live finding
+// 2026-07-29: kofurn's register page carries the deadline its homepage
+// lacks). Only upcoming events with a still-nil deadline cost a fetch; values
+// fill nil-only and every fill records the page as provenance.
+func (p *Pipeline) enrichDeadlinesFromActionPages(ctx context.Context, f *fetch.Fetcher, parsed *sources.ParsedEvent, now string) {
+	if parsed == nil || parsed.SourceID == "benchmark" {
+		return
+	}
+	if !eventUpcoming(parsed, now) {
+		return
+	}
+	officialFetcher := f
+	if p.officialFetcher != nil {
+		officialFetcher = p.officialFetcher
+	}
+
+	try := func(pageURL *string, dst **string, kind enrich.ActionPageKind) {
+		if *dst != nil || pageURL == nil || *pageURL == "" {
+			return
+		}
+		res, err := officialFetcher.Fetch(ctx, *pageURL, fetch.Conditional{})
+		if err != nil || res.NotModified || res.StatusCode != 200 {
+			return
+		}
+		found := enrich.DeadlineOnActionPage(res.Body, kind)
+		if found == nil {
+			return
+		}
+		*dst = found
+		parsed.ExtraSources = append(parsed.ExtraSources, sources.ParsedSource{
+			URL:         res.URL,
+			Type:        "organizer",
+			Publisher:   "official action page",
+			RetrievedAt: now,
+		})
+	}
+	try(parsed.Actions.RegisterURL, &parsed.Actions.RegistrationDeadline, enrich.RegisterPage)
+	try(parsed.Actions.ExhibitURL, &parsed.Actions.ExhibitorDeadline, enrich.ExhibitPage)
+}
+
+// eventUpcoming reports whether the event's end (or start) date parses and is
+// today or later. Unparseable dates gate the fetch off — a deadline for an
+// event we cannot even date is not worth a network request.
+func eventUpcoming(parsed *sources.ParsedEvent, now string) bool {
+	raw := parsed.EndRaw
+	if raw == nil || *raw == "" {
+		raw = parsed.StartRaw
+	}
+	if raw == nil || *raw == "" {
+		return false
+	}
+	iso, ok := normalize.ParseDate(*raw)
+	if !ok || len(now) < 10 {
+		return false
+	}
+	return iso >= now[:10]
 }
 
 func mergeActionSignals(base sources.ActionSignals, extra sources.ActionSignals) sources.ActionSignals {

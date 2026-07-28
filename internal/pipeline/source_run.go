@@ -233,6 +233,7 @@ func (p *Pipeline) normalizeParsed(ctx context.Context, f *fetch.Fetcher, ref so
 		parsed.URL = ref.URL
 	}
 	p.enrichActions(ctx, f, parsed, now)
+	p.enrichDeadlinesFromActionPages(ctx, f, parsed, now)
 
 	e, nerr := normalize.Normalize(parsed, now)
 	if nerr != nil {

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/smpain/event-intelligence-api/internal/fetch"
@@ -148,5 +149,108 @@ func assertBenchmarkCatalogActionHonesty(t *testing.T, db *sql.DB) {
 		if !strings.Contains(missing.String, want) {
 			t.Fatalf("missing_fields = %s, want %q", missing.String, want)
 		}
+	}
+}
+
+// actionPageSource is a non-benchmark source whose event advertises a
+// registration URL; the deadline lives only on that page (kofurn shape).
+type actionPageSource struct {
+	base     string
+	startRaw string
+	endRaw   string
+}
+
+func (s *actionPageSource) ID() string { return "kintex" }
+
+func (s *actionPageSource) Discover(context.Context, *fetch.Fetcher) ([]sources.Ref, error) {
+	return []sources.Ref{{EventID: "kintex-actionpage-1", URL: s.base + "/detail"}}, nil
+}
+
+func (s *actionPageSource) Parse(_ context.Context, raw *fetch.Result) (*sources.ParsedEvent, error) {
+	return &sources.ParsedEvent{
+		SourceID:    "kintex",
+		EventID:     "kintex-actionpage-1",
+		URL:         raw.URL,
+		Name:        "가구 산업 대전",
+		StartRaw:    strptr(s.startRaw),
+		EndRaw:      strptr(s.endRaw),
+		VenueName:   strptr("KINTEX"),
+		City:        strptr("고양"),
+		Country:     strptr("KR"),
+		Timezone:    strptr("Asia/Seoul"),
+		Format:      strptr("onsite"),
+		Publisher:   strptr("KINTEX"),
+		SourceType:  strptr("venue"),
+		HomepageURL: strptr(s.base + "/home"),
+		Actions: sources.ActionSignals{
+			RegisterURL: strptr(s.base + "/reg"),
+		},
+		ClassifyText: "가구 인테리어",
+	}, nil
+}
+
+func actionPageServer(t *testing.T, regHits *int32) *httptest.Server {
+	t.Helper()
+	mux := http.NewServeMux()
+	mux.HandleFunc("/detail", func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, "<html><body>가구 산업 대전</body></html>")
+	})
+	mux.HandleFunc("/home", func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, "<html><body>행사 소개. 오시는 길.</body></html>")
+	})
+	mux.HandleFunc("/reg", func(w http.ResponseWriter, _ *http.Request) {
+		atomic.AddInt32(regHits, 1)
+		fmt.Fprint(w, "<html><body>무료 사전등록 가능 기간 ~2026.08.26(수) 23시 59분</body></html>")
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+func TestRun_FillsDeadlineFromRegistrationPage(t *testing.T) {
+	db := testDB(t)
+	var regHits int32
+	srv := actionPageServer(t, &regHits)
+	f := loopbackFetcher(t, srv.URL)
+
+	_, err := New("batch-actionpage").
+		WithClock(func() string { return "2026-06-23T00:00:00Z" }).
+		Run(context.Background(), db, []sources.Source{&actionPageSource{base: srv.URL, startRaw: "2026.10.21", endRaw: "2026.10.23"}}, f)
+	if err != nil {
+		t.Fatalf("Run error: %v", err)
+	}
+	if atomic.LoadInt32(&regHits) != 1 {
+		t.Fatalf("register page fetches = %d, want 1", regHits)
+	}
+	var deadline sql.NullString
+	if err := db.QueryRow(`SELECT registration_deadline FROM events WHERE event_id = 'kintex-actionpage-1'`).Scan(&deadline); err != nil {
+		t.Fatalf("query: %v", err)
+	}
+	if !deadline.Valid || deadline.String != "2026-08-26" {
+		t.Fatalf("registration_deadline = %v, want 2026-08-26", deadline)
+	}
+	var sourcesJSON string
+	if err := db.QueryRow(`SELECT sources FROM events WHERE event_id = 'kintex-actionpage-1'`).Scan(&sourcesJSON); err != nil {
+		t.Fatalf("source query: %v", err)
+	}
+	if !strings.Contains(sourcesJSON, "/reg") || !strings.Contains(sourcesJSON, "official action page") {
+		t.Fatalf("registration-page provenance missing from sources: %s", sourcesJSON)
+	}
+}
+
+func TestRun_PastEventSkipsActionPageFetch(t *testing.T) {
+	db := testDB(t)
+	var regHits int32
+	srv := actionPageServer(t, &regHits)
+	f := loopbackFetcher(t, srv.URL)
+
+	_, err := New("batch-actionpage-past").
+		WithClock(func() string { return "2026-06-23T00:00:00Z" }).
+		Run(context.Background(), db, []sources.Source{&actionPageSource{base: srv.URL, startRaw: "2024.01.10", endRaw: "2024.01.12"}}, f)
+	if err != nil {
+		t.Fatalf("Run error: %v", err)
+	}
+	if atomic.LoadInt32(&regHits) != 0 {
+		t.Fatalf("register page fetches = %d, want 0 for past event", regHits)
 	}
 }

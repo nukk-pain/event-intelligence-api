@@ -63,3 +63,90 @@ func TestExtractActionsRejectsUnsafeLinks(t *testing.T) {
 		t.Fatalf("RegisterURL = %v, want nil", signals.RegisterURL)
 	}
 }
+
+func TestDeadlineNear_KoreanYearMonthDayShape(t *testing.T) {
+	html := []byte(`<html><body><p>참가 신청 마감: 2026년 9월 1일</p></body></html>`)
+	signals, err := ExtractActions("https://expo.example.com/", html)
+	if err != nil {
+		t.Fatalf("ExtractActions: %v", err)
+	}
+	if signals.RegistrationDeadline == nil || *signals.RegistrationDeadline != "2026년 9월 1일" {
+		t.Fatalf("RegistrationDeadline = %v, want 2026년 9월 1일", signals.RegistrationDeadline)
+	}
+}
+
+func TestDeadlineNear_LabelVariantsAfterOnly(t *testing.T) {
+	// Dates before a label are deliberately NOT extracted: goquery joins text
+	// nodes without whitespace, so a preceding fact's date can touch the
+	// label and a before-window would steal it (wrong deadline > no deadline).
+	html := []byte(`<html><body>
+		<p>2026.08.20 사전등록 마감</p>
+		<p>부스마감 2026/08/15</p>
+	</body></html>`)
+	signals, err := ExtractActions("https://expo.example.com/", html)
+	if err != nil {
+		t.Fatalf("ExtractActions: %v", err)
+	}
+	if signals.RegistrationDeadline != nil {
+		t.Fatalf("RegistrationDeadline = %v, want nil (before-label date must not be trusted)", *signals.RegistrationDeadline)
+	}
+	if signals.ExhibitorDeadline == nil || *signals.ExhibitorDeadline != "2026/08/15" {
+		t.Fatalf("ExhibitorDeadline = %v, want 2026/08/15 (부스마감 variant)", signals.ExhibitorDeadline)
+	}
+}
+
+func TestDeadlineNear_NoticeDateNotMistakenForDeadline(t *testing.T) {
+	// Real false-positive shape from dong-afairs.co.kr: a notice title with a
+	// posting date but no 마감 label. Must stay nil.
+	html := []byte(`<html><body><p>동아전람 무료관람신청 2026-06-18 공지</p></body></html>`)
+	signals, err := ExtractActions("https://expo.example.com/", html)
+	if err != nil {
+		t.Fatalf("ExtractActions: %v", err)
+	}
+	if signals.RegistrationDeadline != nil {
+		t.Fatalf("RegistrationDeadline = %v, want nil (notice date is not a deadline)", *signals.RegistrationDeadline)
+	}
+}
+
+func TestDeadlineOnActionPage_RangeEndOnRegistrationContextPage(t *testing.T) {
+	// Real shape from the kofurn registration page: a 기간 label with a
+	// range-end date. Legitimate only because the caller fetched a
+	// registration/exhibit URL, i.e. the page context is enrollment.
+	html := []byte(`<html><body><p>무료 사전등록 가능 기간 ~2026.08.26(수) 23시 59분</p></body></html>`)
+	got := DeadlineOnActionPage(html, RegisterPage)
+	if got == nil || *got != "2026.08.26" {
+		t.Fatalf("DeadlineOnActionPage = %v, want 2026.08.26", got)
+	}
+}
+
+func TestDeadlineOnActionPage_ExplicitDeadlineLabelWins(t *testing.T) {
+	html := []byte(`<html><body>
+		<p>행사 기간 2026.10.21 ~ 2026.10.23</p>
+		<p>신청 마감 2026년 8월 31일</p>
+	</body></html>`)
+	got := DeadlineOnActionPage(html, RegisterPage)
+	if got == nil || *got != "2026년 8월 31일" {
+		t.Fatalf("DeadlineOnActionPage = %v, want explicit 마감 label to win", got)
+	}
+}
+
+func TestDeadlineOnActionPage_EventPeriodAloneIsNotADeadline(t *testing.T) {
+	// 행사/전시 기간 is the event run, not an application window.
+	html := []byte(`<html><body><p>전시 기간: 2026.10.21 ~ 2026.10.23</p><p>오시는 길</p></body></html>`)
+	if got := DeadlineOnActionPage(html, RegisterPage); got != nil {
+		t.Fatalf("DeadlineOnActionPage = %v, want nil for bare event period", *got)
+	}
+}
+
+func TestDeadlineOnActionPage_ExhibitKindIgnoresVisitorRegistration(t *testing.T) {
+	// On an exhibit page, 사전등록 belongs to visitors — it must not become
+	// the exhibitor deadline (wrong_type guard).
+	html := []byte(`<html><body><p>사전등록 마감 2026.08.20</p></body></html>`)
+	if got := DeadlineOnActionPage(html, ExhibitPage); got != nil {
+		t.Fatalf("DeadlineOnActionPage(exhibit) = %v, want nil for visitor-registration label", *got)
+	}
+	html2 := []byte(`<html><body><p>부스 신청 마감 2026.08.20</p></body></html>`)
+	if got := DeadlineOnActionPage(html2, ExhibitPage); got == nil || *got != "2026.08.20" {
+		t.Fatalf("DeadlineOnActionPage(exhibit) = %v, want 2026.08.20", got)
+	}
+}

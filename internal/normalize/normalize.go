@@ -34,6 +34,11 @@ var dateLayouts = []string{
 	"2006-1-2",
 }
 
+// ParseDate returns the ISO (YYYY-MM-DD) form of a raw date string, or ("",
+// false) when it matches no known layout. Exported for pipeline gates that
+// need the same no-guessing date discipline (e.g. upcoming-event checks).
+func ParseDate(raw string) (string, bool) { return parseDate(raw) }
+
 // parseDate returns the ISO (YYYY-MM-DD) form of a raw date string, or ("",
 // false) when it matches no known layout. It does not fabricate or guess.
 func parseDate(raw string) (string, bool) {
