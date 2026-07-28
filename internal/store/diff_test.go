@@ -683,3 +683,82 @@ func TestApplyBatchEmptyChangeTimestampRejected(t *testing.T) {
 		t.Fatalf("a blank changed_at row leaked into the change feed: %d rows", blanks)
 	}
 }
+
+// TestApplyBatchCarriesForwardEnrichedDeadlines: deadlines are ratchet facts.
+// Enrichment fills them only on runs where its budget reaches the event, so a
+// later run whose parsed state has nil deadlines must NOT wipe stored values
+// (observed live 2026-07-28: ~14 fills and ~8 wipes per ingest canceling out,
+// coverage stuck near zero). Carrying forward must also register as "no
+// semantic change" when nothing else moved.
+func TestApplyBatchCarriesForwardEnrichedDeadlines(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+
+	e := newEvent()
+	reg, exh := "2026-08-14", "2026-07-31"
+	e.RegistrationDeadline = &reg
+	e.ExhibitorDeadline = &exh
+	if err := store.ApplyBatch(ctx, db, []model.Event{e}, "batch-001"); err != nil {
+		t.Fatalf("ApplyBatch run1: %v", err)
+	}
+	before := rowSnapshot(t, db, e.EventID)
+
+	// Next run: enrichment didn't fire, parsed deadlines are nil.
+	e2 := newEvent()
+	e2.RegistrationDeadline = nil
+	e2.ExhibitorDeadline = nil
+	if err := store.ApplyBatch(ctx, db, []model.Event{e2}, "batch-002"); err != nil {
+		t.Fatalf("ApplyBatch run2: %v", err)
+	}
+	after := rowSnapshot(t, db, e.EventID)
+
+	gotReg, gotExh := deadlineColumns(t, db, e.EventID)
+	if !gotReg.Valid || gotReg.String != reg {
+		t.Fatalf("registration_deadline = %v, want carried %s", gotReg, reg)
+	}
+	if !gotExh.Valid || gotExh.String != exh {
+		t.Fatalf("exhibitor_deadline = %v, want carried %s", gotExh, exh)
+	}
+	if n := countChanges(t, db, e.EventID); n != 0 {
+		t.Fatalf("carry-forward produced %d change rows, want 0 (no semantic change)", n)
+	}
+	if after["updated_at"].String != before["updated_at"].String {
+		t.Fatalf("updated_at must stay byte-identical when only carry-forward happened")
+	}
+}
+
+// A run that genuinely changes another field must still keep carried deadlines.
+func TestApplyBatchCarryForwardSurvivesRealChange(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+
+	e := newEvent()
+	reg := "2026-08-14"
+	e.RegistrationDeadline = &reg
+	if err := store.ApplyBatch(ctx, db, []model.Event{e}, "batch-001"); err != nil {
+		t.Fatalf("ApplyBatch run1: %v", err)
+	}
+
+	e2 := newEvent()
+	e2.RegistrationDeadline = nil
+	e2.Status = "cancelled"
+	if err := store.ApplyBatch(ctx, db, []model.Event{e2}, "batch-002"); err != nil {
+		t.Fatalf("ApplyBatch run2: %v", err)
+	}
+	after := rowSnapshot(t, db, e.EventID)
+	gotReg, _ := deadlineColumns(t, db, e.EventID)
+	if !gotReg.Valid || gotReg.String != reg {
+		t.Fatalf("registration_deadline = %v, want carried through a real change", gotReg)
+	}
+	if after["status"].String != "cancelled" {
+		t.Fatalf("status = %q, want cancelled", after["status"].String)
+	}
+}
+
+func deadlineColumns(t *testing.T, db *sql.DB, id string) (reg, exh sql.NullString) {
+	t.Helper()
+	if err := db.QueryRow(`SELECT registration_deadline, exhibitor_deadline FROM events WHERE event_id=?`, id).Scan(&reg, &exh); err != nil {
+		t.Fatalf("deadlineColumns %s: %v", id, err)
+	}
+	return reg, exh
+}

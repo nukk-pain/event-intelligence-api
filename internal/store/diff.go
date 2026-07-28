@@ -112,6 +112,20 @@ func ApplyBatch(ctx context.Context, db *sql.DB, events []model.Event, batchID s
 			return fmt.Errorf("load existing %s: %w", e.EventID, err)
 		}
 
+		// Deadlines are ratchet facts: enrichment fills them only on runs
+		// where its budget reaches the event, so a run that parsed nil must
+		// not erase a stored value (observed live: fills and wipes canceling
+		// at ~20/day, coverage stuck near zero). A wrong stored value is
+		// removed by audit/migration, never by enrichment silence.
+		if found {
+			if e.RegistrationDeadline == nil && prev.RegistrationDeadline != nil {
+				e.RegistrationDeadline = prev.RegistrationDeadline
+			}
+			if e.ExhibitorDeadline == nil && prev.ExhibitorDeadline != nil {
+				e.ExhibitorDeadline = prev.ExhibitorDeadline
+			}
+		}
+
 		newHash := ContentHash(e)
 
 		switch {
