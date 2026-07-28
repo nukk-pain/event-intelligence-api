@@ -2,9 +2,11 @@ package fetch
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -49,6 +51,27 @@ func (f *Fetcher) newHTTPClient(checkRobots bool) *http.Client {
 		IdleConnTimeout:       90 * time.Second,
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
+	}
+	// Per-host legacy TLS: hand-roll the TLS layer over the same SSRF-guarded
+	// dial so only opted-in hosts get RSA key-exchange suites. Every other
+	// host keeps the crypto/tls defaults via tlsConfigForHost.
+	if len(f.legacyTLSHosts) > 0 {
+		baseTransport.DialTLSContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			host, _, err := net.SplitHostPort(addr)
+			if err != nil {
+				return nil, err
+			}
+			rawConn, err := guardedDial(ctx, network, addr)
+			if err != nil {
+				return nil, err
+			}
+			tconn := tls.Client(rawConn, f.tlsConfigForHost(host))
+			if err := tconn.HandshakeContext(ctx); err != nil {
+				_ = rawConn.Close()
+				return nil, err
+			}
+			return tconn, nil
+		}
 	}
 	// Strict transports bound all response headers and use a fresh HTTP/1
 	// connection so net/http cannot replay a GET inside one charged RoundTrip.
@@ -97,4 +120,29 @@ func (f *Fetcher) redirectLimitReached(viaCount int) bool {
 		return viaCount > f.maxRedirects
 	}
 	return viaCount >= f.maxRedirects
+}
+
+// tlsConfigForHost returns the client TLS config for one host. Hosts opted in
+// via WithLegacyTLSHosts get the default secure suites plus the TLS 1.2 RSA
+// key-exchange GCM suites (no DHE, no CBC); everyone else gets nil suites,
+// i.e. the crypto/tls defaults. ALPN offers h2 then http/1.1 in both cases —
+// a legacy server that cannot speak h2 simply won't select it.
+func (f *Fetcher) tlsConfigForHost(host string) *tls.Config {
+	cfg := &tls.Config{
+		ServerName: host,
+		MinVersion: tls.VersionTLS12,
+		NextProtos: []string{"h2", "http/1.1"},
+	}
+	if f.legacyTLSHosts[strings.ToLower(host)] {
+		var ids []uint16
+		for _, s := range tls.CipherSuites() {
+			ids = append(ids, s.ID)
+		}
+		ids = append(ids,
+			tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+		)
+		cfg.CipherSuites = ids
+	}
+	return cfg
 }

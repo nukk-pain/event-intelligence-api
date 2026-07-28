@@ -51,4 +51,7 @@ var ProductionAllowedHosts = []string{
 	"www.gitexeurope.com",
 	"www.worldaic.com.cn",
 	"www.worldrobotconference.com",
+	// Promoted via eventscout -promote on 2026-07-28 (AIIA notice board; the
+	// www subdomain does not respond, the bare domain is canonical).
+	"k-ai.or.kr",
 }

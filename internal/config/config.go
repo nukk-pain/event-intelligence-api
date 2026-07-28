@@ -92,6 +92,7 @@ func Default() Config {
 			{ID: "kintex", Name: "KINTEX", BaseURL: "https://www.kintex.com", Enabled: true},
 			{ID: "benchmark", Name: "International Benchmarks", BaseURL: "https://events.nukk.net/benchmarks", Enabled: true},
 			{ID: "showala", Name: "SHOWALA (KINTEX)", BaseURL: "https://showala.com", Enabled: true},
+			{ID: "aiia", Name: "AIIA 한국인공지능산업협회", BaseURL: "https://k-ai.or.kr", Enabled: true},
 		},
 		CrawlInterval:        24 * time.Hour,
 		IngestDeadline:       30 * time.Minute,

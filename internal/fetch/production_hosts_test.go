@@ -8,7 +8,7 @@ import "testing"
 // move must preserve: the known venues stay present and nothing is listed
 // twice.
 func TestProductionAllowedHostsContainsKnownVenues(t *testing.T) {
-	for _, host := range []string{"www.coex.co.kr", "www.kintex.com", "www.ces.tech", "neurips.cc"} {
+	for _, host := range []string{"www.coex.co.kr", "www.kintex.com", "www.ces.tech", "neurips.cc", "k-ai.or.kr"} {
 		found := false
 		for _, h := range ProductionAllowedHosts {
 			if h == host {

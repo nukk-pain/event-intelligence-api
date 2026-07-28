@@ -92,6 +92,11 @@ type Fetcher struct {
 	allowAnyHost bool
 	allowLoopopt bool // allow loopback IPs (tests only)
 
+	// legacyTLSHosts (lowercased) may negotiate RSA key-exchange suites, which
+	// Go excludes by default. Scoped per host so the forward-secrecy posture of
+	// every other connection is unchanged.
+	legacyTLSHosts map[string]bool
+
 	robotsTTL      time.Duration
 	robotsMu       sync.Mutex
 	robots         map[string]*robotsCacheEntry

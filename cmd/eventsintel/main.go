@@ -20,6 +20,7 @@ import (
 	"github.com/smpain/event-intelligence-api/internal/pipeline"
 	"github.com/smpain/event-intelligence-api/internal/solarenrich"
 	"github.com/smpain/event-intelligence-api/internal/sources"
+	"github.com/smpain/event-intelligence-api/internal/sources/aiia"
 	"github.com/smpain/event-intelligence-api/internal/sources/benchmark"
 	"github.com/smpain/event-intelligence-api/internal/sources/coex"
 	"github.com/smpain/event-intelligence-api/internal/sources/kintex"
@@ -91,6 +92,8 @@ func runIngest(cfg config.Config) error {
 		// list itself lives in fetch.ProductionAllowedHosts so there is one
 		// audited place a host can enter the crawl boundary.
 		fetch.WithAllowedHosts(fetch.ProductionAllowedHosts...),
+		// k-ai.or.kr offers neither ECDHE nor TLS 1.3; see WithLegacyTLSHosts.
+		fetch.WithLegacyTLSHosts("k-ai.or.kr"),
 	)
 	if err != nil {
 		return err
@@ -112,6 +115,7 @@ func runIngest(cfg config.Config) error {
 	// rentals (e.g. RoboWorld) that KINTEX's own list.do has not yet published.
 	// Cross-source dups fold into the venue-native canonical row (store dedup).
 	sources.Register(showala.New())
+	sources.Register(aiia.New())
 
 	registeredSources := sources.All()
 	sourceIDs := make([]string, 0, len(registeredSources))

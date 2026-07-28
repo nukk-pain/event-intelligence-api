@@ -41,7 +41,7 @@ Two paths share one SQLite store. `cmd/eventsintel/main.go` is the only place th
 
 ### Adding a source
 
-A source is `internal/sources.Source` (`ID()`, `Discover()`, `Parse()`). `Discover` returns `Ref{EventID, URL}`; `Parse` turns one fetched page into a `*ParsedEvent` holding **raw, unparsed** fields (dates/names kept exactly as scraped — the `internal/normalize` stage owns all date parsing, taxonomy, and `missing_fields`). Adding a venue is: implement `Source` + `sources.Register(...)` in `main.go` + add its host(s) to the fetcher allowlist there + a `config.SourceConfig` row. The pipeline iterates `sources.All()` and never names a concrete adapter. Existing adapters: `internal/sources/{coex,kintex,benchmark}`.
+A source is `internal/sources.Source` (`ID()`, `Discover()`, `Parse()`). `Discover` returns `Ref{EventID, URL}`; `Parse` turns one fetched page into a `*ParsedEvent` holding **raw, unparsed** fields (dates/names kept exactly as scraped — the `internal/normalize` stage owns all date parsing, taxonomy, and `missing_fields`). Adding a venue is: implement `Source` + `sources.Register(...)` in `main.go` + add its host(s) to `fetch.ProductionAllowedHosts` + a `config.SourceConfig` row. The pipeline iterates `sources.All()` and never names a concrete adapter. Existing adapters: `internal/sources/{coex,kintex,benchmark,showala,aiia}`. Candidate sources can come from `eventscout -promote` (see `cmd/eventscout/README.md`); a legacy-TLS-only host additionally needs `fetch.WithLegacyTLSHosts` in `main.go`.
 
 ### Store
 

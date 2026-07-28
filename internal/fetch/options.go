@@ -71,3 +71,20 @@ func WithRobotsTTL(d time.Duration) Option { return func(f *Fetcher) { f.robotsT
 
 // WithCDPFallback wires an (optional) CDP fallback. Unused in Task 1.1.
 func WithCDPFallback(c CDPFetcher) Option { return func(f *Fetcher) { f.cdp = c } }
+
+// WithLegacyTLSHosts allows the listed hosts (case-insensitive) to negotiate
+// TLS 1.2 RSA key-exchange cipher suites. Some Korean association servers
+// (e.g. k-ai.or.kr) offer neither ECDHE nor TLS 1.3, so Go's default client
+// cannot connect at all; encrypted-without-forward-secrecy beats downgrading
+// the crawl to plain HTTP. Growing this list is a reviewed code change, same
+// as the host allowlist.
+func WithLegacyTLSHosts(hosts ...string) Option {
+	return func(f *Fetcher) {
+		if f.legacyTLSHosts == nil {
+			f.legacyTLSHosts = make(map[string]bool, len(hosts))
+		}
+		for _, h := range hosts {
+			f.legacyTLSHosts[strings.ToLower(h)] = true
+		}
+	}
+}
