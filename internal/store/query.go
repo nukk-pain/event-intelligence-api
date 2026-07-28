@@ -153,7 +153,11 @@ func (f EventFilter) commonWhere() (where []string, args []any) {
 	}
 	switch f.ListKind {
 	case "venue":
-		where = append(where, "e.venue_id IN ('coex', 'kintex')")
+		// "venue" means the domestic list. It began as COEX/KINTEX only; since
+		// the AKEI nationwide directory (2026-07-28) domestic events happen at
+		// venues we have no venue_id for, so the partition is defined by what
+		// it is NOT: the international benchmark family.
+		where = append(where, "e.event_id NOT LIKE 'benchmark-%'")
 	case "benchmark":
 		where = append(where, "e.event_id LIKE 'benchmark-%'")
 	}

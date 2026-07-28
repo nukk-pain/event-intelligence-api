@@ -54,8 +54,9 @@ paths:
       summary: List events
       description: >-
         Keyset-paginated, filterable event listing. Use list=venue for
-        COEX/KINTEX venue schedules and list=benchmark for event-family
-        benchmark records. When list=venue and since is omitted, the server
+        domestic (Korea) event schedules — COEX/KINTEX plus nationwide
+        events from the AKEI exhibition directory and association boards —
+        and list=benchmark for event-family benchmark records. When list=venue and since is omitted, the server
         defaults since to today's date in Asia/Seoul so venue reads show current
         and upcoming schedules by default.
       parameters:

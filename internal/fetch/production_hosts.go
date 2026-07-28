@@ -54,4 +54,7 @@ var ProductionAllowedHosts = []string{
 	// Promoted via eventscout -promote on 2026-07-28 (AIIA notice board; the
 	// www subdomain does not respond, the bare domain is canonical).
 	"k-ai.or.kr",
+	// Promoted from the first automated weekly discovery packet (2026-07-28):
+	// AKEI runs the nationwide domestic exhibition schedule.
+	"www.akei.or.kr",
 }

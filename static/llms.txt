@@ -1,7 +1,8 @@
 # AI Industry Event Intelligence API
 
 > Read-only, cache-first API for AI, humanoid robotics, bio, medical-device, and
-> digital-health industry events. COEX and KINTEX (Korea) are covered first.
+> digital-health industry events. Domestic Korea coverage spans COEX, KINTEX,
+> and the AKEI nationwide exhibition directory; international benchmarks too.
 > JSON is canonical; a token-cheaper Markdown rendering is available for prompt
 > ingestion. No live LLM generation runs on reads.
 
@@ -51,7 +52,7 @@ Exceeding either returns HTTP 429 with a `Retry-After` header.
 
 - categories: ai, humanoid-robotics, bio, medical-devices, digital-health
 - list_kinds: all, venue, benchmark
-- venues: coex, kintex
+- venues: coex, kintex (venue ids; domestic events at other venues carry venue name text only)
 - update_state: new, unchanged, updated, conflicting
 - status: scheduled, tentative, postponed, cancelled, ended
 

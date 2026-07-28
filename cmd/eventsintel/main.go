@@ -21,6 +21,7 @@ import (
 	"github.com/smpain/event-intelligence-api/internal/solarenrich"
 	"github.com/smpain/event-intelligence-api/internal/sources"
 	"github.com/smpain/event-intelligence-api/internal/sources/aiia"
+	"github.com/smpain/event-intelligence-api/internal/sources/akei"
 	"github.com/smpain/event-intelligence-api/internal/sources/benchmark"
 	"github.com/smpain/event-intelligence-api/internal/sources/coex"
 	"github.com/smpain/event-intelligence-api/internal/sources/kintex"
@@ -116,6 +117,9 @@ func runIngest(cfg config.Config) error {
 	// Cross-source dups fold into the venue-native canonical row (store dedup).
 	sources.Register(showala.New())
 	sources.Register(aiia.New())
+	// AKEI is the nationwide exhibition schedule aggregator: one adapter covers
+	// every domestic venue; cross-source dups fold into venue-native rows.
+	sources.Register(akei.New())
 
 	registeredSources := sources.All()
 	sourceIDs := make([]string, 0, len(registeredSources))
