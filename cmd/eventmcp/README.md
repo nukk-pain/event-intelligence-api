@@ -49,9 +49,9 @@ claude mcp add --transport http events https://events.nukk.net/mcp
 ```
 
 등록 후 자기 AI에게 그대로 물으면 됩니다. "다음 달 서울 AI 행사 뭐 있어?"
-`search_events`는 모델 없이 동작하고, `ask_events`는 서버 운영자의 Solar 키로
-질문을 필터로 바꿉니다. `ask_events`에는 클라이언트당 10회, 10분 및 60회, 1일
-한도가 있고 넘으면 429와 Retry-After를 돌려줍니다.
+`search_events`는 모델 없이 돕니다. `ask_events`는 서버 운영자의 Solar 키로
+질문을 필터로 바꾸는데, 클라이언트당 10분에 10회, 하루 60회까지 쓸 수 있고
+넘으면 429와 Retry-After를 돌려줍니다.
 
-서버는 상태가 없습니다. 세션을 발급하지 않고 GET 스트림은 405로 답하며, 요청
-하나가 JSON-RPC 메시지 하나입니다. 질문 문장 외에 어떤 것도 보내지 마세요.
+서버는 상태를 저장하지 않습니다. 세션을 발급하지 않고 GET 스트림은 405로
+답합니다. 요청 하나가 JSON-RPC 메시지 하나입니다. 질문 문장만 보내세요.
