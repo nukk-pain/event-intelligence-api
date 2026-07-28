@@ -23,3 +23,13 @@ func lookup(rawURL string) (catalogEvent, bool) {
 	}
 	return catalogEvent{}, false
 }
+
+// CatalogEventIDs lists every catalog entry's EventID so promotion tooling
+// (eventscout -promote) can avoid minting an ID that already exists.
+func CatalogEventIDs() []string {
+	ids := make([]string, 0, len(catalog))
+	for _, e := range catalog {
+		ids = append(ids, e.EventID)
+	}
+	return ids
+}

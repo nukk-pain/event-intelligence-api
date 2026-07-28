@@ -159,3 +159,25 @@ duration, and fixed limit counters—not the goal, fetched page text, model
 credentials, or provider error details. The interactive CLI prints its local
 goal to its own terminal as part of its normal output, so treat that terminal
 as sensitive and do not redirect it to shared logs.
+
+## Promoting accepted sources into ingest (`-promote`)
+
+Discovery output is not wired into ingest automatically. To move an accepted
+source into the crawl, pass `-promote <dir>` and the CLI writes three review
+artifacts for the accepted sources of that run:
+
+- `seed-candidates.jsonl` — one row per accepted source in the benchmark seed
+  shape, with the scout's judgment reason and flags (`already_allowlisted`,
+  `slug_collision`, `invalid_url`).
+- `catalog-snippet.go.txt` — a paste-ready `catalogEvent` var for
+  `internal/sources/benchmark`. Generated fields come only from the scout run;
+  everything else is left empty for the reviewer to fill from the official
+  page. The snippet is gofmt-validated at generation time.
+- `allowlist-hosts.txt` — hosts not yet in `fetch.ProductionAllowedHosts`,
+  the single audited allowlist ingest enforces.
+
+Promotion is a reviewed code change on purpose: a human verifies each
+candidate against its official page, fills the missing fields, wires the
+snippet into the catalog, adds the hosts, and commits. Nothing a model
+accepted can start being crawled without that commit. With zero accepted
+sources nothing is written.

@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/smpain/event-intelligence-api/internal/agent"
+	"github.com/smpain/event-intelligence-api/internal/fetch"
 	"github.com/smpain/event-intelligence-api/internal/publicdiscovery"
 )
 
@@ -30,6 +31,7 @@ func main() {
 	rounds := flag.Int("rounds", 3, "max discovery rounds")
 	maxTokens := flag.Int("max-tokens", 3000, "max completion tokens")
 	timeout := flag.Duration("timeout", 90*time.Second, "per-request timeout")
+	promoteDir := flag.String("promote", "", "write review artifacts (seed candidates, catalog snippet, new allowlist hosts) for accepted sources into this directory")
 	flag.Parse()
 
 	searchCfg := searchConfig{
@@ -73,6 +75,16 @@ func main() {
 		result.Trace.Calls, result.Trace.Usage.PromptTokens, result.Trace.Usage.CompletionTokens, time.Since(start).Milliseconds())
 	if err != nil {
 		os.Exit(1)
+	}
+	if *promoteDir != "" {
+		wrote, perr := writePromotionFiles(*promoteDir, result.Sources, fetch.ProductionAllowedHosts)
+		if perr != nil {
+			fmt.Fprintln(os.Stderr, "promote:", perr)
+			os.Exit(1)
+		}
+		if !wrote {
+			fmt.Fprintln(os.Stderr, "promote: no accepted sources, nothing written")
+		}
 	}
 }
 

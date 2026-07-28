@@ -576,3 +576,23 @@ contract and must not acquire live LLM work as a side effect.
 - Live verification: initialize, tools/list, search_events, and a real
   ask_events ("다음 달 서울 AI 행사" → ai/서울/2026-08 filter, 7 events)
   through the public URL, with `deploy/verify.sh` still ALL CHECKS PASSED.
+
+### Source promotion goes through code review, not runtime config (2026-07-28)
+
+- Status: accepted
+- Context: eventscout can discover and judge new public sources, but ingest
+  only crawls the sources wired into `main.go` and the benchmark catalog. A
+  path was needed from an accepted discovery to a crawled source.
+- Decision: `eventscout -promote <dir>` emits review artifacts (seed-candidate
+  JSONL, paste-ready catalog snippet, new-host allowlist diff); a human fills
+  the missing fields from the official page and lands them as a normal commit.
+  The crawl allowlist moved to `fetch.ProductionAllowedHosts` as the single
+  audited list both ingest and the promotion diff read.
+- Alternative rejected: runtime seed loading via env-pointed JSONL plus
+  env-extended allowlist. It removes the rebuild step but moves the SSRF
+  boundary out of reviewed code, so a bad judgment or edited host file could
+  put a source into the public dataset without review. The asymmetry (approval
+  is cheap, serving polluted data is not) decided it.
+- Model-generated text (title, reason) enters the snippet only through `%q`
+  escaping and the whole snippet must pass `go/format.Source`, so review
+  content, not syntax, is the only thing a human can get wrong.
