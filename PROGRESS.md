@@ -10,6 +10,10 @@
 
 ## Current Focus
 
+(2026-07-29 삽입) 마감 커버리지 작업 완료 — 상세는 `.tasks/260729-deadline-coverage/PLAN.md`.
+다음 액션: `make eval-report` 정확성 감사 (래칫 도입으로 감사가 잘못된 값의 유일한 제거 경로).
+
+
 Finish the Solar Agent Partner Stage 1 public surface without changing the
 normal cache-first event API: document the anonymous public-discovery boundary,
 operator-only Solar startup, and reproducible no-third-party-key smoke path.
