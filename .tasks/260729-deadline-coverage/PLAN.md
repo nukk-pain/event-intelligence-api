@@ -20,7 +20,10 @@
 - impl: `internal/enrich/actions.go`
 - [x] dateRe에 년월일형("2026년 9월 1일")과 `/` 구분자 추가
 - [x] 마감 라벨 변형 추가 (사전등록/신청/접수 마감, 붙여쓰기 변형)
-- [x] deadlineNear가 라벨 앞 40자도 탐색 (날짜가 라벨 앞에 오는 문장)
+- [x] ~~deadlineNear가 라벨 앞 40자도 탐색~~ → 구현 중 폐기: goquery가 텍스트 노드를
+      공백 없이 이어붙여 직전 항목의 날짜가 라벨에 거리 0으로 붙음("…07.31부스 신청
+      마감…"). 라벨 뒤 탐색만 유지하고, 윈도우를 다음 마감 라벨에서 절단해 인접 항목
+      누수도 차단 (테스트로 못 박음)
 
 #### Task 2: register/exhibit 페이지 결정론 2차 패스 `[TDD]`
 - test: `internal/enrich/actions_test.go`, `internal/pipeline/source_enrich_test.go`(있으면)
