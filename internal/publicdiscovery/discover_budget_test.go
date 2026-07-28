@@ -14,7 +14,7 @@ func TestDiscoverBudgetDefaults_when_provider_is_created(t *testing.T) {
 	limits := DefaultLimits()
 
 	// Then
-	if limits.MaxSeeds != 6 || limits.MaxDepth != 2 || limits.MaxProtocolDocuments != 12 || limits.MaxHTMLPages != 24 {
+	if limits.MaxSeeds != 8 || limits.MaxDepth != 2 || limits.MaxProtocolDocuments != 12 || limits.MaxHTMLPages != 24 {
 		t.Fatalf("frontier limits = %+v", limits)
 	}
 	if limits.MaxCandidates != 30 || limits.MaxHTTPAttempts != 64 || limits.MaxResponseBytes != 6<<20 || limits.Timeout != 60*time.Second {

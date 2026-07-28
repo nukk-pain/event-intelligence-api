@@ -37,6 +37,12 @@ func TestSeedCatalog_when_read_by_caller_is_curated_and_isolated(t *testing.T) {
 		}
 	}
 
+	for _, want := range []string{"AKEI 한국전시산업진흥회", "EXCO"} {
+		if _, ok := seenNames[want]; !ok {
+			t.Fatalf("catalog missing promoted domestic hub seed %q", want)
+		}
+	}
+
 	first.Seeds[0].URL = "https://attacker.invalid/"
 	second := SeedCatalog()
 	if second.Seeds[0].URL == first.Seeds[0].URL {

@@ -8,7 +8,7 @@ import (
 	"github.com/smpain/event-intelligence-api/internal/fetch"
 )
 
-const catalogVersion = "2026-07-19.v1"
+const catalogVersion = "2026-07-28.v2"
 
 func catalogSeeds() []Seed {
 	return []Seed{
@@ -18,6 +18,11 @@ func catalogSeeds() []Seed {
 		{Name: "NVIDIA GTC", URL: "https://www.nvidia.com/gtc/"},
 		{Name: "BIO International", URL: "https://convention.bio.org/"},
 		{Name: "MEDICA", URL: "https://www.medica-tradefair.com/"},
+		// Domestic hub seeds promoted 2026-07-28 (keyless discovery expansion).
+		// robots verified: AKEI 200 allow, EXCO 200 with Googlebot-only rules.
+		// GEP excluded (robots disallows all), BEXCO deferred (robots 302).
+		{Name: "AKEI 한국전시산업진흥회", URL: "https://www.akei.or.kr/"},
+		{Name: "EXCO", URL: "https://exco.co.kr/"},
 	}
 }
 

@@ -1,0 +1,12 @@
+[Unit]
+Description=eventscout weekly keyless source discovery (promotion packet for human review)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/developer/events-intel
+# Operator-only Solar key; absent key means the run skips cleanly (exit 0).
+EnvironmentFile=-/srv/developer/events-intel/solar.env
+ExecStart=/srv/developer/events-intel/run-scout-discovery.sh
+TimeoutStartSec=10m

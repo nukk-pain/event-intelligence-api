@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	MaxSeeds             = 6
+	MaxSeeds             = 8
 	MaxDepth             = 2
 	MaxProtocolDocuments = 12
 	MaxHTMLPages         = 24
