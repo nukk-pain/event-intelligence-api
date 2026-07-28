@@ -64,7 +64,7 @@ func TestDiscoverWithOptions_attributesPrefilterDropsByReason(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Given
 			options := testOptions(t, tt.profile)
-			backend, _ := newScriptedBackend(t, proposal("events"), doneProposal())
+			backend, _ := newScriptedBackend(t, searchAction("events"), doneAction())
 
 			// When
 			run, err := DiscoverWithOptions(context.Background(), DiscoverRequest{
@@ -95,7 +95,7 @@ func TestDiscoverWithOptions_prefilterReasonsSumToTotal(t *testing.T) {
 	// Given
 	options := testOptions(t, DiscoveryProfileEvents)
 	accepted := "https://events.example/calendar"
-	backend, _ := newScriptedBackend(t, proposal("events"), judgment(options.Profile, accepted), doneProposal())
+	backend, _ := newScriptedBackend(t, searchAction("events"), acceptAction(accepted), doneAction())
 
 	// When
 	run, err := DiscoverWithOptions(context.Background(), DiscoverRequest{
@@ -130,7 +130,7 @@ func TestDiscoverWithOptions_prefilterReasonsSumToTotal(t *testing.T) {
 func TestDiscoverWithOptions_prefilterReasonsSerializeCountsOnly(t *testing.T) {
 	// Given
 	options := testOptions(t, DiscoveryProfileEvents)
-	backend, _ := newScriptedBackend(t, proposal("events"), doneProposal())
+	backend, _ := newScriptedBackend(t, searchAction("events"), doneAction())
 
 	// When
 	run, err := DiscoverWithOptions(context.Background(), DiscoverRequest{

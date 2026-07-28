@@ -112,6 +112,68 @@ func TestNewSearchTool_defaults_to_public_provider(t *testing.T) {
 	}
 }
 
+func TestClampOpens_bounds_the_flag_to_the_open_ceiling(t *testing.T) {
+	tests := []struct {
+		name  string
+		opens int
+		want  int
+	}{
+		{name: "negative disables opens", opens: -1, want: 0},
+		{name: "zero disables opens", opens: 0, want: 0},
+		{name: "within range", opens: 2, want: 2},
+		{name: "at the ceiling", opens: maxCLIOpens, want: maxCLIOpens},
+		{name: "above the ceiling", opens: 99, want: maxCLIOpens},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// When
+			got := clampOpens(tt.opens)
+
+			// Then
+			if got != tt.want {
+				t.Fatalf("clampOpens(%d) = %d, want %d", tt.opens, got, tt.want)
+			}
+		})
+	}
+}
+
+// Only the public provider owns a fetch policy of its own, so only it gets an
+// opener; a fixture or key-based provider must never gain a live second hop.
+func TestNewPageOpener_only_wires_the_public_provider(t *testing.T) {
+	tests := []struct {
+		name      string
+		provider  string
+		wantOpen  bool
+		wantError bool
+	}{
+		{name: "default is public", provider: "", wantOpen: true},
+		{name: "public", provider: "public", wantOpen: true},
+		{name: "fixture", provider: "fixture"},
+		{name: "tavily", provider: "tavily"},
+		{name: "unknown", provider: "unknown"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// When
+			opener, err := newPageOpener(tt.provider)
+
+			// Then
+			if err != nil {
+				t.Fatalf("newPageOpener(%q) error = %v", tt.provider, err)
+			}
+			if tt.wantOpen {
+				if _, ok := opener.(*publicdiscovery.AgentPageOpener); !ok {
+					t.Fatalf("opener = %T, want *publicdiscovery.AgentPageOpener", opener)
+				}
+				return
+			}
+			if opener != nil {
+				t.Fatalf("opener = %#v, want no opener for provider %q", opener, tt.provider)
+			}
+		})
+	}
+}
+
 func TestMarshalSources_public_reports_provider_and_budget(t *testing.T) {
 	// Given
 	tool, err := publicdiscovery.NewAgentSearchTool()

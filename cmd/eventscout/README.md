@@ -48,9 +48,20 @@ go run ./cmd/eventscout \
   -goal '한국 AI 로봇 행사 공식 소스 찾기'
 ```
 
+`-opens` (default 3, clamped to 0–3) bounds how many offered candidate pages the
+model may open to fill in a missing title, date, or location. Opening is a live
+second-hop fetch, so it exists only for `-search-provider public`: it reuses that
+provider's fetch policy — robots.txt, the private/loopback/link-local/metadata
+refusal, 512 KiB per response — and reads only the page title and a bounded body
+snippet, never a date or location it would have to invent. `fixture` and
+`tavily` runs have no opener at all and ignore the flag. `-opens 0` disables the
+action entirely: it is not offered to the model and nothing is fetched for it.
+
 The effective discovery guardrails are server-owned and hard-clamped even when
-larger CLI flags are supplied: at most 2 rounds, 4 model calls, 4,000 total
-completion tokens (1,000 reserved per call by default), 30 candidates total and
+larger CLI flags are supplied: at most 2 rounds, 3 page opens, 8 model calls,
+4,000 total completion tokens (1,000 reserved per call by default, so the
+completion reservation — not the call ceiling — is what usually stops a run),
+30 candidates total and
 5 candidates per source, an 800-rune goal, and a 20-second per-model-call
 default (never above 60 seconds). The public crawler adds 6 seeds, depth 2, 12
 protocol documents, 24 HTML pages, 64 transport attempts, 30 candidates, 6 MiB
@@ -65,7 +76,7 @@ For a completed successful `public` provider run, the CLI may add a
 request-local, count-only `yield_trace` object with exactly these fields:
 `outcome`, `terminal_reason`, `crawler_validated`, `offered`,
 `prefilter_dropped`, `prefilter_reasons`, `proposal_calls`, `judge_calls`,
-`judge_entries_parsed`, `judge_entries_dropped`, and `accepted`.
+`open_calls`, `judge_entries_parsed`, `judge_entries_dropped`, and `accepted`.
 
 `prefilter_reasons` breaks the prefilter total into fixed count-only keys —
 `invalid_url`, `url_pattern`, `missing_title`, `missing_location`,

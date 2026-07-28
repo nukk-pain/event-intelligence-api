@@ -66,6 +66,53 @@ func TestHandler_returns_discovery_envelope_when_goal_is_valid(t *testing.T) {
 	}
 }
 
+// The yield trace is a published response contract: open_calls joins it
+// additively, so every field that was there before must still be there, with no
+// extra field smuggled in alongside it.
+func TestHandler_serializes_the_full_yield_trace_field_set(t *testing.T) {
+	// Given
+	runner := &stubRunner{output: DiscoveryOutput{
+		YieldTrace: agent.YieldTrace{
+			Outcome: agent.YieldOutcomeAccepted, TerminalReason: agent.YieldTerminalProposalDone,
+			CrawlerValidated: 2, Offered: 1, PrefilterDropped: 1, ProposalCalls: 2, JudgeCalls: 1,
+			OpenCalls: 3, JudgeEntriesParsed: 1, Accepted: 1,
+		},
+	}}
+	handler, _ := newTestHandler(t, runner, defaultTestHandlerSettings())
+
+	// When
+	recorder := serveJSON(handler, testJSONRequest{
+		remoteAddr: "198.51.100.10:43120", body: `{"goal":"official Korean robotics event sources"}`,
+	})
+
+	// Then
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", recorder.Code, http.StatusOK, recorder.Body.String())
+	}
+	var envelope struct {
+		YieldTrace map[string]json.RawMessage `json:"yield_trace"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &envelope); err != nil {
+		t.Fatalf("json.Unmarshal() error = %v", err)
+	}
+	wantFields := []string{
+		"outcome", "terminal_reason", "crawler_validated", "offered", "prefilter_dropped",
+		"prefilter_reasons", "proposal_calls", "judge_calls", "open_calls",
+		"judge_entries_parsed", "judge_entries_dropped", "accepted",
+	}
+	if len(envelope.YieldTrace) != len(wantFields) {
+		t.Fatalf("yield trace fields = %v, want exactly %v", envelope.YieldTrace, wantFields)
+	}
+	for _, field := range wantFields {
+		if _, ok := envelope.YieldTrace[field]; !ok {
+			t.Fatalf("yield trace missing %q: %s", field, recorder.Body.String())
+		}
+	}
+	if string(envelope.YieldTrace["open_calls"]) != "3" {
+		t.Fatalf("open_calls = %s, want the runner's count 3", envelope.YieldTrace["open_calls"])
+	}
+}
+
 func TestHandler_rejects_invalid_goal_documents_with_400(t *testing.T) {
 	tests := []struct {
 		name        string

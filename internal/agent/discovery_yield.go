@@ -27,13 +27,18 @@ const (
 	YieldTerminalCandidateEncodeError   YieldTerminalReason = "candidate_encode_error"
 	YieldTerminalJudgeError             YieldTerminalReason = "judge_error"
 	YieldTerminalMalformedJudgeEnvelope YieldTerminalReason = "malformed_judge_envelope"
-	YieldTerminalModelCallBudget        YieldTerminalReason = "model_call_budget"
-	YieldTerminalTokenBudget            YieldTerminalReason = "token_budget"
-	YieldTerminalRoundLimit             YieldTerminalReason = "round_limit"
-	YieldTerminalContextCanceled        YieldTerminalReason = "context_canceled"
-	YieldTerminalDeadlineExceeded       YieldTerminalReason = "deadline_exceeded"
-	YieldTerminalInvalidUsage           YieldTerminalReason = "invalid_usage"
-	YieldTerminalNone                   YieldTerminalReason = "none"
+	// YieldTerminalMalformedAction ends a run whose model kept violating the
+	// action contract: an unparseable action, a search with no search budget
+	// left, or an action that is not currently offered — twice in a row, the
+	// second time after an explicit correction.
+	YieldTerminalMalformedAction  YieldTerminalReason = "malformed_action"
+	YieldTerminalModelCallBudget  YieldTerminalReason = "model_call_budget"
+	YieldTerminalTokenBudget      YieldTerminalReason = "token_budget"
+	YieldTerminalRoundLimit       YieldTerminalReason = "round_limit"
+	YieldTerminalContextCanceled  YieldTerminalReason = "context_canceled"
+	YieldTerminalDeadlineExceeded YieldTerminalReason = "deadline_exceeded"
+	YieldTerminalInvalidUsage     YieldTerminalReason = "invalid_usage"
+	YieldTerminalNone             YieldTerminalReason = "none"
 )
 
 // PrefilterReason identifies why one search result was discarded before the
@@ -88,17 +93,21 @@ func (reasons *PrefilterReasons) add(reason PrefilterReason) {
 
 // YieldTrace contains counts only. It must never contain candidate data or request content.
 type YieldTrace struct {
-	Outcome             YieldOutcome        `json:"outcome"`
-	TerminalReason      YieldTerminalReason `json:"terminal_reason"`
-	CrawlerValidated    int                 `json:"crawler_validated"`
-	Offered             int                 `json:"offered"`
-	PrefilterDropped    int                 `json:"prefilter_dropped"`
-	PrefilterReasons    PrefilterReasons    `json:"prefilter_reasons"`
-	ProposalCalls       int                 `json:"proposal_calls"`
-	JudgeCalls          int                 `json:"judge_calls"`
-	JudgeEntriesParsed  int                 `json:"judge_entries_parsed"`
-	JudgeEntriesDropped int                 `json:"judge_entries_dropped"`
-	Accepted            int                 `json:"accepted"`
+	Outcome          YieldOutcome        `json:"outcome"`
+	TerminalReason   YieldTerminalReason `json:"terminal_reason"`
+	CrawlerValidated int                 `json:"crawler_validated"`
+	Offered          int                 `json:"offered"`
+	PrefilterDropped int                 `json:"prefilter_dropped"`
+	PrefilterReasons PrefilterReasons    `json:"prefilter_reasons"`
+	ProposalCalls    int                 `json:"proposal_calls"`
+	JudgeCalls       int                 `json:"judge_calls"`
+	// OpenCalls counts the page fetches actually attempted through the
+	// PageOpener, failures included. A refused open never reaches the network,
+	// so it is not counted here.
+	OpenCalls           int `json:"open_calls"`
+	JudgeEntriesParsed  int `json:"judge_entries_parsed"`
+	JudgeEntriesDropped int `json:"judge_entries_dropped"`
+	Accepted            int `json:"accepted"`
 }
 
 // WithCrawlerValidated merges the orchestration-owned validated candidate count.

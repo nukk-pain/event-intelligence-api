@@ -11,9 +11,8 @@ import (
 
 func TestDiscover_legacy_fixture_SearchTool_contract_remains_compatible(t *testing.T) {
 	// Given
-	options := testOptions(t, DiscoveryProfileEvents)
 	url := "https://events.example/calendar"
-	backend, _ := newScriptedBackend(t, proposal("events"), judgment(options.Profile, url))
+	backend, _ := newScriptedBackend(t, searchAction("events"), acceptAction(url), doneAction())
 	fixture := &staticSearch{results: []SearchResult{{Title: "Fixture Calendar", URL: url, Snippet: "fixture"}}}
 
 	// When
@@ -26,8 +25,8 @@ func TestDiscover_legacy_fixture_SearchTool_contract_remains_compatible(t *testi
 	if len(sources) != 1 || sources[0].URL != url || sources[0].Title != "Fixture Calendar" {
 		t.Fatalf("sources = %#v, want legacy fixture candidate", sources)
 	}
-	if trace.Calls != 2 || sources[0].Provenance != nil {
-		t.Fatalf("trace/provenance = %#v/%#v, want 2 calls and empty provenance", trace, sources[0].Provenance)
+	if trace.Calls != 3 || sources[0].Provenance != nil {
+		t.Fatalf("trace/provenance = %#v/%#v, want 3 action turns and empty provenance", trace, sources[0].Provenance)
 	}
 }
 
@@ -43,8 +42,7 @@ func TestDiscover_Tavily_SearchTool_contract_remains_compatible(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewTavilySearch() error = %v", err)
 	}
-	options := testOptions(t, DiscoveryProfileEvents)
-	backend, _ := newScriptedBackend(t, proposal("events"), judgment(options.Profile, "https://events.example/tavily"))
+	backend, _ := newScriptedBackend(t, searchAction("events"), acceptAction("https://events.example/tavily"), doneAction())
 
 	// When
 	sources, _, err := Discover(context.Background(), backend, "events", search, 1, 100, time.Second)
@@ -66,7 +64,7 @@ func TestDiscoverWithOptions_preserves_provenance_additively(t *testing.T) {
 		Provider: "public", SeedURL: "https://seed.example/", ParentURL: "https://seed.example/sitemap.xml",
 		Relation: "sitemap", RawURL: "HTTPS://EVENTS.EXAMPLE:443/calendar#top",
 	}
-	backend, _ := newScriptedBackend(t, proposal("events"), judgment(options.Profile, url))
+	backend, _ := newScriptedBackend(t, searchAction("events"), acceptAction(url), doneAction())
 	search := &staticSearch{results: []SearchResult{{Title: "Calendar", URL: url, Provenance: provenance}}}
 
 	// When
@@ -95,10 +93,10 @@ func TestDiscoverWithOptions_preserves_provenance_additively(t *testing.T) {
 func TestDiscoverWithOptions_does_not_leak_state_between_requests(t *testing.T) {
 	// Given
 	options := testOptions(t, DiscoveryProfileEvents)
-	options.MaxRounds = 1
 	url := "https://events.example/calendar"
 	backend, model := newScriptedBackend(t,
-		proposal("first"), judgment(options.Profile, url), proposal("second"), judgment(options.Profile, url),
+		searchAction("first"), acceptAction(url), doneAction(),
+		searchAction("second"), acceptAction(url), doneAction(),
 	)
 	search := &staticSearch{results: []SearchResult{{Title: "Calendar", URL: url}}}
 
@@ -118,10 +116,10 @@ func TestDiscoverWithOptions_does_not_leak_state_between_requests(t *testing.T) 
 		t.Fatalf("source counts = %d / %d, want 1 / 1", len(first.Sources), len(second.Sources))
 	}
 	requests := model.capturedRequests()
-	if len(requests) != 4 {
-		t.Fatalf("requests = %d, want 4", len(requests))
+	if len(requests) != 6 {
+		t.Fatalf("requests = %d, want 6", len(requests))
 	}
-	for _, request := range requests[2:] {
+	for _, request := range requests[3:] {
 		for _, message := range request.Messages {
 			if strings.Contains(message.Content, "first-goal-marker") {
 				t.Fatal("second request leaked first request goal")
@@ -134,7 +132,7 @@ func TestDiscoverWithOptions_redacts_and_bounds_goal_per_request(t *testing.T) {
 	// Given
 	options := testOptions(t, DiscoveryProfileEvents)
 	options.GoalMaxRunes = 5
-	backend, model := newScriptedBackend(t, doneProposal())
+	backend, model := newScriptedBackend(t, doneAction())
 
 	// When
 	run, err := DiscoverWithOptions(context.Background(), DiscoverRequest{
@@ -165,9 +163,11 @@ func TestDiscoverWithOptions_httptest_returns_only_offered_profile_valid_sources
 	options.ReferenceTime = time.Date(2026, 7, 19, 0, 0, 0, 0, time.UTC)
 	valid := "https://conf.example/conference/valid"
 	missingLocation := "https://conf.example/conference/no-location"
-	backend, _ := newScriptedBackend(t, proposal("conferences"), judgment(
-		options.Profile, valid, missingLocation, "https://invented.example/conference",
-	))
+	backend, _ := newScriptedBackend(t,
+		searchAction("conferences"),
+		acceptAction(valid, missingLocation, "https://invented.example/conference"),
+		doneAction(),
+	)
 	search := &staticSearch{results: []SearchResult{
 		{Title: "Valid Conference", URL: valid, Date: "2027-05-02", Location: "Seoul"},
 		{Title: "Missing Location", URL: missingLocation, Date: "2027-05-03"},

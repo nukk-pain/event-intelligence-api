@@ -28,8 +28,9 @@ func main() {
 	searchFile := flag.String("search", "cmd/eventscout/fixtures/search.json", "fixture search dataset")
 	searchProvider := flag.String("search-provider", "public", "search provider (public, fixture or tavily)")
 	backendName := flag.String("backend", "", "backend name (default: first configured)")
-	rounds := flag.Int("rounds", 3, "max discovery rounds")
-	maxTokens := flag.Int("max-tokens", 3000, "max completion tokens")
+	rounds := flag.Int("rounds", 3, "max discovery searches")
+	opens := flag.Int("opens", maxCLIOpens, "max candidate pages the model may open (0-3, public provider only)")
+	maxTokens := flag.Int("max-tokens", 500, "max completion tokens reserved per model call (effective turns = total budget / this)")
 	timeout := flag.Duration("timeout", 90*time.Second, "per-request timeout")
 	promoteDir := flag.String("promote", "", "write review artifacts (seed candidates, catalog snippet, new allowlist hosts) for accepted sources into this directory")
 	flag.Parse()
@@ -46,13 +47,20 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	opener, err := newPageOpener(*searchProvider)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	maxOpens := clampOpens(*opens)
 	be, err := pickBackend(*backendName)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("source discovery — backend=%s(%s) search=%s rounds=%d\ngoal: %s\n\n", be.Name, be.Model, *searchProvider, *rounds, *goal)
+	fmt.Printf("source discovery — backend=%s(%s) search=%s rounds=%d opens=%d\ngoal: %s\n\n",
+		be.Name, be.Model, *searchProvider, *rounds, maxOpens, *goal)
 	start := time.Now()
 	profile, err := agent.NamedDiscoveryProfile(agent.DiscoveryProfileEvents)
 	if err != nil {
@@ -60,11 +68,14 @@ func main() {
 		os.Exit(1)
 	}
 	options := agent.DefaultDiscoverOptions(profile)
-	options.MaxRounds = *rounds
+	options.MaxSearches = *rounds
+	// A provider with no opener ignores MaxOpens: the loop never offers the open
+	// action without one, so nothing is fetched for it.
+	options.MaxOpens = maxOpens
 	options.MaxTokensPerCall = *maxTokens
 	options.PerCallTimeout = *timeout
 	result, err := agent.DiscoverWithOptions(context.Background(), agent.DiscoverRequest{
-		Backend: be, Goal: *goal, Tool: tool, Options: options,
+		Backend: be, Goal: *goal, Tool: tool, Opener: opener, Options: options,
 	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "discover:", err)
@@ -117,6 +128,29 @@ func marshalDiscovery(tool agent.SearchTool, result agent.DiscoveryResult, compl
 		return []byte("[]")
 	}
 	return encoded
+}
+
+// maxCLIOpens is the CLI ceiling on page opens. It matches the agent's own hard
+// cap, which clamps anything larger anyway.
+const maxCLIOpens = 3
+
+func clampOpens(opens int) int {
+	return min(max(opens, 0), maxCLIOpens)
+}
+
+// newPageOpener returns a live page opener for the public provider only. The
+// fixture provider is offline by design and the Tavily provider owns no fetch
+// policy of its own, so neither gets a second hop; a nil opener disables the
+// open action entirely.
+func newPageOpener(provider string) (agent.PageOpener, error) {
+	if provider != "" && provider != "public" {
+		return nil, nil
+	}
+	opener, err := publicdiscovery.NewAgentPageOpener()
+	if err != nil {
+		return nil, fmt.Errorf("public page opener: %w", err)
+	}
+	return opener, nil
 }
 
 type searchConfig struct {

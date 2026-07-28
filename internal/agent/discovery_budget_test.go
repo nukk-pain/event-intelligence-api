@@ -16,10 +16,17 @@ func TestDiscoverWithOptions_returns_controlled_error_for_malformed_model_JSON(t
 		results []SearchResult
 		calls   int
 	}{
-		{name: "proposal", replies: []modelReply{{content: `not JSON`}}, calls: 1},
 		{
-			name: "judge", replies: []modelReply{proposal("events"), modelReply{content: `{"sources":[`}},
-			results: []SearchResult{{Title: "Event", URL: "https://events.example/calendar"}}, calls: 2,
+			name:    "first turn",
+			replies: []modelReply{{content: `not JSON`}, {content: `still not JSON`}},
+			calls:   2,
+		},
+		{
+			name: "after a search",
+			replies: []modelReply{
+				searchAction("events"), modelReply{content: `{"sources":[`}, modelReply{content: `{"sources":[`},
+			},
+			results: []SearchResult{{Title: "Event", URL: "https://events.example/calendar"}}, calls: 3,
 		},
 	}
 	for _, tt := range tests {
@@ -104,11 +111,11 @@ func TestDiscoverWithOptions_propagates_per_call_deadline_to_hung_upstream(t *te
 	}
 }
 
-func TestDiscoverWithOptions_stops_before_judge_when_call_budget_exhausted(t *testing.T) {
+func TestDiscoverWithOptions_stops_after_one_turn_when_call_budget_exhausted(t *testing.T) {
 	// Given
 	options := testOptions(t, DiscoveryProfileEvents)
 	options.MaxModelCalls = 1
-	backend, model := newScriptedBackend(t, proposal("events"))
+	backend, model := newScriptedBackend(t, searchAction("events"))
 	search := &staticSearch{results: []SearchResult{{Title: "Event", URL: "https://events.example/calendar"}}}
 
 	// When
@@ -133,10 +140,10 @@ func TestDiscoverWithOptions_caps_outbound_tokens_and_records_misleading_usage(t
 	options := testOptions(t, DiscoveryProfileEvents)
 	options.MaxCompletionTokens = 5
 	options.MaxTokensPerCall = 4
-	judge := judgment(options.Profile, "https://events.example/calendar")
-	judge.completionTokens = 3
+	accept := acceptAction("https://events.example/calendar")
+	accept.completionTokens = 3
 	backend, model := newScriptedBackend(t,
-		modelReply{content: `{"query":"events"}`, completionTokens: 3}, judge,
+		modelReply{content: `{"action":"search","query":"events"}`, completionTokens: 3}, accept,
 	)
 	search := &staticSearch{results: []SearchResult{{Title: "Event", URL: "https://events.example/calendar"}}}
 
@@ -161,20 +168,21 @@ func TestDiscoverWithOptions_caps_outbound_tokens_and_records_misleading_usage(t
 	}
 }
 
-func TestDiscoverWithOptions_clamps_hard_round_call_and_completion_limits(t *testing.T) {
+func TestDiscoverWithOptions_clamps_hard_search_turn_call_and_completion_limits(t *testing.T) {
 	// Given
 	options := testOptions(t, DiscoveryProfileEvents)
-	options.MaxRounds = 99
+	options.MaxSearches = 99
+	options.MaxTurns = 99
 	options.MaxModelCalls = 99
 	options.MaxCompletionTokens = 99_999
 	options.MaxTokensPerCall = 1000
 	first := "https://events.example/one"
 	second := "https://events.example/two"
 	replies := []modelReply{
-		{content: `{"query":"one"}`, completionTokens: 1000},
-		judgment(options.Profile, first),
-		{content: `{"query":"two"}`, completionTokens: 1000},
-		judgment(options.Profile, second),
+		{content: `{"action":"search","query":"one"}`, completionTokens: 1000},
+		acceptAction(first),
+		{content: `{"action":"search","query":"two"}`, completionTokens: 1000},
+		acceptAction(second),
 	}
 	replies[1].completionTokens = 1000
 	replies[3].completionTokens = 1000
@@ -194,8 +202,10 @@ func TestDiscoverWithOptions_clamps_hard_round_call_and_completion_limits(t *tes
 		t.Fatalf("DiscoverWithOptions() error = %v", err)
 	}
 	requests := model.capturedRequests()
+	// Four 1000-token replies exhaust the hard completion-token ceiling, so the
+	// run stops there even though the raised call budget clamps to 8.
 	if len(requests) != 4 || run.Trace.Calls != 4 {
-		t.Fatalf("calls HTTP=%d trace=%d, want hard maximum 4", len(requests), run.Trace.Calls)
+		t.Fatalf("calls HTTP=%d trace=%d, want 4 before the token ceiling stops the run", len(requests), run.Trace.Calls)
 	}
 	wantMaxTokens := []int{1000, 1000, 1000, 1000}
 	for i, request := range requests {
@@ -206,7 +216,7 @@ func TestDiscoverWithOptions_clamps_hard_round_call_and_completion_limits(t *tes
 	if run.Trace.Usage.CompletionTokens != 4000 {
 		t.Fatalf("completion tokens = %d, want 4000", run.Trace.Usage.CompletionTokens)
 	}
-	if run.Metadata.Budget.MaxRounds != 2 || run.Metadata.Budget.MaxModelCalls != 4 ||
+	if run.Metadata.Budget.MaxSearches != 2 || run.Metadata.Budget.MaxTurns != 8 || run.Metadata.Budget.MaxModelCalls != 8 ||
 		run.Metadata.Budget.MaxCompletionTokens != 4000 || run.Metadata.Budget.CompletionTokensReserved != 4000 {
 		t.Fatalf("hard-clamped budget = %#v", run.Metadata.Budget)
 	}

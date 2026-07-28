@@ -42,6 +42,7 @@
     },
     "proposal_calls": 2,
     "judge_calls": 1,
+    "open_calls": 0,
     "judge_entries_parsed": 1,
     "judge_entries_dropped": 0,
     "accepted": 1

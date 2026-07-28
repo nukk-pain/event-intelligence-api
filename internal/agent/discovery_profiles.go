@@ -69,12 +69,16 @@ func validateDiscoverOptions(options DiscoverOptions) (validatedDiscoverOptions,
 		return validatedDiscoverOptions{}, err
 	}
 	options.Profile = profile
-	if options.MaxRounds <= 0 || options.MaxModelCalls <= 0 || options.MaxCompletionTokens <= 0 ||
+	if options.MaxSearches <= 0 || options.MaxTurns <= 0 || options.MaxModelCalls <= 0 || options.MaxCompletionTokens <= 0 ||
 		options.MaxTokensPerCall <= 0 || options.MaxCandidates <= 0 || options.MaxCandidatesPerSource <= 0 ||
-		options.GoalMaxRunes <= 0 || options.PerCallTimeout <= 0 || options.ReferenceTime.IsZero() {
+		options.GoalMaxRunes <= 0 || options.PerCallTimeout <= 0 || options.ReferenceTime.IsZero() ||
+		options.MaxOpens < 0 {
 		return validatedDiscoverOptions{}, ErrInvalidDiscoverOptions
 	}
-	options.MaxRounds = min(options.MaxRounds, hardMaxDiscoveryRounds)
+	options.MaxSearches = min(options.MaxSearches, hardMaxSearches)
+	options.MaxTurns = min(options.MaxTurns, hardMaxDiscoveryTurns)
+	// Zero stays zero: it is the documented way to disable the open action.
+	options.MaxOpens = min(options.MaxOpens, hardMaxDiscoveryOpens)
 	options.MaxModelCalls = min(options.MaxModelCalls, hardMaxDiscoveryModelCalls)
 	options.MaxCompletionTokens = min(options.MaxCompletionTokens, hardMaxDiscoveryCompletionTokens)
 	options.MaxTokensPerCall = min(options.MaxTokensPerCall, options.MaxCompletionTokens)

@@ -40,11 +40,15 @@ func prepareCandidate(result SearchResult, options validatedDiscoverOptions) (of
 	result.Location = boundedRedactedText(result.Location, maxCandidateMetadataRunes)
 	result.Locale = boundedRedactedText(result.Locale, maxCandidateMetadataRunes)
 	result.Language = boundedRedactedText(result.Language, maxCandidateMetadataRunes)
-	if reason, ok := candidateMeetsRequirements(result, options); !ok {
-		return offeredCandidate{}, reason, false
-	}
 	result.Provenance = validProvenance(canonicalURL, result.Provenance)
-	return offeredCandidate{canonicalURL: canonicalURL, sourceKey: strings.ToLower(parsed.Hostname()), result: result}, "", true
+	candidate := offeredCandidate{canonicalURL: canonicalURL, sourceKey: strings.ToLower(parsed.Hostname()), result: result}
+	// A requirement failure still returns the built candidate: the URL passed
+	// every safety check, so the caller may hold it for a later open. ok is
+	// false either way — it must not enter the candidate table.
+	if reason, ok := candidateMeetsRequirements(result, options); !ok {
+		return candidate, reason, false
+	}
+	return candidate, "", true
 }
 
 func candidateMeetsRequirements(result SearchResult, options validatedDiscoverOptions) (PrefilterReason, bool) {

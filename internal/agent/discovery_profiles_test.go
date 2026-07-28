@@ -82,7 +82,8 @@ func TestDiscoverWithOptions_applies_selected_profile_required_fields(t *testing
 			// Given
 			options := testOptions(t, tt.profile)
 			options.ReferenceTime = time.Date(2026, 7, 19, 0, 0, 0, 0, time.UTC)
-			backend, _ := newScriptedBackend(t, proposal("profile query"), judgment(options.Profile, tt.result.URL))
+			options.MaxTurns = 2
+			backend, _ := newScriptedBackend(t, searchAction("profile query"), acceptAction(tt.result.URL))
 			search := &staticSearch{results: []SearchResult{tt.result}}
 
 			// When
@@ -111,8 +112,9 @@ func TestDiscoverWithOptions_enforces_profile_past_date_policy(t *testing.T) {
 
 	for _, name := range []DiscoveryProfileName{DiscoveryProfileEvents, DiscoveryProfileAnnouncements} {
 		options := testOptions(t, name)
+		options.MaxTurns = 2
 		options.ReferenceTime = reference
-		backend, _ := newScriptedBackend(t, proposal("archive"), judgment(options.Profile, result.URL))
+		backend, _ := newScriptedBackend(t, searchAction("archive"), acceptAction(result.URL))
 		run, err := DiscoverWithOptions(context.Background(), DiscoverRequest{
 			Backend: backend, Goal: "archive", Tool: &staticSearch{results: []SearchResult{result}}, Options: options,
 		})
@@ -129,7 +131,10 @@ func TestDiscoverWithOptions_enforces_profile_past_date_policy(t *testing.T) {
 	}
 }
 
-func TestDiscoverWithOptions_GenericProfileChangesProposalPrompt(t *testing.T) {
+// One prompt now carries the whole rubric: the loop asks for an action, not for
+// a proposal and then a judgement. Selecting a profile must still change what
+// the model is told, on every turn, with no event-only values left behind.
+func TestDiscoverWithOptions_GenericProfileChangesActionPrompt(t *testing.T) {
 	// Given
 	eventProfile, err := NamedDiscoveryProfile(DiscoveryProfileEvents)
 	if err != nil {
@@ -142,51 +147,26 @@ func TestDiscoverWithOptions_GenericProfileChangesProposalPrompt(t *testing.T) {
 	genericRequests := captureProfileModelRequests(t, genericProfile)
 
 	// Then
-	eventSystem := eventRequests[0].Messages[0].Content
-	genericSystem := genericRequests[0].Messages[0].Content
-	if genericSystem == eventSystem {
-		t.Fatal("generic proposal system prompt equals event proposal system prompt")
-	}
-	for _, want := range append([]string{genericProfile.Purpose}, append(genericProfile.QueryTemplates,
-		append(genericProfile.LocaleHints, genericProfile.LanguageHints...)...)...) {
-		if !strings.Contains(genericSystem, want) {
-			t.Fatalf("generic proposal system prompt %q does not contain selected profile value %q", genericSystem, want)
+	for turn := range genericRequests {
+		eventSystem := eventRequests[turn].Messages[0].Content
+		genericSystem := genericRequests[turn].Messages[0].Content
+		if genericSystem == eventSystem {
+			t.Fatalf("turn %d: generic action system prompt equals the event one", turn)
+		}
+		for _, want := range []string{genericProfile.Purpose, genericProfile.AdmissibilityRubric, genericProfile.OutputLabel} {
+			if !strings.Contains(genericSystem, want) {
+				t.Fatalf("turn %d: generic action system prompt %q does not contain selected profile value %q",
+					turn, genericSystem, want)
+			}
+		}
+		for _, unwanted := range []string{eventProfile.Purpose, eventProfile.AdmissibilityRubric, eventProfile.OutputLabel} {
+			if strings.Contains(genericSystem, unwanted) {
+				t.Fatalf("turn %d: generic action system prompt retained event-only value %q: %q",
+					turn, unwanted, genericSystem)
+			}
 		}
 	}
-	if strings.Contains(genericSystem, eventProfile.Purpose) || strings.Contains(genericSystem, eventProfile.QueryTemplates[0]) {
-		t.Fatalf("generic proposal system prompt retained event-only values: %q", genericSystem)
-	}
-	t.Logf("captured generic proposal markers: purpose=%q templates=%q locale=%q language=%q",
-		genericProfile.Purpose, genericProfile.QueryTemplates, genericProfile.LocaleHints, genericProfile.LanguageHints)
-}
-
-func TestDiscoverWithOptions_GenericProfileChangesJudgePrompt(t *testing.T) {
-	// Given
-	eventProfile, err := NamedDiscoveryProfile(DiscoveryProfileEvents)
-	if err != nil {
-		t.Fatalf("NamedDiscoveryProfile(events) error = %v", err)
-	}
-	genericProfile := genericPromptTestProfile(t)
-
-	// When
-	eventRequests := captureProfileModelRequests(t, eventProfile)
-	genericRequests := captureProfileModelRequests(t, genericProfile)
-
-	// Then
-	eventSystem := eventRequests[1].Messages[0].Content
-	genericSystem := genericRequests[1].Messages[0].Content
-	if genericSystem == eventSystem {
-		t.Fatal("generic judge system prompt equals event judge system prompt")
-	}
-	for _, want := range []string{genericProfile.Purpose, genericProfile.AdmissibilityRubric, genericProfile.OutputLabel} {
-		if !strings.Contains(genericSystem, want) {
-			t.Fatalf("generic judge system prompt %q does not contain selected profile value %q", genericSystem, want)
-		}
-	}
-	if strings.Contains(genericSystem, eventProfile.AdmissibilityRubric) || strings.Contains(genericSystem, eventProfile.OutputLabel) {
-		t.Fatalf("generic judge system prompt retained event-only values: %q", genericSystem)
-	}
-	t.Logf("captured generic judge markers: purpose=%q rubric=%q output_label=%q",
+	t.Logf("captured generic action markers: purpose=%q rubric=%q output_label=%q",
 		genericProfile.Purpose, genericProfile.AdmissibilityRubric, genericProfile.OutputLabel)
 }
 
@@ -209,9 +189,10 @@ func genericPromptTestProfile(t *testing.T) DiscoveryProfile {
 func captureProfileModelRequests(t *testing.T, profile DiscoveryProfile) []capturedChatRequest {
 	t.Helper()
 	options := DefaultDiscoverOptions(profile)
-	options.MaxRounds = 1
+	options.MaxSearches = 1
+	options.MaxTurns = 2
 	candidateURL := "https://example.com/profile-source"
-	backend, model := newScriptedBackend(t, proposal("profile query"), judgment(profile, candidateURL))
+	backend, model := newScriptedBackend(t, searchAction("profile query"), acceptAction(candidateURL))
 	run, err := DiscoverWithOptions(context.Background(), DiscoverRequest{
 		Backend: backend,
 		Goal:    "generic source goal",
@@ -230,7 +211,7 @@ func captureProfileModelRequests(t *testing.T, profile DiscoveryProfile) []captu
 	}
 	requests := model.capturedRequests()
 	if len(requests) != 2 || len(requests[0].Messages) != 2 || len(requests[1].Messages) != 2 {
-		t.Fatalf("captured model requests = %#v, want two system/user exchanges", requests)
+		t.Fatalf("captured model requests = %#v, want two system/user action turns", requests)
 	}
 	t.Logf("completed profile=%q model_calls=%d completion_tokens=%d accepted_sources=%d",
 		run.Metadata.Profile, run.Trace.Calls, run.Trace.Usage.CompletionTokens, len(run.Sources))

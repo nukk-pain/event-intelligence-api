@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -22,6 +23,7 @@ func (s *captureSearch) Search(_ context.Context, query string) ([]SearchResult,
 func TestDiscover_strips_contacts_from_goal_before_backend_request(t *testing.T) {
 	// Given
 	var backendUserMessage string
+	var calls atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var request struct {
 			Messages []struct {
@@ -37,8 +39,12 @@ func TestDiscover_strips_contacts_from_goal_before_backend_request(t *testing.T)
 				backendUserMessage = message.Content
 			}
 		}
+		content := `{\"action\":\"done\"}`
+		if calls.Add(1) == 1 {
+			content = `{\"action\":\"search\",\"query\":\"AI events\"}`
+		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"{\"query\":\"AI events\"}"}}]}`))
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"` + content + `"}}]}`))
 	}))
 	t.Cleanup(server.Close)
 	backend := Backend{Name: "test", BaseURL: server.URL, Model: "test-model"}

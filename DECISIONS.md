@@ -596,3 +596,44 @@ contract and must not acquire live LLM work as a side effect.
 - Model-generated text (title, reason) enters the snippet only through `%q`
   escaping and the whole snippet must pass `go/format.Source`, so review
   content, not syntax, is the only thing a human can get wrong.
+
+### Discovery choreography moves from code to the model (2026-07-28)
+
+- Status: accepted
+- Context: the discovery loop hard-coded a propose→search→judge round order;
+  Solar chose only within slots the code opened. For Solar Agent Partner
+  Stage 1 the loop's direction itself should be the model's, without giving up
+  any budget, SSRF, or contract guarantee.
+- Decision: `internal/agent` now runs an action loop. Every turn the model
+  returns exactly one JSON action — `search{query}`, `open{url}`,
+  `accept{selections}`, or `done` — and the loop executes it. No code path
+  sequences the actions; termination and cost are enforced by budgets only
+  (turns ≤ 8, model calls ≤ 8, completion-token reservation, searches ≤ 2,
+  opens ≤ 3 CLI / 2 server). A malformed or unavailable action gets exactly
+  one server-owned correction reprompt; a repeat ends the run with the new
+  `malformed_action` terminal reason, keeping already-accepted sources.
+- `open` exists to rescue real discoveries: candidates the prefilter dropped
+  only for missing metadata (title/date/location) wait in a bounded pending
+  list (10), the model may open one, empty fields are backfilled from the
+  fetched page, and the candidate is re-evaluated into the judgeable table.
+  Opens fetch through the same public-crawl fetcher as discovery itself —
+  same SSRF guard, robots enforcement, body-size cap, and a 15s per-open
+  timeout subordinated to the caller's deadline. A URL outside the candidate
+  or pending tables is refused without a fetch.
+- `yield_trace` keeps all existing fields with their meanings (accept turns →
+  judge_calls, every other turn → proposal_calls) and gains the additive
+  count-only `open_calls` (executed fetches only). A candidate counted in
+  `prefilter_dropped` that an open later rescues also appears in `offered`;
+  the drop counter records the initial verdict and never decrements.
+- Untrusted text (goal, crawled titles/snippets, model-echoed queries) is
+  rendered through `promptSafeLine` (control chars collapse, angle brackets
+  drop), so page content cannot forge prompt delimiter blocks or menu lines.
+- Token policy: per-call reservation dropped 1000→500 (`eventscout
+  -max-tokens` default 3000→500). Action responses are one small JSON object
+  (~120 tokens observed at `reasoning_effort=minimal`); the reservation, not
+  the call cap, was binding, so this makes all 8 turns reachable without
+  raising the 4,000-token completion ceiling.
+- Known behavior kept: `eventscout-server` still discards the whole result on
+  a non-nil discovery error (e.g. a transient search failure after an
+  accept), exactly as the round loop did. Changing that means changing the
+  governed anonymous error envelope, deliberately out of this change's scope.

@@ -11,8 +11,9 @@ import (
 func TestDiscoverWithOptions_characterizesExactSelectionAndBudgets(t *testing.T) {
 	// Given
 	options := testOptions(t, DiscoveryProfileEvents)
+	options.MaxTurns = 2
 	candidateURL := "https://events.example/calendar"
-	backend, _ := newScriptedBackend(t, proposal("events"), judgment(options.Profile, candidateURL))
+	backend, _ := newScriptedBackend(t, searchAction("events"), acceptAction(candidateURL))
 
 	// When
 	run, err := DiscoverWithOptions(context.Background(), DiscoverRequest{
@@ -37,8 +38,11 @@ func TestDiscoverWithOptions_characterizesExactSelectionAndBudgets(t *testing.T)
 func TestDiscoverWithOptionsYieldTrace(t *testing.T) {
 	// Given
 	options := testOptions(t, DiscoveryProfileEvents)
+	// Two turns exactly: one search, one accept — then the turn budget ends the
+	// run, which is the same terminal boundary the round budget used to produce.
+	options.MaxTurns = 2
 	candidateURL := "https://events.example/calendar"
-	backend, _ := newScriptedBackend(t, proposal("events"), judgment(options.Profile, candidateURL), doneProposal())
+	backend, _ := newScriptedBackend(t, searchAction("events"), acceptAction(candidateURL), doneAction())
 
 	// When
 	run, err := DiscoverWithOptions(context.Background(), DiscoverRequest{
@@ -65,7 +69,7 @@ func TestDiscoverWithOptionsYieldTrace(t *testing.T) {
 	if marshalErr != nil {
 		t.Fatalf("marshal yield trace: %v", marshalErr)
 	}
-	wantWire := `{"outcome":"accepted","terminal_reason":"round_limit","crawler_validated":0,"offered":1,"prefilter_dropped":0,"prefilter_reasons":{"invalid_url":0,"url_pattern":0,"missing_title":0,"missing_location":0,"missing_date":0,"past_date":0},"proposal_calls":1,"judge_calls":1,"judge_entries_parsed":1,"judge_entries_dropped":0,"accepted":1}`
+	wantWire := `{"outcome":"accepted","terminal_reason":"round_limit","crawler_validated":0,"offered":1,"prefilter_dropped":0,"prefilter_reasons":{"invalid_url":0,"url_pattern":0,"missing_title":0,"missing_location":0,"missing_date":0,"past_date":0},"proposal_calls":1,"judge_calls":1,"open_calls":0,"judge_entries_parsed":1,"judge_entries_dropped":0,"accepted":1}`
 	if string(wire) != wantWire {
 		t.Fatalf("serialized yield trace = %s, want %s", wire, wantWire)
 	}
@@ -96,11 +100,10 @@ func TestDiscoverWithOptionsYieldTrace(t *testing.T) {
 func TestDiscoverWithOptionsYieldTraceDropsMalformedSelection(t *testing.T) {
 	// Given
 	options := testOptions(t, DiscoveryProfileEvents)
-	options.MaxRounds = 2
 	backend, _ := newScriptedBackend(t,
-		proposal("events"),
-		modelReply{content: `{"sources":[{"url":"https://events.example/calendar","reason":"operator-secret-marker"}]}`},
-		doneProposal(),
+		searchAction("events"),
+		modelReply{content: `{"action":"accept","selections":[{"url":"https://invented.example/calendar","reason":"operator-secret-marker"}]}`},
+		doneAction(),
 	)
 
 	// When
@@ -116,7 +119,7 @@ func TestDiscoverWithOptionsYieldTraceDropsMalformedSelection(t *testing.T) {
 		t.Fatalf("DiscoverWithOptions() error = %v", err)
 	}
 	if run.YieldTrace.Outcome != YieldOutcomeJudgeEmpty || run.YieldTrace.TerminalReason != YieldTerminalProposalDone ||
-		run.YieldTrace.JudgeEntriesParsed != 0 || run.YieldTrace.JudgeEntriesDropped != 1 || run.YieldTrace.Accepted != 0 {
+		run.YieldTrace.JudgeEntriesParsed != 1 || run.YieldTrace.JudgeEntriesDropped != 1 || run.YieldTrace.Accepted != 0 {
 		t.Fatalf("yield trace = %#v, want bounded malformed-entry drop", run.YieldTrace)
 	}
 	wire, marshalErr := json.Marshal(run.YieldTrace)
@@ -131,9 +134,10 @@ func TestDiscoverWithOptionsYieldTraceDropsMalformedSelection(t *testing.T) {
 func TestDiscoverWithOptionsYieldTraceRequestIsolation(t *testing.T) {
 	// Given
 	options := testOptions(t, DiscoveryProfileEvents)
+	options.MaxTurns = 2
 	backend, _ := newScriptedBackend(t,
-		proposal("first"), judgment(options.Profile, "https://events.example/first"),
-		doneProposal(),
+		searchAction("first"), acceptAction("https://events.example/first"),
+		doneAction(),
 	)
 
 	// When
@@ -154,10 +158,12 @@ func TestDiscoverWithOptionsYieldTraceRequestIsolation(t *testing.T) {
 	}
 }
 
-func TestDiscoverWithOptionsYieldTraceTopLevelMalformedJudgeIsError(t *testing.T) {
+func TestDiscoverWithOptionsYieldTraceTopLevelMalformedActionIsError(t *testing.T) {
 	// Given
 	options := testOptions(t, DiscoveryProfileEvents)
-	backend, _ := newScriptedBackend(t, proposal("events"), modelReply{content: `{"sources":[`})
+	backend, _ := newScriptedBackend(t,
+		searchAction("events"), modelReply{content: `{"sources":[`}, modelReply{content: `{"sources":[`},
+	)
 
 	// When
 	run, err := DiscoverWithOptions(context.Background(), DiscoverRequest{
@@ -168,9 +174,9 @@ func TestDiscoverWithOptionsYieldTraceTopLevelMalformedJudgeIsError(t *testing.T
 	if !errors.Is(err, ErrMalformedModelResponse) {
 		t.Fatalf("error = %v, want ErrMalformedModelResponse", err)
 	}
-	if run.YieldTrace.Outcome != YieldOutcomeError || run.YieldTrace.TerminalReason != YieldTerminalMalformedJudgeEnvelope ||
+	if run.YieldTrace.Outcome != YieldOutcomeError || run.YieldTrace.TerminalReason != YieldTerminalMalformedAction ||
 		run.YieldTrace.JudgeEntriesDropped != 0 {
-		t.Fatalf("yield trace = %#v, want envelope error without entry drop", run.YieldTrace)
+		t.Fatalf("yield trace = %#v, want action-envelope error without entry drop", run.YieldTrace)
 	}
 }
 
@@ -189,49 +195,44 @@ func TestDiscoverWithOptionsYieldTraceSelectionBoundaries(t *testing.T) {
 		wantAccepted  int
 	}{
 		{
-			name: "candidate_empty", replies: func(DiscoveryProfile) []modelReply { return []modelReply{doneProposal()} },
+			name: "candidate_empty", replies: func(DiscoveryProfile) []modelReply { return []modelReply{doneAction()} },
 			wantOutcome: YieldOutcomeCandidateEmpty, wantReason: YieldTerminalProposalDone,
 		},
 		{
 			name: "prefilter_rejection", replies: func(DiscoveryProfile) []modelReply {
-				return []modelReply{proposal("events"), doneProposal()}
+				return []modelReply{searchAction("events"), doneAction()}
 			},
 			results:     []SearchResult{{Title: "Private", URL: "http://127.0.0.1/private"}},
-			configure:   func(options *DiscoverOptions) { options.MaxRounds = 2 },
 			wantOutcome: YieldOutcomeOfferedEmpty, wantReason: YieldTerminalProposalDone, wantPrefilter: 1,
 		},
 		{
-			name: "false_selection", replies: func(profile DiscoveryProfile) []modelReply {
+			name: "invented_selection", replies: func(DiscoveryProfile) []modelReply {
 				return []modelReply{
-					proposal("events"),
-					{content: `{"sources":[{"url":"https://events.example/calendar","` + profile.OutputLabel + `":false,"reason":"misleading_success_output"}]}`},
-					doneProposal(),
+					searchAction("events"), acceptAction("https://invented.example/calendar"), doneAction(),
 				}
 			},
 			results:     []SearchResult{{Title: "Calendar", URL: "https://events.example/calendar"}},
-			configure:   func(options *DiscoverOptions) { options.MaxRounds = 2 },
 			wantOutcome: YieldOutcomeJudgeEmpty, wantReason: YieldTerminalProposalDone,
 			wantOffered: 1, wantParsed: 1, wantDropped: 1,
 		},
 		{
-			name: "non_exact_selection", replies: func(profile DiscoveryProfile) []modelReply {
+			name: "non_exact_selection", replies: func(DiscoveryProfile) []modelReply {
 				return []modelReply{
-					proposal("events"), judgment(profile, "https://events.example/calendar?invented=true"), doneProposal(),
+					searchAction("events"), acceptAction("https://events.example/calendar?invented=true"), doneAction(),
 				}
 			},
 			results:     []SearchResult{{Title: "Calendar", URL: "https://events.example/calendar"}},
-			configure:   func(options *DiscoverOptions) { options.MaxRounds = 2 },
 			wantOutcome: YieldOutcomeJudgeEmpty, wantReason: YieldTerminalProposalDone,
 			wantOffered: 1, wantParsed: 1, wantDropped: 1,
 		},
 		{
-			name: "model_call_budget", replies: func(DiscoveryProfile) []modelReply { return []modelReply{proposal("events")} },
+			name: "model_call_budget", replies: func(DiscoveryProfile) []modelReply { return []modelReply{searchAction("events")} },
 			configure:   func(options *DiscoverOptions) { options.MaxModelCalls = 1 },
 			wantOutcome: YieldOutcomeBudgetStopped, wantReason: YieldTerminalModelCallBudget,
 		},
 		{
-			name: "accepted_plus_token_budget", replies: func(profile DiscoveryProfile) []modelReply {
-				return []modelReply{proposal("events"), judgment(profile, "https://events.example/calendar")}
+			name: "accepted_plus_token_budget", replies: func(DiscoveryProfile) []modelReply {
+				return []modelReply{searchAction("events"), acceptAction("https://events.example/calendar")}
 			},
 			results: []SearchResult{{Title: "Calendar", URL: "https://events.example/calendar"}},
 			configure: func(options *DiscoverOptions) {

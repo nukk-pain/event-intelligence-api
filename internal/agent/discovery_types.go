@@ -7,8 +7,22 @@ import (
 )
 
 const (
-	hardMaxDiscoveryRounds           = 2
-	hardMaxDiscoveryModelCalls       = 4
+	// hardMaxSearches caps how many searches one request may execute. It carries
+	// the retired MaxRounds budget forward unchanged: the action loop has no
+	// rounds, so the search count is what the old round budget actually bounded.
+	hardMaxSearches = 2
+	// hardMaxDiscoveryTurns caps the total number of model turns across every
+	// action (search, accept, done, and one-shot malformed corrections).
+	hardMaxDiscoveryTurns = 8
+	// hardMaxDiscoveryOpens caps how many candidate pages one request may fetch
+	// through a PageOpener. Each open is a live second-hop fetch inside the
+	// request deadline, so the ceiling stays low.
+	hardMaxDiscoveryOpens = 3
+	// hardMaxDiscoveryModelCalls caps how many model calls one request may spend.
+	// It is 8, not the 4 that covered a search/accept/done run, because every open
+	// spends a turn of its own: a run that searches, opens the pages it needs, and
+	// then judges cannot reach the accept turn on a budget of 4.
+	hardMaxDiscoveryModelCalls       = 8
 	hardMaxDiscoveryCompletionTokens = 4000
 	hardMaxDiscoveryCandidates       = 30
 	hardMaxDiscoveryGoalRunes        = 800
@@ -115,8 +129,14 @@ const (
 
 // DiscoverOptions holds server-owned profile and budget controls for one request.
 type DiscoverOptions struct {
-	Profile                DiscoveryProfile
-	MaxRounds              int
+	Profile DiscoveryProfile
+	// MaxSearches bounds how many search actions the model may execute.
+	MaxSearches int
+	// MaxTurns bounds the total model turns spent across every action.
+	MaxTurns int
+	// MaxOpens bounds how many candidate pages the model may open. Zero (the
+	// default) disables the open action, as does a request with no PageOpener.
+	MaxOpens               int
 	MaxModelCalls          int
 	MaxCompletionTokens    int
 	MaxTokensPerCall       int
@@ -132,6 +152,10 @@ type DiscoverRequest struct {
 	Backend Backend
 	Goal    string
 	Tool    SearchTool
+	// Opener, when set, lets the model open an offered candidate page to fill in
+	// fields the search provider left empty. A nil Opener disables the open
+	// action entirely — the model is never offered it and nothing is fetched.
+	Opener  PageOpener
 	Options DiscoverOptions
 }
 
@@ -146,7 +170,8 @@ type DiscoveryMetadata struct {
 
 // DiscoveryBudget reports normalized hard limits and reserved completion tokens.
 type DiscoveryBudget struct {
-	MaxRounds                int `json:"max_rounds"`
+	MaxSearches              int `json:"max_searches"`
+	MaxTurns                 int `json:"max_turns"`
 	MaxModelCalls            int `json:"max_model_calls"`
 	MaxCompletionTokens      int `json:"max_completion_tokens"`
 	CompletionTokensReserved int `json:"completion_tokens_reserved"`
@@ -175,8 +200,14 @@ func (result *DiscoveryResult) addTruncation(reason TruncationReason) {
 // DefaultDiscoverOptions returns the hard-bounded defaults for a server-selected profile.
 func DefaultDiscoverOptions(profile DiscoveryProfile) DiscoverOptions {
 	return DiscoverOptions{
-		Profile: profile, MaxRounds: hardMaxDiscoveryRounds, MaxModelCalls: hardMaxDiscoveryModelCalls,
-		MaxCompletionTokens: hardMaxDiscoveryCompletionTokens, MaxTokensPerCall: 1000,
+		Profile: profile, MaxSearches: hardMaxSearches, MaxTurns: hardMaxDiscoveryTurns,
+		MaxOpens: 0, MaxModelCalls: hardMaxDiscoveryModelCalls,
+		// MaxTokensPerCall is a per-call reservation against the completion
+		// budget, so effective turns = MaxCompletionTokens / MaxTokensPerCall.
+		// Action responses are one small JSON object (~120 tokens observed with
+		// reasoning_effort=minimal); 500 keeps all 8 turns reachable without
+		// raising the completion-token cost ceiling.
+		MaxCompletionTokens: hardMaxDiscoveryCompletionTokens, MaxTokensPerCall: 500,
 		MaxCandidates: hardMaxDiscoveryCandidates, MaxCandidatesPerSource: 5, GoalMaxRunes: hardMaxDiscoveryGoalRunes,
 		PerCallTimeout: 20 * time.Second, ReferenceTime: time.Now().UTC(),
 	}

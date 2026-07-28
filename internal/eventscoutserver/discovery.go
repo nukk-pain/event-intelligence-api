@@ -17,30 +17,45 @@ type publicSearchTool interface {
 
 type publicSearchToolFactory func() (publicSearchTool, error)
 
+type pageOpenerFactory func() (agent.PageOpener, error)
+
+// serverMaxDiscoveryOpens caps the page opens one server request may spend. Each
+// open is a live second-hop fetch inside the one-minute request deadline, so the
+// server keeps a tighter ceiling than the agent's own hard cap. The opener's own
+// per-fetch deadline is derived from the request context, so a slow page can
+// never outlive the request.
+const serverMaxDiscoveryOpens = 2
+
 type SolarDiscoveryRunner struct {
-	backend     agent.Backend
-	toolFactory publicSearchToolFactory
-	clock       Clock
+	backend       agent.Backend
+	toolFactory   publicSearchToolFactory
+	openerFactory pageOpenerFactory
+	clock         Clock
 }
 
 func NewSolarDiscoveryRunner(backend agent.Backend) (*SolarDiscoveryRunner, error) {
 	return newSolarDiscoveryRunner(backend, func() (publicSearchTool, error) {
 		return publicdiscovery.NewAgentSearchTool()
+	}, func() (agent.PageOpener, error) {
+		return publicdiscovery.NewAgentPageOpener()
 	}, SystemClock{})
 }
 
 func newSolarDiscoveryRunner(
 	backend agent.Backend,
 	toolFactory publicSearchToolFactory,
+	openerFactory pageOpenerFactory,
 	clock Clock,
 ) (*SolarDiscoveryRunner, error) {
 	if err := validateSolarBackend(backend); err != nil {
 		return nil, err
 	}
-	if toolFactory == nil || clock == nil {
+	if toolFactory == nil || openerFactory == nil || clock == nil {
 		return nil, ErrInvalidHandlerConfig
 	}
-	return &SolarDiscoveryRunner{backend: backend, toolFactory: toolFactory, clock: clock}, nil
+	return &SolarDiscoveryRunner{
+		backend: backend, toolFactory: toolFactory, openerFactory: openerFactory, clock: clock,
+	}, nil
 }
 
 func (runner *SolarDiscoveryRunner) Discover(ctx context.Context, goal Goal) (DiscoveryOutput, error) {
@@ -52,10 +67,15 @@ func (runner *SolarDiscoveryRunner) Discover(ctx context.Context, goal Goal) (Di
 	if err != nil {
 		return DiscoveryOutput{}, fmt.Errorf("public provider: %w", err)
 	}
+	opener, err := runner.openerFactory()
+	if err != nil {
+		return DiscoveryOutput{}, fmt.Errorf("public page opener: %w", err)
+	}
 	options := agent.DefaultDiscoverOptions(profile)
+	options.MaxOpens = serverMaxDiscoveryOpens
 	options.ReferenceTime = runner.clock.Now().UTC()
 	result, err := agent.DiscoverWithOptions(ctx, agent.DiscoverRequest{
-		Backend: runner.backend, Goal: goal.String(), Tool: tool, Options: options,
+		Backend: runner.backend, Goal: goal.String(), Tool: tool, Opener: opener, Options: options,
 	})
 	if err != nil {
 		return DiscoveryOutput{}, fmt.Errorf("discover: %w", err)

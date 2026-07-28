@@ -29,7 +29,7 @@ func TestPublicYieldEndToEnd_exactSourceAccepted(t *testing.T) {
 		t.Fatalf("DiscoverWithOptions: %v", err)
 	}
 	if modelCalls.Load() != 2 {
-		t.Fatalf("model calls = %d, want proposal and judge calls", modelCalls.Load())
+		t.Fatalf("model calls = %d, want one search turn and one accept turn", modelCalls.Load())
 	}
 	wantYield := agent.YieldTrace{
 		Outcome: agent.YieldOutcomeAccepted, TerminalReason: agent.YieldTerminalRoundLimit,
@@ -61,7 +61,7 @@ func TestPublicYieldEndToEnd_rewrittenJudgeURLIsDropped(t *testing.T) {
 		t.Fatalf("DiscoverWithOptions: %v", err)
 	}
 	if modelCalls.Load() != 2 {
-		t.Fatalf("model calls = %d, want proposal and judge calls", modelCalls.Load())
+		t.Fatalf("model calls = %d, want one search turn and one accept turn", modelCalls.Load())
 	}
 	wantYield := agent.YieldTrace{
 		Outcome: agent.YieldOutcomeBudgetStopped, TerminalReason: agent.YieldTerminalRoundLimit,
@@ -111,8 +111,8 @@ func newPublicYieldFixture(t *testing.T) (*AgentSearchTool, string) {
 func newFakeSolarBackend(t *testing.T, judgeURL string) (agent.Backend, *atomic.Int32) {
 	t.Helper()
 	responses := []string{
-		`{"query":"official AI event calendar"}`,
-		fmt.Sprintf(`{"sources":[{"url":%q,"is_event_source":true,"reason":"official source"}]}`, judgeURL),
+		`{"action":"search","query":"official AI event calendar"}`,
+		fmt.Sprintf(`{"action":"accept","selections":[{"url":%q,"reason":"official source"}]}`, judgeURL),
 	}
 	var calls atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -156,7 +156,9 @@ func publicYieldOptions(t *testing.T) agent.DiscoverOptions {
 		t.Fatalf("NamedDiscoveryProfile: %v", err)
 	}
 	options := agent.DefaultDiscoverOptions(profile)
-	options.MaxRounds = 1
+	options.MaxSearches = 1
+	// One search turn plus one accept turn, then the turn budget ends the run.
+	options.MaxTurns = 2
 	options.ReferenceTime = fixtureTime
 	return options
 }

@@ -66,7 +66,10 @@ On successful `POST /v1/discover`, the response includes `sources`, `meta`, and
 a request-local, count-only `yield_trace`. `yield_trace` has exactly these
 fields: `outcome`, `terminal_reason`, `crawler_validated`, `offered`,
 `prefilter_dropped`, `prefilter_reasons`, `proposal_calls`, `judge_calls`,
-`judge_entries_parsed`, `judge_entries_dropped`, and `accepted`.
+`open_calls`, `judge_entries_parsed`, `judge_entries_dropped`, and `accepted`.
+`open_calls` counts the candidate pages the model opened — a second-hop fetch of
+a URL the server itself offered, capped at two per request and subject to the
+same robots, SSRF, and size policy as the crawl.
 `prefilter_reasons` is a nested fixed-key count-only breakdown —
 `invalid_url`, `url_pattern`, `missing_title`, `missing_location`,
 `missing_date`, `past_date` — whose values always sum to `prefilter_dropped`.

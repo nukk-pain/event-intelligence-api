@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"sync/atomic"
 	"testing"
 
@@ -73,11 +74,11 @@ func TestSolarDiscoveryRunner_uses_fresh_public_tool_and_event_profile_per_reque
 		var content string
 		switch call % 3 {
 		case 1:
-			content = `{"query":"robotics official calendar"}`
+			content = `{"action":"search","query":"robotics official calendar"}`
 		case 2:
-			content = fmt.Sprintf(`{"sources":[{"url":%q,"is_event_source":true,"reason":"official source"}]}`, candidateURL)
+			content = fmt.Sprintf(`{"action":"accept","selections":[{"url":%q,"reason":"official source"}]}`, candidateURL)
 		default:
-			content = `{"done":true}`
+			content = `{"action":"done"}`
 		}
 		if _, err := fmt.Fprintf(w, `{"choices":[{"message":{"content":%q}}],"usage":{"prompt_tokens":10,"completion_tokens":4}}`, content); err != nil {
 			t.Errorf("write model response: %v", err)
@@ -93,12 +94,13 @@ func TestSolarDiscoveryRunner_uses_fresh_public_tool_and_event_profile_per_reque
 	candidateURL = "https://events.example/events/robotics"
 	backend := agent.Backend{Name: "solar", BaseURL: modelServer.URL, APIKey: "test-operator-key", Model: "solar-open2"}
 	var factoryCalls atomic.Int32
+	unusedOpener := &countingOpener{}
 	runner, err := newSolarDiscoveryRunner(backend, func() (publicSearchTool, error) {
 		factoryCalls.Add(1)
 		return &fixturePublicTool{
 			originURL: publicOrigin.URL, candidateURL: candidateURL, client: publicOrigin.Client(),
 		}, nil
-	}, fixedTestClock())
+	}, func() (agent.PageOpener, error) { return unusedOpener, nil }, fixedTestClock())
 	if err != nil {
 		t.Fatalf("newSolarDiscoveryRunner() error = %v", err)
 	}
@@ -138,6 +140,110 @@ func TestSolarDiscoveryRunner_uses_fresh_public_tool_and_event_profile_per_reque
 			output.YieldTrace.Outcome != agent.YieldOutcomeAccepted {
 			t.Fatalf("yield trace = %#v, want merged crawler and agent counts", output.YieldTrace)
 		}
+		if output.YieldTrace.OpenCalls != 0 {
+			t.Fatalf("open calls = %d, want none when the model never opens a page", output.YieldTrace.OpenCalls)
+		}
+	}
+	if opened := unusedOpener.opened(); len(opened) != 0 {
+		t.Fatalf("opened = %#v, want no page fetched when the model never asks", opened)
+	}
+}
+
+// countingOpener stands in for the live public page opener so the test can
+// prove how many opens the server actually permits.
+type countingOpener struct {
+	mu    sync.Mutex
+	calls []string
+}
+
+func (opener *countingOpener) Open(_ context.Context, url string) (agent.OpenedPage, error) {
+	opener.mu.Lock()
+	defer opener.mu.Unlock()
+	opener.calls = append(opener.calls, url)
+	return agent.OpenedPage{Title: "Opened Robotics Expo", Snippet: "official schedule"}, nil
+}
+
+func (opener *countingOpener) opened() []string {
+	opener.mu.Lock()
+	defer opener.mu.Unlock()
+	return append([]string(nil), opener.calls...)
+}
+
+// The server wires an opener and holds it to two opens per request, so a live
+// second hop can never eat the whole request deadline.
+func TestSolarDiscoveryRunner_wires_an_opener_and_caps_it_at_two_opens(t *testing.T) {
+	// Given
+	candidateURL := "https://events.example/events/robotics"
+	var modelCalls atomic.Int32
+	modelServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		var content string
+		switch modelCalls.Add(1) {
+		case 1:
+			content = `{"action":"search","query":"robotics official calendar"}`
+		case 2, 3, 4:
+			content = fmt.Sprintf(`{"action":"open","url":%q}`, candidateURL)
+		default:
+			content = `{"action":"done"}`
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if _, err := fmt.Fprintf(w, `{"choices":[{"message":{"content":%q}}],"usage":{"prompt_tokens":10,"completion_tokens":4}}`, content); err != nil {
+			t.Errorf("write model response: %v", err)
+		}
+	}))
+	defer modelServer.Close()
+	publicOrigin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer publicOrigin.Close()
+	backend := agent.Backend{Name: "solar", BaseURL: modelServer.URL, APIKey: "test-operator-key", Model: "solar-open2"}
+	opener := &countingOpener{}
+	var openerFactoryCalls atomic.Int32
+	runner, err := newSolarDiscoveryRunner(backend, func() (publicSearchTool, error) {
+		return &fixturePublicTool{
+			originURL: publicOrigin.URL, candidateURL: candidateURL, client: publicOrigin.Client(),
+		}, nil
+	}, func() (agent.PageOpener, error) {
+		openerFactoryCalls.Add(1)
+		return opener, nil
+	}, fixedTestClock())
+	if err != nil {
+		t.Fatalf("newSolarDiscoveryRunner() error = %v", err)
+	}
+	goal, err := NewGoal("official robotics sources")
+	if err != nil {
+		t.Fatalf("NewGoal() error = %v", err)
+	}
+
+	// When
+	output, err := runner.Discover(context.Background(), goal)
+
+	// Then
+	if err != nil {
+		t.Fatalf("Discover() error = %v", err)
+	}
+	if openerFactoryCalls.Load() != 1 {
+		t.Fatalf("opener factory calls = %d, want one fresh opener per request", openerFactoryCalls.Load())
+	}
+	// The model asked to open three times; the server's ceiling is two, so the
+	// third open must be refused without a fetch. The counts are written out
+	// literally: a raised ceiling has to fail this test, not redefine it.
+	opened := opener.opened()
+	if len(opened) != 2 {
+		t.Fatalf("opens = %#v, want exactly 2", opened)
+	}
+	for _, url := range opened {
+		if url != candidateURL {
+			t.Fatalf("opened %q, want only the offered candidate", url)
+		}
+	}
+	if output.YieldTrace.OpenCalls != 2 {
+		t.Fatalf("yield trace open calls = %d, want 2", output.YieldTrace.OpenCalls)
+	}
+	// The third open was answered with a correction rather than a fetch, so the
+	// model still got its turn, and the per-call reservation (500) leaves room
+	// for one more turn in which the model ends the run with done.
+	if modelCalls.Load() != 5 {
+		t.Fatalf("model calls = %d, want the refused open to cost a turn and the run to end on done", modelCalls.Load())
 	}
 }
 

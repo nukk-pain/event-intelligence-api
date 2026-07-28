@@ -99,22 +99,23 @@ func (s *staticSearch) Search(ctx context.Context, query string) ([]SearchResult
 	return append([]SearchResult(nil), s.results...), nil
 }
 
-func proposal(query string) modelReply {
-	return modelReply{content: fmt.Sprintf(`{"query":%q}`, query), completionTokens: 1}
+// searchAction, acceptAction and doneAction script one model turn each in the
+// action loop's wire format. Tests compose them in any order — the loop imposes
+// none.
+func searchAction(query string) modelReply {
+	return modelReply{content: fmt.Sprintf(`{"action":"search","query":%q}`, query), completionTokens: 1}
 }
 
-func doneProposal() modelReply {
-	return modelReply{content: `{"done":true}`, completionTokens: 1}
+func doneAction() modelReply {
+	return modelReply{content: `{"action":"done"}`, completionTokens: 1}
 }
 
-func judgment(profile DiscoveryProfile, candidates ...string) modelReply {
-	sources := make([]map[string]any, 0, len(candidates))
+func acceptAction(candidates ...string) modelReply {
+	selections := make([]map[string]any, 0, len(candidates))
 	for _, candidate := range candidates {
-		sources = append(sources, map[string]any{
-			"url": candidate, profile.OutputLabel: true, "reason": "profile match",
-		})
+		selections = append(selections, map[string]any{"url": candidate, "reason": "profile match"})
 	}
-	body, _ := json.Marshal(map[string]any{"sources": sources})
+	body, _ := json.Marshal(map[string]any{"action": "accept", "selections": selections})
 	return modelReply{content: string(body), completionTokens: 1}
 }
 
@@ -125,7 +126,7 @@ func testOptions(t *testing.T, name DiscoveryProfileName) DiscoverOptions {
 		t.Fatalf("profile %q: %v", name, err)
 	}
 	options := DefaultDiscoverOptions(profile)
-	options.MaxRounds = 1
+	options.MaxSearches = 1
 	return options
 }
 

@@ -9,23 +9,53 @@ import (
 	"unicode/utf8"
 )
 
+// correction instructions are server-owned constants. They never echo model or
+// crawled text back into the prompt, so a hostile response cannot use the
+// correction channel to smuggle instructions into the next turn.
+const (
+	correctionMalformedAction = "Your previous response was not a single valid JSON action object. " +
+		"Reply with exactly one JSON object in one of the listed action formats and nothing else."
+	correctionSearchExhausted = "Your previous response asked for a search, but no searches remain. " +
+		"Choose one of the remaining actions instead."
+	correctionActionUnavailable = "Your previous response chose an action that is not available. " +
+		"Choose one of the listed actions only."
+	// noteOpenFailed is not a correction: a page that will not load is an
+	// ordinary fact of the open web, not a contract violation. It rides along
+	// for exactly one turn so the model does not spend another open retrying the
+	// same URL, and it never echoes the model's or the page's text.
+	noteOpenFailed = "Your previous open action could not retrieve that page. " +
+		"Do not open the same url again; choose a different action."
+)
+
 type discoverySession struct {
-	options               validatedDiscoverOptions
-	model                 discoveryModel
-	tool                  SearchTool
-	result                DiscoveryResult
-	goal                  string
-	tried                 []string
+	options    validatedDiscoverOptions
+	model      discoveryModel
+	tool       SearchTool
+	opener     PageOpener
+	result     DiscoveryResult
+	goal       string
+	tried      []string
+	candidates []offeredCandidate
+	// pending holds candidates the prefilter dropped only for missing metadata.
+	// They are not judgeable and the model cannot accept them; an open can fill
+	// the gap and promote one into candidates.
+	pending  []offeredCandidate
+	searches int
+	opens    int
+	turns    int
+	// openNote carries a server-owned one-turn note about a failed open.
+	openNote              string
 	found                 map[string]DiscoveredSource
 	order                 []string
 	offered               map[string]struct{}
 	perSourceCandidateUse map[string]int
 }
 
-// Discover runs the autonomous source-discovery loop: the model proposes a
-// search query, the tool runs it, the model judges which results are real event
-// sources, and the loop repeats (deciding the next action itself) up to
-// maxRounds. Discovered sources are de-duplicated by URL.
+// Discover runs the autonomous source-discovery loop: on every turn the model
+// picks its own next action (search, accept, or done), the loop executes it and
+// re-renders the state, and this repeats until the model stops or a budget is
+// reached. maxRounds carries forward as the search budget. Discovered sources
+// are de-duplicated by URL.
 func Discover(ctx context.Context, be Backend, goal string, tool SearchTool, maxRounds, maxTokens int, timeout time.Duration) ([]DiscoveredSource, Trace, error) {
 	if maxRounds <= 0 {
 		return nil, Trace{}, nil
@@ -35,7 +65,7 @@ func Discover(ctx context.Context, be Backend, goal string, tool SearchTool, max
 		return nil, Trace{}, err
 	}
 	options := DefaultDiscoverOptions(profile)
-	options.MaxRounds = maxRounds
+	options.MaxSearches = maxRounds
 	options.MaxTokensPerCall = maxTokens
 	options.PerCallTimeout = timeout
 	run, err := DiscoverWithOptions(ctx, DiscoverRequest{Backend: be, Goal: goal, Tool: tool, Options: options})
@@ -55,7 +85,7 @@ func DiscoverWithOptions(ctx context.Context, request DiscoverRequest) (Discover
 	result := DiscoveryResult{Sources: []DiscoveredSource{}, Metadata: DiscoveryMetadata{
 		Profile: validated.Profile.Name,
 		Budget: DiscoveryBudget{
-			MaxRounds: validated.MaxRounds, MaxModelCalls: validated.MaxModelCalls,
+			MaxSearches: validated.MaxSearches, MaxTurns: validated.MaxTurns, MaxModelCalls: validated.MaxModelCalls,
 			MaxCompletionTokens: validated.MaxCompletionTokens, MaxCandidates: validated.MaxCandidates,
 			MaxCandidatesPerSource: validated.MaxCandidatesPerSource,
 		},
@@ -65,33 +95,28 @@ func DiscoverWithOptions(ctx context.Context, request DiscoverRequest) (Discover
 		result.addTruncation(TruncationGoalLength)
 	}
 	session := discoverySession{
-		options: validated, tool: request.Tool, result: result, goal: redactedGoal,
+		options: validated, tool: request.Tool, opener: request.Opener, result: result, goal: redactedGoal,
 		found: map[string]DiscoveredSource{}, offered: map[string]struct{}{}, perSourceCandidateUse: map[string]int{},
 	}
 	session.model = discoveryModel{backend: request.Backend, options: validated, result: &session.result}
 	return session.run(ctx)
 }
 
+// run is the action loop: every turn re-renders the current state, asks the
+// model for exactly one next action, and executes it. Nothing here sequences
+// the model — a search, an accept, or a stop is legal on any turn, in any
+// order, any number of times. Termination is guaranteed by the turn, model-call
+// and token budgets checked at the top of each iteration; every exit goes
+// through complete().
 func (session *discoverySession) run(ctx context.Context) (DiscoveryResult, error) {
-	for round := 0; round < session.options.MaxRounds; round++ {
-		request := proposalModelRequest(session.options.Profile, proposalData{
-			goal: session.goal, tried: session.tried, found: session.order,
-		})
-		callsBefore := session.result.Trace.Calls
-		content, err := session.model.call(ctx, request)
-		session.result.YieldTrace.ProposalCalls += session.result.Trace.Calls - callsBefore
-		if errors.Is(err, errModelBudgetReached) {
-			return session.complete(budgetTerminalReason(session.result.Metadata), nil)
-		}
-		if err != nil {
-			return session.complete(terminalReasonForError(err, YieldTerminalProposalError), fmt.Errorf("propose query: %w", err))
-		}
-		proposal, err := parseProposalResponse(content)
-		if err != nil {
-			return session.complete(YieldTerminalProposalError, fmt.Errorf("propose query: %w", err))
-		}
-		if proposal.Done {
-			return session.complete(YieldTerminalProposalDone, nil)
+	// correction holds the one-shot instruction added after a contract
+	// violation. Non-empty means the previous turn already spent its single
+	// correction, so a repeat violation ends the run.
+	var correction string
+	for {
+		if session.turns >= session.options.MaxTurns {
+			session.result.addTruncation(TruncationRoundLimit)
+			return session.complete(YieldTerminalRoundLimit, nil)
 		}
 		if session.result.Trace.Calls >= session.options.MaxModelCalls {
 			session.result.addTruncation(TruncationModelCallBudget)
@@ -101,48 +126,124 @@ func (session *discoverySession) run(ctx context.Context) (DiscoveryResult, erro
 			session.result.addTruncation(TruncationCompletionTokenBudget)
 			return session.complete(YieldTerminalTokenBudget, nil)
 		}
-		session.tried = append(session.tried, proposal.Query)
-		results, err := session.tool.Search(ctx, proposal.Query)
-		if err != nil {
-			return session.complete(terminalReasonForError(err, YieldTerminalSearchError), fmt.Errorf("search %q: %w", proposal.Query, err))
+
+		request := actionModelRequest(session.options.Profile, session.promptData())
+		if correction != "" {
+			request.system += "\n" + correction
 		}
-		candidates := session.offerCandidates(results)
-		if len(candidates) == 0 {
-			if session.result.Metadata.CandidatesOffered >= session.options.MaxCandidates {
-				return session.complete(YieldTerminalNone, nil)
-			}
-			continue
+		if session.openNote != "" {
+			request.system += "\n" + session.openNote
+			session.openNote = ""
 		}
-		request, err = judgeModelRequest(session.options.Profile, candidates)
-		if err != nil {
-			return session.complete(YieldTerminalCandidateEncodeError, err)
-		}
-		callsBefore = session.result.Trace.Calls
-		content, err = session.model.call(ctx, request)
-		session.result.YieldTrace.JudgeCalls += session.result.Trace.Calls - callsBefore
+		callsBefore := session.result.Trace.Calls
+		content, err := session.model.call(ctx, request)
+		session.turns++
+		calls := session.result.Trace.Calls - callsBefore
 		if errors.Is(err, errModelBudgetReached) {
 			return session.complete(budgetTerminalReason(session.result.Metadata), nil)
 		}
 		if err != nil {
-			return session.complete(terminalReasonForError(err, YieldTerminalJudgeError), fmt.Errorf("judge results: %w", err))
+			// A failed turn produced no action, so it cannot be an accept call.
+			session.result.YieldTrace.ProposalCalls += calls
+			return session.complete(terminalReasonForError(err, YieldTerminalProposalError), fmt.Errorf("action turn: %w", err))
 		}
-		judged, err := parseJudgeResponse(content, session.options.Profile.OutputLabel)
-		if err != nil {
-			return session.complete(YieldTerminalMalformedJudgeEnvelope, fmt.Errorf("judge results: %w", err))
+		action, parseErr := parseActionResponse(content)
+		if parseErr != nil {
+			// yield_trace: an unparseable turn is not an accept, so it lands in
+			// proposal_calls with the search/done turns.
+			session.result.YieldTrace.ProposalCalls += calls
+			if correction != "" {
+				return session.complete(YieldTerminalMalformedAction,
+					fmt.Errorf("action turn: %w: %w", ErrMalformedModelResponse, parseErr))
+			}
+			correction = correctionMalformedAction
+			continue
 		}
-		session.result.YieldTrace.JudgeEntriesParsed += judged.parsed
-		session.result.YieldTrace.JudgeEntriesDropped += judged.dropped
-		session.acceptSelections(candidates, judged.selections)
-		if session.result.Metadata.Budget.CompletionTokensReserved >= session.options.MaxCompletionTokens ||
-			session.result.Trace.Usage.CompletionTokens >= session.options.MaxCompletionTokens {
-			return session.complete(YieldTerminalTokenBudget, nil)
+		// yield_trace mapping: a turn that returned accept is a judging call;
+		// every other turn (search, done, refused action) is a proposal call.
+		if action.Kind == actionAccept {
+			session.result.YieldTrace.JudgeCalls += calls
+		} else {
+			session.result.YieldTrace.ProposalCalls += calls
 		}
-		if session.result.Metadata.CandidatesOffered >= session.options.MaxCandidates {
-			return session.complete(YieldTerminalNone, nil)
+
+		switch action.Kind {
+		case actionSearch:
+			if session.searches >= session.options.MaxSearches {
+				if correction != "" {
+					return session.complete(YieldTerminalMalformedAction, nil)
+				}
+				correction = correctionSearchExhausted
+				continue
+			}
+			correction = ""
+			session.searches++
+			session.tried = append(session.tried, action.Query)
+			results, searchErr := session.tool.Search(ctx, action.Query)
+			if searchErr != nil {
+				return session.complete(terminalReasonForError(searchErr, YieldTerminalSearchError),
+					fmt.Errorf("search %q: %w", action.Query, searchErr))
+			}
+			session.candidates = append(session.candidates, session.offerCandidates(results)...)
+		case actionOpen:
+			// A URL the server never offered is an invented fetch target, and an
+			// open with no opener or no budget left is an action that was not on
+			// the menu. Both take the unavailable-action correction, and neither
+			// touches the network.
+			target, fromPending := session.openTarget(action.URL)
+			if !session.openAllowed() || target == nil {
+				if correction != "" {
+					return session.complete(YieldTerminalMalformedAction, nil)
+				}
+				correction = correctionActionUnavailable
+				continue
+			}
+			correction = ""
+			session.opens++
+			session.result.YieldTrace.OpenCalls++
+			page, openErr := session.opener.Open(ctx, action.URL)
+			if openErr != nil {
+				// Non-fatal: the turn is spent, every candidate is unchanged, and
+				// the next prompt says so once.
+				session.openNote = noteOpenFailed
+				continue
+			}
+			applyOpenedPage(&target.result, page)
+			if fromPending {
+				session.promotePending(action.URL)
+			}
+		case actionAccept:
+			correction = ""
+			// yield_trace: every selection the model returned counts as parsed;
+			// acceptSelections counts the ones dropped against the table.
+			// Parsed counts every entry the model actually sent; blank-url
+			// entries dropped by the parser are accounted as dropped so
+			// parsed == accepted + dropped still holds for the trace.
+			session.result.YieldTrace.JudgeEntriesParsed += len(action.Selections) + action.DroppedSelections
+			session.result.YieldTrace.JudgeEntriesDropped += action.DroppedSelections
+			session.acceptSelections(action.Selections)
+		case actionDone:
+			return session.complete(YieldTerminalProposalDone, nil)
 		}
 	}
-	session.result.addTruncation(TruncationRoundLimit)
-	return session.complete(YieldTerminalRoundLimit, nil)
+}
+
+// promptData renders the current, order-free state the model chooses from.
+func (session *discoverySession) promptData() actionPromptData {
+	data := actionPromptData{
+		goal:                session.goal,
+		tried:               session.tried,
+		candidates:          session.candidates,
+		accepted:            session.order,
+		remainingSearches:   session.options.MaxSearches - session.searches,
+		remainingModelCalls: min(session.options.MaxModelCalls-session.result.Trace.Calls, session.options.MaxTurns-session.turns),
+		openAllowed:         session.openAllowed(),
+	}
+	if data.openAllowed {
+		data.remainingOpens = session.options.MaxOpens - session.opens
+		data.pending = session.pending
+	}
+	return data
 }
 
 func (session *discoverySession) offerCandidates(results []SearchResult) []offeredCandidate {
@@ -152,6 +253,9 @@ func (session *discoverySession) offerCandidates(results []SearchResult) []offer
 		if !ok {
 			session.result.YieldTrace.PrefilterDropped++
 			session.result.YieldTrace.PrefilterReasons.add(reason)
+			// Holding a metadata-short candidate for a later open does not undo
+			// the drop, so the counters above stand as recorded.
+			session.rememberPending(candidate, reason)
 			continue
 		}
 		if _, seen := session.offered[candidate.canonicalURL]; seen {
@@ -169,6 +273,9 @@ func (session *discoverySession) offerCandidates(results []SearchResult) []offer
 			continue
 		}
 		session.offered[candidate.canonicalURL] = struct{}{}
+		// A later search that returned this URL with complete metadata beat the
+		// open to it, so it no longer belongs in pending.
+		session.dropPending(candidate.canonicalURL)
 		session.perSourceCandidateUse[candidate.sourceKey]++
 		session.result.Metadata.CandidatesOffered++
 		session.result.YieldTrace.Offered++
@@ -180,14 +287,19 @@ func (session *discoverySession) offerCandidates(results []SearchResult) []offer
 	return candidates
 }
 
-func (session *discoverySession) acceptSelections(candidates []offeredCandidate, selections []judgedSelection) {
-	offered := make(map[string]offeredCandidate, len(candidates))
-	for _, candidate := range candidates {
+// acceptSelections admits the selections that name a candidate currently in the
+// table, verbatim and canonical. Anything else — an invented URL, a rewritten
+// one, or a duplicate — is dropped and counted, never fetched or trusted.
+// Accepted candidates leave the table so later turns cannot re-offer them.
+func (session *discoverySession) acceptSelections(selections []actionSelection) {
+	offered := make(map[string]offeredCandidate, len(session.candidates))
+	for _, candidate := range session.candidates {
 		offered[candidate.canonicalURL] = candidate
 	}
+	accepted := make(map[string]struct{}, len(selections))
 	for _, selection := range selections {
-		canonicalURL, err := canonicalCandidateURL(selection.url)
-		if err != nil || selection.url != canonicalURL {
+		canonicalURL, err := canonicalCandidateURL(selection.URL)
+		if err != nil || selection.URL != canonicalURL {
 			session.result.YieldTrace.JudgeEntriesDropped++
 			continue
 		}
@@ -207,13 +319,25 @@ func (session *discoverySession) acceptSelections(candidates []offeredCandidate,
 			provenance = &cloned
 		}
 		source := DiscoveredSource{
-			URL: canonicalURL, Title: result.Title, Reason: selection.reason,
+			URL: canonicalURL, Title: result.Title, Reason: selection.Reason,
 			Date: result.Date, Location: result.Location, Provenance: provenance,
 		}
 		session.found[canonicalURL] = source
 		session.order = append(session.order, canonicalURL)
 		session.result.YieldTrace.Accepted++
+		accepted[canonicalURL] = struct{}{}
 	}
+	if len(accepted) == 0 {
+		return
+	}
+	remaining := session.candidates[:0]
+	for _, candidate := range session.candidates {
+		if _, taken := accepted[candidate.canonicalURL]; taken {
+			continue
+		}
+		remaining = append(remaining, candidate)
+	}
+	session.candidates = remaining
 }
 
 func (session *discoverySession) complete(reason YieldTerminalReason, err error) (DiscoveryResult, error) {
