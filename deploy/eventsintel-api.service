@@ -5,7 +5,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=root
+User=eventsintel
+Group=eventsintel
 WorkingDirectory=/srv/developer/events-intel
 ExecStart=/srv/developer/events-intel/eventsintel serve
 Environment=EVENTSINTEL_HTTP_ADDR=127.0.0.1:3005

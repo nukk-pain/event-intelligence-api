@@ -1,11 +1,53 @@
 package main
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
+	"github.com/smpain/event-intelligence-api/internal/fetch"
 	"github.com/smpain/event-intelligence-api/internal/pipeline"
 	"github.com/smpain/event-intelligence-api/internal/solarenrich"
 )
+
+type mainTestTextSelector struct {
+	body  []byte
+	calls int
+}
+
+func (s *mainTestTextSelector) Text(context.Context, string, []byte) ([]byte, error) {
+	s.calls++
+	return s.body, nil
+}
+
+func TestReadOfficialPageText_UsesRenderedDOMForSolarEvidence(t *testing.T) {
+	// Given
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`<html><body><div id="root"></div></body></html>`))
+	}))
+	t.Cleanup(server.Close)
+	officialFetcher, err := fetch.NewFetcher(fetch.WithAnyPublicHost(true), fetch.WithAllowLoopback(true))
+	if err != nil {
+		t.Fatalf("NewFetcher: %v", err)
+	}
+	selector := &mainTestTextSelector{body: []byte(`<html><body><p>사전등록 마감 2026.08.26</p></body></html>`)}
+
+	// When
+	body, err := readOfficialPageText(context.Background(), officialFetcher, selector, server.URL+"#/registration")
+
+	// Then
+	if err != nil {
+		t.Fatalf("readOfficialPageText: %v", err)
+	}
+	if !strings.Contains(body, "사전등록 마감 2026.08.26") {
+		t.Fatalf("page body = %q, want rendered deadline for Solar readTexts", body)
+	}
+	if selector.calls != 1 {
+		t.Fatalf("selector calls = %d, want 1", selector.calls)
+	}
+}
 
 func TestIngestChangedData(t *testing.T) {
 	cases := []struct {

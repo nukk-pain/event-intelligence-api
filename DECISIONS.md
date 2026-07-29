@@ -657,3 +657,36 @@ contract and must not acquire live LLM work as a side effect.
 - Idempotent by branch: one packet date, one branch; an existing remote
   branch means delivered, and reruns push nothing and open nothing. A PR
   failure warns but never fails the discovery run that produced its packet.
+
+### Daily headless DOM fallback stays inside ingest (2026-07-29)
+
+- Status: accepted
+- Context: static HTTP cannot expose deadlines on fragment-routed or
+  JavaScript-rendered organizer pages, including the observed khospital and
+  kofurn shapes. The consumer layer intentionally remains thin; the cached,
+  robots-aware ingest service is the correct boundary for this work.
+
+- Decision: after a successful `200` official-page fetch, classify a page as a
+  JS shell when it has fewer than 400 visible runes, a `#/` route, a noscript
+  notice, or only a `#root`/`#app` body shell. A shared selector then supplies
+  Chrome's rendered HTML to deterministic action/deadline extraction and to
+  Solar action-page evidence collection. It starts one Chromium process lazily
+  per ingest batch, caps the batch at 30 rendered pages, gives each page 15
+  seconds, identifies itself with the configured User-Agent, and closes the
+  browser when the batch ends. Chrome receives the page through a loopback
+  origin; same-origin scripts and XHRs route back through the existing fetcher,
+  and direct browser egress is blocked.
+- The existing HTTP fetcher remains the only SSRF, allowlist, rate-limit, and
+  robots boundary. The ingest unit runs Chrome as the unprivileged
+  `eventsintel` account with the sandbox enabled. Rendering changes readable page content only; it cannot
+  write a deadline without the existing literal-date and typed-context evidence
+  gate. A render error, timeout, or missing Chromium returns the static body
+  and never fails deterministic ingest.
+- Managed challenges and explicit bot blocks are not bypassed. Non-200 pages
+  never reach Chrome. A reviewed benchmark catalog entry with a human-confirmed
+  source note remains the honest alternative for such cases.
+- Consequences: the VPS needs Chromium installed and its 1 GB memory must be
+  checked during the first manual run. The worst-case sequential render budget
+  is 7m30s, below the ingest unit's 20-minute deadline. Production proof still
+  requires the next deploy's manual ingest, coverage comparison from baseline
+  17, `make eval-report` with `wrong_type` 0, and `deploy/verify.sh`.

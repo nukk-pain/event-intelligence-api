@@ -6,6 +6,7 @@ import (
 	"github.com/smpain/event-intelligence-api/internal/enrich"
 	"github.com/smpain/event-intelligence-api/internal/fetch"
 	"github.com/smpain/event-intelligence-api/internal/normalize"
+	"github.com/smpain/event-intelligence-api/internal/render"
 	"github.com/smpain/event-intelligence-api/internal/sources"
 )
 
@@ -24,7 +25,8 @@ func (p *Pipeline) enrichActions(ctx context.Context, f *fetch.Fetcher, parsed *
 	if err != nil || res.NotModified || res.StatusCode != 200 {
 		return
 	}
-	signals, err := enrich.ExtractActions(res.URL, res.Body)
+	body := p.officialPageText(ctx, res.URL, res.Body)
+	signals, err := enrich.ExtractActions(res.URL, body)
 	if err != nil {
 		return
 	}
@@ -33,7 +35,7 @@ func (p *Pipeline) enrichActions(ctx context.Context, f *fetch.Fetcher, parsed *
 	// pages, which is exactly the gap the multi-hop agent was built to close.
 	// It reads the page already in hand, so nothing is fetched twice.
 	if p.actionEnricher != nil {
-		if enriched, aerr := p.actionEnricher.EnrichActions(ctx, res.URL, res.Body, parsed.Actions); aerr == nil {
+		if enriched, aerr := p.actionEnricher.EnrichActions(ctx, res.URL, body, parsed.Actions); aerr == nil {
 			before := parsed.Actions
 			parsed.Actions = mergeActionSignals(parsed.Actions, enriched)
 			// Every enriched claim carries provenance. Without this the
@@ -84,7 +86,7 @@ func (p *Pipeline) enrichDeadlinesFromActionPages(ctx context.Context, f *fetch.
 		if err != nil || res.NotModified || res.StatusCode != 200 {
 			return
 		}
-		found := enrich.DeadlineOnActionPage(res.Body, kind)
+		found := enrich.DeadlineOnActionPage(p.officialPageText(ctx, res.URL, res.Body), kind)
 		if found == nil {
 			return
 		}
@@ -98,6 +100,10 @@ func (p *Pipeline) enrichDeadlinesFromActionPages(ctx context.Context, f *fetch.
 	}
 	try(parsed.Actions.RegisterURL, &parsed.Actions.RegistrationDeadline, enrich.RegisterPage)
 	try(parsed.Actions.ExhibitURL, &parsed.Actions.ExhibitorDeadline, enrich.ExhibitPage)
+}
+
+func (p *Pipeline) officialPageText(ctx context.Context, pageURL string, staticBody []byte) []byte {
+	return render.StaticOrRendered(ctx, p.textSelector, pageURL, staticBody)
 }
 
 // eventUpcoming reports whether the event's end (or start) date parses and is

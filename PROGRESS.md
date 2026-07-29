@@ -635,3 +635,22 @@ next core-product action after the Solar submission.
 | 2026-06-21 | Initial progress file | Project promoted from idea document |
 | 2026-06-21 | Target user = founders/operators; format = JSONL; created schema + seed prototype | Resolved gating decisions and executed the documented Next Action |
 | 2026-07-26 | Governed public yield diagnostics and smoke semantics | Keep count-only observability request-local and prevent a zero accepted-source classification from being misreported as a failed live result |
+
+## Current Implementation Checkpoint (2026-07-29)
+
+- Daily ingest now has a test-proven, optional headless DOM fallback for
+  JS-shell official pages. It runs only after a successful official HTTP fetch,
+  shares one lazy Chrome process per batch, caps rendering at 30 pages and 15
+  seconds per page, and falls back to static HTML on any renderer failure. Its
+  browser receives a loopback copy of the approved document; same-origin
+  resources return through the official fetcher and direct browser egress is
+  blocked.
+- The selected rendered HTML feeds both deterministic action/deadline parsing
+  and Solar's existing typed evidence text collection; no evidence gate or
+  stored-field policy changed. A local Chrome-backed `httptest` page proved a
+  JavaScript-injected `사전등록 마감 2026.08.26` reaches the renderer output.
+- Current local evidence: focused renderer, pipeline, and ingest-command tests
+  pass. Pending operational evidence: deploy the updated unprivileged
+  `eventsintel` systemd units to `developer-vps`, run manual ingest under the
+  20-minute timer, compare deadline coverage from the baseline of 17, obtain
+  `make eval-report` wrong_type 0, and run `deploy/verify.sh`.

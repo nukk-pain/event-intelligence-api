@@ -5,7 +5,10 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-User=root
+User=eventsintel
+Group=eventsintel
+StateDirectory=eventsintel
+StateDirectoryMode=0750
 WorkingDirectory=/srv/developer/events-intel
 ExecStart=/srv/developer/events-intel/eventsintel ingest
 Environment=EVENTSINTEL_DB_PATH=/srv/developer/events-intel/data/events.db
@@ -14,6 +17,7 @@ Environment=EVENTSINTEL_RATE_PER_MIN=30
 Environment=EVENTSINTEL_SOURCE_CONCURRENCY=2
 Environment=EVENTSINTEL_DETAIL_WORKERS=4
 Environment=EVENTSINTEL_INGEST_DEADLINE=20m
+Environment=HOME=/var/lib/eventsintel
 # Solar enrichment credentials and switches live in a root-only env file on the
 # host, never in this unit or the repo. Absent file = enrichment off, which is
 # also the rollback: remove the file and restart nothing.

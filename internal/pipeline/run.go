@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/smpain/event-intelligence-api/internal/fetch"
+	"github.com/smpain/event-intelligence-api/internal/render"
 )
 
 // BreakerConfig tunes the per-source circuit breaker. The zero value is valid
@@ -69,6 +70,7 @@ type Pipeline struct {
 	sourceConcurrency int
 	detailWorkers     int
 	officialFetcher   *fetch.Fetcher
+	textSelector      render.TextSelector
 	// enricher optionally resolves fields the deterministic parse could not.
 	// Nil keeps ingest fully deterministic.
 	enricher EventEnricher
@@ -111,6 +113,14 @@ func (p *Pipeline) WithDetailWorkers(n int) *Pipeline {
 
 func (p *Pipeline) WithOfficialFetcher(f *fetch.Fetcher) *Pipeline {
 	p.officialFetcher = f
+	return p
+}
+
+// WithTextSelector attaches the shared, optional JS-shell fallback. It is
+// called only after the existing official fetch succeeds, so it cannot create
+// a second HTTP, robots, or SSRF path.
+func (p *Pipeline) WithTextSelector(selector render.TextSelector) *Pipeline {
+	p.textSelector = selector
 	return p
 }
 

@@ -9,6 +9,7 @@ Reverse-proxied Go service on the shared DigitalOcean VPS `developer-vps`
 | VPS | `developer-vps` (`root@developer-vps-01`) |
 | Service dir | `/srv/developer/events-intel/` |
 | Binary | `eventsintel` (linux/amd64, CGo-free static) |
+| Headless runtime | Google Chrome (non-Snap CDP runtime), started lazily once per ingest batch |
 | DB | `/srv/developer/events-intel/data/events.db` (SQLite WAL) |
 | API bind | `127.0.0.1:3005` (Caddy reverse-proxies) |
 | Caddy | append `deploy/events.nukk.net.caddy` to `/etc/caddy/Caddyfile` |
@@ -18,6 +19,50 @@ Reverse-proxied Go service on the shared DigitalOcean VPS `developer-vps`
 - `eventsintel-api.service` — systemd unit, runs `eventsintel serve` on `127.0.0.1:3005`.
 - `eventsintel-ingest.service` + `.timer` — 24h ingest batch (flock single-flight, 30/min polite rate).
 - `events.nukk.net.caddy` — Caddy site block.
+
+## Headless DOM fallback runtime
+
+The daily ingest can render a page only after the existing robots-aware HTTP
+fetch succeeds with `200`. It uses one lazy Chromium process for the batch,
+opens a tab only for a JS shell, limits the batch to 30 rendered pages, and
+cancels each page after 15 seconds. The conservative sequential upper bound is
+7m30s, leaving time inside the ingest unit's 20-minute deadline for normal
+HTTP work.
+
+Install the non-Snap Chrome runtime and prepare the unprivileged service
+account before deploying the binary. Ubuntu's `chromium` package is a Snap
+wrapper and cannot launch from this system-level ingest unit because Snap
+rejects that cgroup.
+
+```sh
+sudo apt-get update
+curl -fsSLo /tmp/google-chrome-stable_current_amd64.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+sudo apt-get install -y /tmp/google-chrome-stable_current_amd64.deb
+id -u eventsintel >/dev/null 2>&1 || sudo useradd --system --home /srv/developer/events-intel --shell /usr/sbin/nologin eventsintel
+sudo install -d -o eventsintel -g eventsintel /srv/developer/events-intel/data
+sudo install -d -o eventsintel -g eventsintel /srv/developer/events-intel/snap
+sudo install -d -o eventsintel -g eventsintel /var/lib/eventsintel
+sudo chown -R eventsintel:eventsintel /srv/developer/events-intel/data
+google-chrome --headless --disable-gpu --version
+free -h
+```
+
+The allocator prefers `/usr/bin/google-chrome` when present, so it cannot select
+the Ubuntu Snap wrapper. The browser runs as `eventsintel`, with Chrome's sandbox enabled and GPU
+disabled. Its systemd `StateDirectory` supplies the writable
+`/var/lib/eventsintel` Chrome home; the deploy directory stays root-owned. It
+has no direct Internet path: the already-approved document is
+served through a per-page loopback origin, while same-origin browser resources
+are obtained only through the existing SSRF-, allowlist-, robots-, and
+rate-limited fetcher. Do not add a separate renderer service or a local-to-VPS
+database writer: the VPS SQLite database remains the source of truth. If
+Chromium cannot start or a page times out, ingest continues from the already
+fetched static body.
+
+Managed challenges and explicit bot blocks are not bypassed. A non-200 static
+fetch never reaches Chromium; a source blocked this way stays unavailable to
+automation and may be represented only through the reviewed benchmark catalog
+with a human-confirmed source note.
 
 ## DNS (Cloudflare)
 
@@ -66,6 +111,20 @@ then flip `proxied:true`.
 5. If the change alters HTML / asset versions / cache policy, re-`--apply` the cache
    rule if its expression changed and purge once (see the cache-rule doc).
 6. **Run `deploy/verify.sh`** (step 8 above) — non-negotiable.
+7. For this renderer change, also run one manual ingest and inspect the journal:
+
+   ```sh
+   sudo systemctl start eventsintel-ingest.service
+   sudo journalctl -u eventsintel-ingest.service -n 200 --no-pager
+   ```
+
+   Confirm the run completes inside 20 minutes, then run `make eval-report` on
+   the VPS and retain the `wrong_type` result with the deploy evidence.
+
+   Before the first restart, copy both updated unit files, run `systemctl
+   daemon-reload`, and verify `systemctl show -p User -p Group
+   eventsintel-ingest.service` reports `eventsintel`. The existing database
+   directory must remain owned by that account.
 
 ## Edge caching (Cloudflare)
 

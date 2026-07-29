@@ -18,6 +18,7 @@ import (
 	"github.com/smpain/event-intelligence-api/internal/config"
 	"github.com/smpain/event-intelligence-api/internal/fetch"
 	"github.com/smpain/event-intelligence-api/internal/pipeline"
+	"github.com/smpain/event-intelligence-api/internal/render"
 	"github.com/smpain/event-intelligence-api/internal/solarenrich"
 	"github.com/smpain/event-intelligence-api/internal/sources"
 	"github.com/smpain/event-intelligence-api/internal/sources/aiia"
@@ -67,6 +68,9 @@ func usage() {
 // that cannot take the lock is skipped cleanly (log + exit 0) so runs never pile
 // up.
 func runIngest(cfg config.Config) error {
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.IngestDeadline)
+	defer cancel()
+
 	lock, err := pipeline.AcquireLock(cfg.LockPath)
 	if err != nil {
 		if errors.Is(err, pipeline.ErrLocked) {
@@ -107,6 +111,13 @@ func runIngest(cfg config.Config) error {
 	if err != nil {
 		return err
 	}
+	renderConfig := render.DefaultConfig(cfg.UserAgent)
+	renderConfig.ResourceFetcher = officialResourceFetcher{fetcher: officialFetcher}
+	textSelector, err := render.New(ctx, renderConfig)
+	if err != nil {
+		return fmt.Errorf("headless renderer: %w", err)
+	}
+	defer textSelector.Close()
 
 	// Register the venue adapters (single registration point).
 	sources.Register(coex.New())
@@ -137,7 +148,8 @@ func runIngest(cfg config.Config) error {
 		WithMaxDiscover(cfg.MaxDiscoverPerSource).
 		WithSourceConcurrency(cfg.SourceConcurrency).
 		WithDetailWorkers(cfg.DetailWorkers).
-		WithOfficialFetcher(officialFetcher)
+		WithOfficialFetcher(officialFetcher).
+		WithTextSelector(textSelector)
 
 	// Solar enrichment is opt-in and ingest-only. Without both the operator key
 	// and the explicit switch, ingest stays exactly as deterministic as before.
@@ -167,11 +179,7 @@ func runIngest(cfg config.Config) error {
 			MaxCalls: cfg.SolarMaxCalls, MaxTokens: 512, CallTimeout: 20 * time.Second,
 			MaxConcurrent: cfg.SolarMaxConcurrent,
 		}, func(fetchCtx context.Context, pageURL string) (string, error) {
-			res, ferr := officialFetcher.Fetch(fetchCtx, pageURL, fetch.Conditional{})
-			if ferr != nil || res.StatusCode != 200 {
-				return "", ferr
-			}
-			return string(res.Body), nil
+			return readOfficialPageText(fetchCtx, officialFetcher, textSelector, pageURL)
 		})
 		if err != nil {
 			return fmt.Errorf("solar action enrichment: %w", err)
@@ -190,9 +198,6 @@ func runIngest(cfg config.Config) error {
 	// run is silently skipped indefinitely. The pipeline checks ctx between
 	// items/sources and marks the run truncated (it will NOT poison the
 	// discovery floor by recording a cut-short Discovered count as the baseline).
-	ctx, cancel := context.WithTimeout(context.Background(), cfg.IngestDeadline)
-	defer cancel()
-
 	rep, err := p.Run(ctx, db, srcs, f)
 	if err != nil {
 		return err
@@ -234,6 +239,33 @@ func runIngest(cfg config.Config) error {
 		}
 	}
 	return nil
+}
+
+// readOfficialPageText preserves the official fetcher as the only network
+// boundary, then gives the Solar evidence collector the same selected HTML as
+// deterministic extraction. Renderer failure deliberately falls back to static
+// text so enrichment remains additive and non-fatal.
+func readOfficialPageText(ctx context.Context, officialFetcher *fetch.Fetcher, selector render.TextSelector, pageURL string) (string, error) {
+	res, err := officialFetcher.Fetch(ctx, pageURL, fetch.Conditional{})
+	if err != nil || res.NotModified || res.StatusCode != http.StatusOK {
+		return "", err
+	}
+	return string(render.StaticOrRendered(ctx, selector, res.URL, res.Body)), nil
+}
+
+type officialResourceFetcher struct {
+	fetcher *fetch.Fetcher
+}
+
+func (f officialResourceFetcher) Fetch(ctx context.Context, rawURL string) (render.Resource, error) {
+	res, err := f.fetcher.Fetch(ctx, rawURL, fetch.Conditional{})
+	if err != nil {
+		return render.Resource{}, err
+	}
+	if res.NotModified || res.StatusCode != http.StatusOK {
+		return render.Resource{}, fmt.Errorf("renderer resource %q: HTTP %d", rawURL, res.StatusCode)
+	}
+	return render.Resource{Body: res.Body, ContentType: res.ContentType}, nil
 }
 
 // ingestChangedData reports whether the batch processed any events into the store
