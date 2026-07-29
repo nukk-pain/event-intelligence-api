@@ -45,12 +45,21 @@ func (f *Fetcher) newHTTPClient(checkRobots bool) *http.Client {
 
 	baseTransport := &http.Transport{
 		DialContext:           guardedDial,
-		ForceAttemptHTTP2:     !f.strictPublicCrawl,
+		ForceAttemptHTTP2:     !f.strictPublicCrawl && !f.allowAnyHost,
 		DisableKeepAlives:     f.strictPublicCrawl,
 		MaxIdleConns:          20,
 		IdleConnTimeout:       90 * time.Second,
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
+	}
+	// Any-public-host fetchers read organizer sites — arbitrary, often old
+	// servers. Several negotiate HTTP/2 and then kill the stream with
+	// PROTOCOL_ERROR while serving HTTP/1.1 perfectly (rehahomecare.com,
+	// 2026-07-29: the entire site was unreachable to ingest, so its event
+	// never got a deadline, an official-page read, or an action URL). An
+	// empty non-nil TLSNextProto keeps net/http from upgrading via ALPN.
+	if f.allowAnyHost {
+		baseTransport.TLSNextProto = map[string]func(string, *tls.Conn) http.RoundTripper{}
 	}
 	// Per-host legacy TLS: hand-roll the TLS layer over the same SSRF-guarded
 	// dial so only opted-in hosts get RSA key-exchange suites. Every other

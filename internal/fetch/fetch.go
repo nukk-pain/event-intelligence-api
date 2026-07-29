@@ -20,6 +20,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -203,7 +204,83 @@ func (f *Fetcher) Fetch(ctx context.Context, rawURL string, cond Conditional) (*
 		return nil, err
 	}
 
-	return f.doWithRetry(ctx, u, cond)
+	res, err := f.doWithRetry(ctx, u, cond)
+	if err != nil {
+		return res, err
+	}
+	return f.followStaticRedirects(ctx, u, cond, res)
+}
+
+// staticRedirectHops bounds meta-refresh/frameset following. Two is enough for
+// the stub→real-page shape without turning a fetch into a crawl.
+const staticRedirectHops = 2
+
+var (
+	metaRefreshRe = regexp.MustCompile(`(?is)<meta[^>]+http-equiv=["']?refresh["']?[^>]*content=["'][^"']*url\s*=\s*([^"'>\s]+)`)
+	frameSrcRe    = regexp.MustCompile(`(?is)<i?frame[^>]+src=["']([^"'>\s]+)["']`)
+)
+
+// followStaticRedirects resolves the meta-refresh and frameset indirections
+// that older Korean event sites use instead of an HTTP redirect. Without this
+// the crawler reads a 3.6KB stub and concludes the site is empty
+// (rehahomecare.com, 2026-07-29: no action URLs, no deadline, nothing). Same
+// host only, bounded hops, each hop re-validated and re-robots-gated by going
+// back through Fetch's own guards. The returned Result carries the FINAL URL
+// so relative links resolve against the page they actually came from.
+func (f *Fetcher) followStaticRedirects(ctx context.Context, u *url.URL, cond Conditional, res *Result) (*Result, error) {
+	current := u
+	for hop := 0; hop < staticRedirectHops; hop++ {
+		if res == nil || res.NotModified || res.StatusCode != http.StatusOK || len(res.Body) == 0 {
+			return res, nil
+		}
+		target := staticRedirectTarget(string(res.Body))
+		if target == "" {
+			return res, nil
+		}
+		ref, err := url.Parse(strings.TrimSpace(target))
+		if err != nil {
+			return res, nil
+		}
+		next := current.ResolveReference(ref)
+		if !strings.EqualFold(next.Host, u.Host) || (next.Scheme != "http" && next.Scheme != "https") {
+			return res, nil // cross-host static redirects are not followed
+		}
+		if next.String() == current.String() {
+			return res, nil
+		}
+		if err := f.validateURL(next); err != nil {
+			return res, nil
+		}
+		allowed, crawlDelay, rerr := f.robotsAllows(ctx, next)
+		if rerr != nil || !allowed {
+			return res, nil
+		}
+		f.recordCrawlDelay(next.Hostname(), crawlDelay)
+		if err := f.waitHostCrawlDelay(ctx, next.Hostname()); err != nil {
+			return res, nil
+		}
+		hopRes, herr := f.doWithRetry(ctx, next, cond)
+		if herr != nil || hopRes == nil {
+			return res, nil // the stub still stands; following is best-effort
+		}
+		res = hopRes
+		current = next
+	}
+	return res, nil
+}
+
+func staticRedirectTarget(body string) string {
+	if m := metaRefreshRe.FindStringSubmatch(body); m != nil {
+		return m[1]
+	}
+	// A frameset page has no readable body of its own; its first frame is the
+	// real document.
+	if strings.Contains(strings.ToLower(body), "<frameset") {
+		if m := frameSrcRe.FindStringSubmatch(body); m != nil {
+			return m[1]
+		}
+	}
+	return ""
 }
 
 // doWithRetry performs the GET with rate limiting and retry/backoff.
