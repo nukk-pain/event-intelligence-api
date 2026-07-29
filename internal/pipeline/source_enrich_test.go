@@ -238,6 +238,63 @@ func TestRun_FillsDeadlineFromRegistrationPage(t *testing.T) {
 	}
 }
 
+type benchmarkDeadlineSource struct {
+	base string
+}
+
+func (s *benchmarkDeadlineSource) ID() string { return "benchmark" }
+
+func (s *benchmarkDeadlineSource) Discover(context.Context, *fetch.Fetcher) ([]sources.Ref, error) {
+	return []sources.Ref{{EventID: "benchmark-rendered-deadline-2026", URL: s.base + "/detail"}}, nil
+}
+
+func (s *benchmarkDeadlineSource) Parse(_ context.Context, raw *fetch.Result) (*sources.ParsedEvent, error) {
+	return &sources.ParsedEvent{
+		SourceID:    "benchmark",
+		EventID:     "benchmark-rendered-deadline-2026",
+		URL:         raw.URL,
+		Name:        "KHF 2026",
+		StartRaw:    strptr("2026.08.19"),
+		EndRaw:      strptr("2026.08.21"),
+		VenueName:   strptr("COEX"),
+		City:        strptr("Seoul"),
+		Country:     strptr("KR"),
+		Timezone:    strptr("Asia/Seoul"),
+		Format:      strptr("onsite"),
+		Publisher:   strptr("KHF"),
+		SourceType:  strptr("organizer"),
+		HomepageURL: strptr(s.base + "/home"),
+		Actions: sources.ActionSignals{
+			RegisterURL: strptr(s.base + "/reg"),
+		},
+		ClassifyText: "digital health healthcare AI",
+	}, nil
+}
+
+func TestRun_FillsDeadlineForBenchmarkDeclaredActionPage(t *testing.T) {
+	db := testDB(t)
+	var regHits int32
+	srv := actionPageServer(t, &regHits)
+	f := loopbackFetcher(t, srv.URL)
+
+	_, err := New("batch-benchmark-deadline").
+		WithClock(func() string { return "2026-06-23T00:00:00Z" }).
+		Run(context.Background(), db, []sources.Source{&benchmarkDeadlineSource{base: srv.URL}}, f)
+	if err != nil {
+		t.Fatalf("Run error: %v", err)
+	}
+	if atomic.LoadInt32(&regHits) != 1 {
+		t.Fatalf("register page fetches = %d, want 1", regHits)
+	}
+	var deadline sql.NullString
+	if err := db.QueryRow(`SELECT registration_deadline FROM events WHERE event_id = 'benchmark-rendered-deadline-2026'`).Scan(&deadline); err != nil {
+		t.Fatalf("query: %v", err)
+	}
+	if !deadline.Valid || deadline.String != "2026-08-26" {
+		t.Fatalf("registration_deadline = %v, want 2026-08-26", deadline)
+	}
+}
+
 func TestRun_PastEventSkipsActionPageFetch(t *testing.T) {
 	db := testDB(t)
 	var regHits int32

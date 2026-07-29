@@ -44,13 +44,13 @@ const techCrunchFixture = `<!doctype html><html><head>
 <meta property="og:url" content="https://techcrunch.com/events/techcrunch-disrupt/">
 </head><body></body></html>`
 
-func TestDiscover_ReturnsFortyThreeBenchmarkRefs(t *testing.T) {
+func TestDiscover_ReturnsFortyFiveBenchmarkRefs(t *testing.T) {
 	refs, err := New().Discover(context.Background(), nil)
 	if err != nil {
 		t.Fatalf("Discover: %v", err)
 	}
-	if len(refs) != 43 {
-		t.Fatalf("refs len = %d, want 43", len(refs))
+	if len(refs) != 45 {
+		t.Fatalf("refs len = %d, want 45", len(refs))
 	}
 	seen := map[string]bool{}
 	for _, ref := range refs {
@@ -123,6 +123,23 @@ func TestParse_UsesCatalogFallbackDatesAndActions(t *testing.T) {
 	}
 	if parsed.SummaryText == nil || *parsed.SummaryText == "" {
 		t.Fatalf("SummaryText = %v, want catalog fallback summary", parsed.SummaryText)
+	}
+}
+
+func TestParse_KHFUsesReviewedDeadlineAndDirectRegistrationURL(t *testing.T) {
+	parsed, err := New().Parse(context.Background(), result("https://khospital.org/visitor/visitor-guide/", "<!doctype html><html><head></head><body></body></html>"))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+
+	if parsed.EventID != "benchmark-khf-2026" {
+		t.Fatalf("EventID = %q", parsed.EventID)
+	}
+	if parsed.Actions.RegisterURL == nil || *parsed.Actions.RegisterURL != "https://khospital.org/registration/#/pre-reg/891" {
+		t.Fatalf("RegisterURL = %v, want direct KHF registration URL", parsed.Actions.RegisterURL)
+	}
+	if parsed.Actions.RegistrationDeadline == nil || *parsed.Actions.RegistrationDeadline != "2026-08-18" {
+		t.Fatalf("RegistrationDeadline = %v, want official-guide deadline", parsed.Actions.RegistrationDeadline)
 	}
 }
 

@@ -12,6 +12,8 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
+const externalResourcePath = "/_eventsintel_external_resource"
+
 type localPage struct {
 	context         context.Context
 	sourceURL       *url.URL
@@ -65,6 +67,10 @@ func (p *localPage) ServeHTTP(w http.ResponseWriter, request *http.Request) {
 		http.Error(w, "renderer accepts GET only", http.StatusMethodNotAllowed)
 		return
 	}
+	if request.URL.Path == externalResourcePath {
+		p.serveExternalResource(w, request)
+		return
+	}
 	upstream := p.sourceURL.ResolveReference(request.URL)
 	if !sameOrigin(upstream, p.sourceURL) {
 		http.Error(w, "cross-origin renderer request", http.StatusForbidden)
@@ -72,6 +78,21 @@ func (p *localPage) ServeHTTP(w http.ResponseWriter, request *http.Request) {
 	}
 	if sameRequest(upstream, p.sourceURL) {
 		p.writeResource(w, Resource{Body: p.staticBody, ContentType: "text/html; charset=utf-8"})
+		return
+	}
+	resource, err := p.resourceFetcher.Fetch(p.context, upstream.String())
+	if err != nil {
+		http.Error(w, "renderer resource unavailable", http.StatusBadGateway)
+		return
+	}
+	p.writeResource(w, resource)
+}
+
+func (p *localPage) serveExternalResource(w http.ResponseWriter, request *http.Request) {
+	rawURL := request.URL.Query().Get("url")
+	upstream, err := url.Parse(rawURL)
+	if err != nil || (upstream.Scheme != "http" && upstream.Scheme != "https") || upstream.Hostname() == "" {
+		http.Error(w, "invalid renderer resource", http.StatusBadRequest)
 		return
 	}
 	resource, err := p.resourceFetcher.Fetch(p.context, upstream.String())
@@ -107,6 +128,12 @@ func rewriteForLocalOrigin(body []byte, sourceURL, localURL *url.URL) []byte {
 		}
 		rewritten, local := rewriteURL(value, sourceURL, localURL)
 		if !local {
+			if selection.Is("script") {
+				if rewritten = rewriteExternalScriptURL(value, sourceURL, localURL); rewritten != "" {
+					selection.SetAttr(attribute, rewritten)
+					return
+				}
+			}
 			selection.Remove()
 			return
 		}
@@ -138,6 +165,22 @@ func rewriteForLocalOrigin(body []byte, sourceURL, localURL *url.URL) []byte {
 		return body
 	}
 	return []byte(html)
+}
+
+func rewriteExternalScriptURL(rawURL string, sourceURL, localURL *url.URL) string {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return ""
+	}
+	upstream := sourceURL.ResolveReference(parsed)
+	if upstream.Scheme != "http" && upstream.Scheme != "https" {
+		return ""
+	}
+	local := *localURL
+	local.Path = externalResourcePath
+	local.RawQuery = url.Values{"url": []string{upstream.String()}}.Encode()
+	local.Fragment = ""
+	return local.String()
 }
 
 func rewriteURL(rawURL string, sourceURL, localURL *url.URL) (string, bool) {

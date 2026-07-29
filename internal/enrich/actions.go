@@ -20,7 +20,7 @@ var (
 	// Korean pages write dates as 2026.08.26, 2026-08-26, 2026/08/15, and —
 	// most commonly on organizer pages — 2026년 9월 1일. All carry an explicit
 	// year+month+day, which is the bar for storing a deadline at all.
-	dateRe = regexp.MustCompile(`20[0-9]{2}\s*년\s*[01]?[0-9]\s*월\s*[0-3]?[0-9]\s*일|20[0-9]{2}[.\-/][01]?[0-9][.\-/][0-3]?[0-9]`)
+	dateRe = regexp.MustCompile(`20[0-9]{2}\s*년\s*[01]?[0-9]\s*월\s*[0-3]?[0-9]\s*일?|20[0-9]{2}[.\-/][01]?[0-9][.\-/][0-3]?[0-9]`)
 )
 
 func ExtractActions(pageURL string, body []byte) (sources.ActionSignals, error) {
@@ -146,7 +146,7 @@ func deadlineNear(text string, labels []string) *string {
 			}
 		}
 		if found := dateRe.FindString(window); found != "" {
-			return strPtr(found)
+			return strPtr(canonicalDateText(found))
 		}
 	}
 	return nil
@@ -174,7 +174,7 @@ var (
 	// Exhibit pages get only application-window labels: 사전등록/등록 there
 	// usually means visitor registration.
 	exhibitPeriodLabels = []string{
-		"신청 기간", "신청기간", "접수 기간", "접수기간",
+		"신청 기간", "신청기간", "접수 기간", "접수기간", "참가업체 모집",
 	}
 )
 
@@ -212,10 +212,18 @@ func DeadlineOnActionPage(body []byte, kind ActionPageKind) *string {
 		}
 		dates := dateRe.FindAllString(window, -1)
 		if len(dates) > 0 {
-			return strPtr(dates[len(dates)-1])
+			return strPtr(canonicalDateText(dates[len(dates)-1]))
 		}
 	}
 	return nil
+}
+
+func canonicalDateText(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if strings.Contains(raw, "년") && strings.Contains(raw, "월") && !strings.HasSuffix(raw, "일") {
+		return raw + "일"
+	}
+	return raw
 }
 
 func hasAny(text string, keywords []string) bool {

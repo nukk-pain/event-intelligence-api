@@ -112,7 +112,11 @@ func runIngest(cfg config.Config) error {
 		return err
 	}
 	renderConfig := render.DefaultConfig(cfg.UserAgent)
-	renderConfig.ResourceFetcher = officialResourceFetcher{fetcher: officialFetcher}
+	// Chrome receives every resource through the reviewed production-host
+	// fetcher. The broader officialFetcher remains limited to server-side
+	// action-page enrichment; it must not become browser-reachable through the
+	// loopback renderer proxy.
+	renderConfig.ResourceFetcher = officialResourceFetcher{fetcher: f}
 	textSelector, err := render.New(ctx, renderConfig)
 	if err != nil {
 		return fmt.Errorf("headless renderer: %w", err)

@@ -62,3 +62,16 @@ func TestParseDateRejectsInvalidISOShapedDate(t *testing.T) {
 		t.Fatalf("parseDate accepted sliced date prefix as %q", got)
 	}
 }
+
+func TestParseDateAcceptsExplicitKoreanCalendarDate(t *testing.T) {
+	// Given
+	const raw = "2026년 7월 31일"
+
+	// When
+	got, ok := parseDate(raw)
+
+	// Then
+	if !ok || got != "2026-07-31" {
+		t.Fatalf("parseDate(%q) = %q, %v; want 2026-07-31, true", raw, got, ok)
+	}
+}

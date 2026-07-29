@@ -150,3 +150,16 @@ func TestDeadlineOnActionPage_ExhibitKindIgnoresVisitorRegistration(t *testing.T
 		t.Fatalf("DeadlineOnActionPage(exhibit) = %v, want 2026.08.20", got)
 	}
 }
+
+func TestDeadlineOnActionPage_ExhibitRecruitmentWindow(t *testing.T) {
+	// Given
+	html := []byte(`<html><body><p>참가업체 모집은 2026년 7월 31(금)까지 입니다.</p></body></html>`)
+
+	// When
+	got := DeadlineOnActionPage(html, ExhibitPage)
+
+	// Then
+	if got == nil || *got != "2026년 7월 31일" {
+		t.Fatalf("DeadlineOnActionPage(exhibit) = %v, want 2026년 7월 31일", got)
+	}
+}

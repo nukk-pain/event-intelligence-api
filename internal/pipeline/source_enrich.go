@@ -67,7 +67,14 @@ func (p *Pipeline) enrichActions(ctx context.Context, f *fetch.Fetcher, parsed *
 // lacks). Only upcoming events with a still-nil deadline cost a fetch; values
 // fill nil-only and every fill records the page as provenance.
 func (p *Pipeline) enrichDeadlinesFromActionPages(ctx context.Context, f *fetch.Fetcher, parsed *sources.ParsedEvent, now string) {
-	if parsed == nil || parsed.SourceID == "benchmark" {
+	if parsed == nil {
+		return
+	}
+	// Benchmark entries do not receive generic action enrichment. A reviewed
+	// catalog entry may still declare an official registration or exhibit URL;
+	// those URLs are eligible for the same evidence-gated deadline read as any
+	// other source.
+	if parsed.SourceID == "benchmark" && parsed.Actions.RegisterURL == nil && parsed.Actions.ExhibitURL == nil {
 		return
 	}
 	if !eventUpcoming(parsed, now) {
@@ -86,7 +93,7 @@ func (p *Pipeline) enrichDeadlinesFromActionPages(ctx context.Context, f *fetch.
 		if err != nil || res.NotModified || res.StatusCode != 200 {
 			return
 		}
-		found := enrich.DeadlineOnActionPage(p.officialPageText(ctx, res.URL, res.Body), kind)
+		found := enrich.DeadlineOnActionPage(p.officialPageText(ctx, *pageURL, res.Body), kind)
 		if found == nil {
 			return
 		}

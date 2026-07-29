@@ -61,6 +61,38 @@ func TestFallback_TextUsesRenderedDOMForJSShell(t *testing.T) {
 	}
 }
 
+func TestFallback_TextFetchesThirdPartyScriptThroughApprovedFetcher(t *testing.T) {
+	// Given
+	resourceFetcher := &fakeResourceFetcher{resources: map[string]Resource{
+		"https://cdn.example/assets/registration.js": {
+			ContentType: "application/javascript",
+			Body:        []byte(`document.getElementById("root").innerHTML = "<p>사전등록 마감 2026.08.18</p>"`),
+		},
+	}}
+	fallback, err := New(context.Background(), Config{UserAgent: "eventsintel-test", MaxPages: 1, Timeout: 15 * time.Second, ResourceFetcher: resourceFetcher})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	t.Cleanup(fallback.Close)
+
+	// When
+	got, err := fallback.Text(context.Background(), "https://events.example/registration/#/pre-reg/891", []byte(`<html><body><div id="root">loading</div><script src="https://cdn.example/assets/registration.js"></script></body></html>`))
+
+	// Then
+	if err != nil {
+		t.Fatalf("Text: %v", err)
+	}
+	if !strings.Contains(string(got), "사전등록 마감 2026.08.18") {
+		t.Fatalf("rendered DOM = %s, want third-party script output", got)
+	}
+	for _, rawURL := range resourceFetcher.calls {
+		if rawURL == "https://cdn.example/assets/registration.js" {
+			return
+		}
+	}
+	t.Fatalf("resource calls = %v, want approved third-party script fetched through ResourceFetcher", resourceFetcher.calls)
+}
+
 func TestFallback_TextLimitsRenderedPages(t *testing.T) {
 	// Given
 	renderer := &fakeRenderer{body: []byte(`<html><body>rendered</body></html>`)}

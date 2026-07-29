@@ -39,9 +39,9 @@ type Resource struct {
 	ContentType string
 }
 
-// ResourceFetcher supplies same-origin scripts and XHR responses to the local
-// page origin. It keeps every renderer-originated request inside the caller's
-// established SSRF, allowlist, robots, and rate-limit policy.
+// ResourceFetcher supplies approved page resources to the local page origin.
+// It keeps every renderer-originated request inside the caller's established
+// SSRF, allowlist, robots, and rate-limit policy.
 type ResourceFetcher interface {
 	Fetch(ctx context.Context, rawURL string) (Resource, error)
 }

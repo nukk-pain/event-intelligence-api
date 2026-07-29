@@ -32,6 +32,7 @@ var dateLayouts = []string{
 	"2006.1.2",
 	"2006-01-02",
 	"2006-1-2",
+	"2006년 1월 2일",
 }
 
 // ParseDate returns the ISO (YYYY-MM-DD) form of a raw date string, or ("",

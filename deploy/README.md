@@ -54,7 +54,9 @@ disabled. Its systemd `StateDirectory` supplies the writable
 has no direct Internet path: the already-approved document is
 served through a per-page loopback origin, while same-origin browser resources
 are obtained only through the existing SSRF-, allowlist-, robots-, and
-rate-limited fetcher. Do not add a separate renderer service or a local-to-VPS
+rate-limited fetcher. A reviewed third-party script dependency follows that
+same proxy path only when its host is explicitly allowlisted; Chrome never gets
+direct Internet access. Do not add a separate renderer service or a local-to-VPS
 database writer: the VPS SQLite database remains the source of truth. If
 Chromium cannot start or a page times out, ingest continues from the already
 fetched static body.
