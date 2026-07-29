@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/smpain/event-intelligence-api/internal/agent"
@@ -126,8 +127,21 @@ func runIngest(cfg config.Config) error {
 	}
 	renderStats := func() {
 		st := textSelector.Stats()
-		log.Printf("headless render: shell_detected=%d succeeded=%d failed=%d cap_skipped=%d (cap=%d)",
-			st.ShellDetected, st.RenderSucceeded, st.RenderFailed, st.CapSkipped, renderConfig.MaxPages)
+		reasons := ""
+		if len(st.FailureReasons) > 0 {
+			keys := make([]string, 0, len(st.FailureReasons))
+			for k := range st.FailureReasons {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
+			parts := make([]string, 0, len(keys))
+			for _, k := range keys {
+				parts = append(parts, fmt.Sprintf("%s=%d", k, st.FailureReasons[k]))
+			}
+			reasons = " [" + strings.Join(parts, " ") + "]"
+		}
+		log.Printf("headless render: shell_detected=%d succeeded=%d failed=%d%s cap_skipped=%d (cap=%d)",
+			st.ShellDetected, st.RenderSucceeded, st.RenderFailed, reasons, st.CapSkipped, renderConfig.MaxPages)
 	}
 	defer func() {
 		renderStats()

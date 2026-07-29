@@ -302,3 +302,32 @@ func TestFallback_StatsCountCapSkipped(t *testing.T) {
 		t.Errorf("CapSkipped = %d, want 1", stats.CapSkipped)
 	}
 }
+
+func TestFallback_StatsGroupFailureReasons(t *testing.T) {
+	// Raising the per-batch cap took failures from 5 to 17, and "failed=17"
+	// alone cannot say whether the newly-reached pages time out, come back
+	// empty, or crash the browser.
+	shell := []byte(`<html><body><div id="root"></div></body></html>`)
+
+	timeouts := &fakeRenderer{err: context.DeadlineExceeded}
+	f, err := NewWithRenderer(Config{UserAgent: "ua", MaxPages: 5, Timeout: time.Second}, timeouts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.Text(context.Background(), "https://a.example.com/", shell)
+	f.Text(context.Background(), "https://b.example.com/", shell)
+
+	empty := &fakeRenderer{body: []byte("   ")}
+	f2, err := NewWithRenderer(Config{UserAgent: "ua", MaxPages: 5, Timeout: time.Second}, empty)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f2.Text(context.Background(), "https://c.example.com/", shell)
+
+	if got := f.Stats().FailureReasons["timeout"]; got != 2 {
+		t.Errorf("timeout failures = %d, want 2 (%v)", got, f.Stats().FailureReasons)
+	}
+	if got := f2.Stats().FailureReasons["empty_dom"]; got != 1 {
+		t.Errorf("empty_dom failures = %d, want 1 (%v)", got, f2.Stats().FailureReasons)
+	}
+}

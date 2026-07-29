@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 	"unicode/utf8"
@@ -71,6 +72,9 @@ type Fallback struct {
 	renderSucceeded atomic.Int64
 	renderFailed    atomic.Int64
 	capSkipped      atomic.Int64
+
+	failuresMu sync.Mutex
+	failures   map[string]int64
 }
 
 // Stats reports one batch's shell-detection and render outcomes so ingest can
@@ -81,6 +85,9 @@ type Stats struct {
 	RenderSucceeded int64
 	RenderFailed    int64
 	CapSkipped      int64
+	// FailureReasons groups failures by cause, because a bare count cannot
+	// say whether pages time out, return an empty DOM, or crash the browser.
+	FailureReasons map[string]int64
 }
 
 // Stats is safe on a nil *Fallback (rendering disabled this run).
@@ -88,12 +95,50 @@ func (f *Fallback) Stats() Stats {
 	if f == nil {
 		return Stats{}
 	}
+	f.failuresMu.Lock()
+	reasons := make(map[string]int64, len(f.failures))
+	for k, v := range f.failures {
+		reasons[k] = v
+	}
+	f.failuresMu.Unlock()
 	return Stats{
 		ShellDetected:   f.shellDetected.Load(),
 		RenderSucceeded: f.renderSucceeded.Load(),
 		RenderFailed:    f.renderFailed.Load(),
 		CapSkipped:      f.capSkipped.Load(),
+		FailureReasons:  reasons,
 	}
+}
+
+// recordFailure classifies a render failure so a batch can say why, not just
+// how many.
+func (f *Fallback) recordFailure(err error) {
+	reason := "other"
+	switch {
+	case err == nil:
+		reason = "empty_dom"
+	case errors.Is(err, context.DeadlineExceeded), errors.Is(err, context.Canceled):
+		reason = "timeout"
+	default:
+		msg := strings.ToLower(err.Error())
+		switch {
+		case strings.Contains(msg, "deadline") || strings.Contains(msg, "timeout"):
+			reason = "timeout"
+		case strings.Contains(msg, "empty dom"):
+			reason = "empty_dom"
+		case strings.Contains(msg, "websocket") || strings.Contains(msg, "connection") || strings.Contains(msg, "closed"):
+			reason = "browser_lost"
+		case strings.Contains(msg, "net::"):
+			reason = "page_load"
+		}
+	}
+	f.renderFailed.Add(1)
+	f.failuresMu.Lock()
+	if f.failures == nil {
+		f.failures = map[string]int64{}
+	}
+	f.failures[reason]++
+	f.failuresMu.Unlock()
 }
 
 // New returns the Chrome-backed selector used by one daily ingest batch.
@@ -145,11 +190,11 @@ func (f *Fallback) Text(ctx context.Context, rawURL string, staticBody []byte) (
 
 	rendered, err := f.renderer.Render(renderCtx, rawURL, staticBody)
 	if err != nil {
-		f.renderFailed.Add(1)
+		f.recordFailure(err)
 		return staticBody, fmt.Errorf("render %q: %w", rawURL, err)
 	}
 	if len(bytes.TrimSpace(rendered)) == 0 {
-		f.renderFailed.Add(1)
+		f.recordFailure(nil)
 		return staticBody, fmt.Errorf("render %q: empty DOM", rawURL)
 	}
 	f.renderSucceeded.Add(1)
