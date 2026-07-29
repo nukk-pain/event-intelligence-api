@@ -63,3 +63,13 @@ ingest의 공식 페이지 fetch 경로에 **선택적 헤드리스 렌더링 �
 - 결정론 추출: `internal/enrich/actions.go`
 - 커버리지 로그: `cmd/eventsintel/main.go` (store.CountUpcomingWithDeadline)
 - 감사 도구: `eval/audit.py`, `eval/README.md`
+
+## 추가 발견 (2026-07-29 오후)
+
+- themedtechconference.com 은 JS 렌더링이 아니라 **Cloudflare 봇 차단(403
+  Attention Required)** — 정적 fetch가 원천 불가한 별도 클래스다. 소비자 쪽은
+  이를 "blocked"로 분류해 보고서에 명시하도록 했다.
+- 헤드리스 도입 시 이 클래스의 처리 방침을 여기서 결정할 것: managed challenge는
+  실제 브라우저에서 통과되기도 하지만, 명시적 봇 차단의 우회는 안티봇 회피로
+  읽힐 수 있다. 권고: robots·차단 신호를 존중하고, 이런 행사는 benchmark 카탈로그
+  수동 필드(사람이 확인한 마감)로 채우는 절차를 두는 쪽이 제품 정직성과 일관된다.
