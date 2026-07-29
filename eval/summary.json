@@ -1,27 +1,19 @@
 {
- "total": 61,
+ "total": 37,
  "by_classification": {
-  "verified": 30,
-  "unverified": 18,
-  "partial": 12,
-  "wrong_type": 1
+  "unverified": 25,
+  "verified": 5,
+  "wrong_type": 2,
+  "partial": 5
  },
  "by_field": {
   "exhibitor_deadline": {
-   "total": 16,
-   "verified": 2
-  },
-  "name_en": {
-   "total": 19,
-   "verified": 17
-  },
-  "register_url": {
-   "total": 16,
-   "verified": 10
+   "total": 21,
+   "verified": 3
   },
   "registration_deadline": {
-   "total": 10,
-   "verified": 1
+   "total": 16,
+   "verified": 2
   }
  }
 }

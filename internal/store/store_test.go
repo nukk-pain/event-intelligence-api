@@ -533,3 +533,32 @@ func TestMigrateRevokesOnlyPreGateSolarDeadlines(t *testing.T) {
 	check("gated-v2", false, false)
 	check("scraped", false, false)
 }
+
+func TestCountUpcomingWithDeadline(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+
+	mk := func(id, start string, deadline *string) model.Event {
+		e := newEvent()
+		e.EventID = id
+		e.StartDate = strptr(start)
+		e.EndDate = strptr(start)
+		e.RegistrationDeadline = deadline
+		return e
+	}
+	events := []model.Event{
+		mk("ev-up-deadline", "2099-01-01", strptr("2098-12-01")),
+		mk("ev-up-none", "2099-01-01", nil),
+		mk("ev-past", "2000-01-01", strptr("1999-12-01")),
+	}
+	if err := store.ApplyBatch(ctx, db, events, "batch-count"); err != nil {
+		t.Fatalf("ApplyBatch: %v", err)
+	}
+	n, err := store.CountUpcomingWithDeadline(ctx, db, "2026-07-29")
+	if err != nil {
+		t.Fatalf("CountUpcomingWithDeadline: %v", err)
+	}
+	if n != 1 {
+		t.Fatalf("count = %d, want 1", n)
+	}
+}

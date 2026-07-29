@@ -153,7 +153,7 @@ func (a *ActionEnricher) EnrichActions(ctx context.Context, pageURL string, body
 	// shapes that carry an explicit year, month, and day; anything without one
 	// is still rejected rather than guessed at.
 	if current.RegistrationDeadline == nil {
-		if iso, ok := normalizeDeadline(deref(brief.RegisterDeadline)); ok && dateEvidence(readTexts, iso) {
+		if iso, ok := normalizeDeadline(deref(brief.RegisterDeadline)); ok && typedDateEvidence(readTexts, iso, registrationDeadlineKind) {
 			out.RegistrationDeadline = &iso
 			changed = true
 		}
@@ -165,7 +165,7 @@ func (a *ActionEnricher) EnrichActions(ctx context.Context, pageURL string, body
 	// The exhibitor cutoff is a different date from the attendee one, and it is
 	// the one a company weighing a booth needs.
 	if current.ExhibitorDeadline == nil {
-		if iso, ok := normalizeDeadline(deref(brief.BoothDeadline)); ok && dateEvidence(readTexts, iso) {
+		if iso, ok := normalizeDeadline(deref(brief.BoothDeadline)); ok && typedDateEvidence(readTexts, iso, exhibitorDeadlineKind) {
 			out.ExhibitorDeadline = &iso
 			changed = true
 		}

@@ -212,6 +212,13 @@ func runIngest(cfg config.Config) error {
 			sr.Source, sr.Discovered, sr.DiscoveredRaw, sr.DroppedByCap, sr.Parsed, sr.Stored, sr.Skipped, status)
 	}
 
+	// Deadlines are ratchet facts (store carry-forward), so this count should
+	// only ever rise between runs — a drop in the journal is the cheapest
+	// possible regression alarm. Best-effort: never fails the ingest.
+	if n, cerr := store.CountUpcomingWithDeadline(ctx, db, time.Now().UTC().Format("2006-01-02")); cerr == nil {
+		log.Printf("deadline coverage: upcoming events with a deadline = %d", n)
+	}
+
 	// Invalidate the Cloudflare edge cache so it stops serving stale event JSON/
 	// HTML now that fresh data is in the store. This is what makes the long edge
 	// s-maxage safe (see internal/api/cache.go). It is best-effort: a purge failure

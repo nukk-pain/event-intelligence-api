@@ -1,100 +1,27 @@
 [
  {
-  "event_id": "benchmark-emnlp-2026",
-  "field": "name_en",
-  "value": "Conference on Empirical Methods in Natural Language Processing",
-  "name": "EMNLP 2026",
-  "url": "https://2026.emnlp.org/",
-  "evidence_urls": [
-   "https://2026.emnlp.org/"
-  ],
-  "classification": "verified",
-  "evidence": "https://2026.emnlp.org/"
- },
- {
-  "event_id": "benchmark-iclr-2027",
-  "field": "name_en",
-  "value": "International Conference on Learning Representations",
-  "name": "ICLR 2027",
-  "url": "https://iclr.cc/Conferences/FutureMeetings",
-  "evidence_urls": [
-   "https://iclr.cc/Conferences/FutureMeetings"
-  ],
-  "classification": "unverified",
-  "evidence": ""
- },
- {
-  "event_id": "benchmark-nvidia-gtc-2027",
-  "field": "name_en",
-  "value": "NVIDIA GTC",
-  "name": "NVIDIA GTC 2027",
-  "url": "https://www.nvidia.com/gtc/",
-  "evidence_urls": [
-   "https://www.nvidia.com/gtc/"
-  ],
-  "classification": "verified",
-  "evidence": "https://www.nvidia.com/gtc/"
- },
- {
-  "event_id": "benchmark-switch-singapore-2026",
-  "field": "name_en",
-  "value": "SWITCH 2026",
-  "name": "Singapore Week of Innovation and Technology 2026",
-  "url": "https://www.switchsg.org/",
-  "evidence_urls": [
-   "https://www.switchsg.org/"
-  ],
-  "classification": "partial",
-  "evidence": "https://www.switchsg.org/ :: tokens present, not contiguous"
- },
- {
-  "event_id": "coex-%ea%b2%bd%ea%b8%b0-%ea%b5%ad%ec%a0%9c-%ec%a2%85%ed%95%a9-%ed%95%99%ec%88%a0%eb%8c%80%ed%9a%8c-%eb%b0%8f-%ec%b9%98%ea%b3%bc%ea%b8%b0%ec%9e%90%ec%9e%ac-%ec%a0%84%ec%8b%9c%ed%9a%8cgamex-2026",
-  "field": "name_en",
-  "value": "GAMEX 2026",
-  "name": "경기 국제 종합 학술대회 및 치과기자재 전시회(GAMEX 2026)",
-  "url": "https://www.gamex.kr/",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/%ea%b2%bd%ea%b8%b0-%ea%b5%ad%ec%a0%9c-%ec%a2%85%ed%95%a9-%ed%95%99%ec%88%a0%eb%8c%80%ed%9a%8c-%eb%b0%8f-%ec%b9%98%ea%b3%bc%ea%b8%b0%ec%9e%90%ec%9e%ac-%ec%a0%84%ec%8b%9c%ed%9a%8cgamex-2026/",
-   "https://www.gamex.kr/"
-  ],
-  "classification": "verified",
-  "evidence": "https://www.coex.co.kr/exhibitions/%ea%b2%bd%ea%b8%b0-%ea%b5%ad%ec%a0%9c-%ec%a2%85%ed%95%a9-%ed%95%99%ec%88%a0%eb%8c%80%ed%9a%8c-%eb%b0%8f-%ec%b9%98%ea%b3%bc%ea%b8%b0%ec%9e%90%ec%9e%ac-%ec%a0%84%ec%8b%9c%ed%9a%8cgamex-2026/"
- },
- {
-  "event_id": "coex-%eb%b0%94%ec%9d%b4%ec%98%a4%ed%94%8c%eb%9f%ac%ec%8a%a4-%ec%9d%b8%ed%84%b0%ed%8e%99%ec%8a%a4-%ec%bd%94%eb%a6%ac%ec%95%84-2026-bix2026",
-  "field": "name_en",
-  "value": "BIX2026",
-  "name": "바이오플러스-인터펙스 코리아 2026 (BIX2026)",
-  "url": "https://www.bioplusinterphex.co.kr/ko-kr.html?utm_source=coex&utm_medium=affiliate&utm_campaign=bix_awereness_visitor",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/%eb%b0%94%ec%9d%b4%ec%98%a4%ed%94%8c%eb%9f%ac%ec%8a%a4-%ec%9d%b8%ed%84%b0%ed%8e%99%ec%8a%a4-%ec%bd%94%eb%a6%ac%ec%95%84-2026-bix2026/",
-   "https://www.bioplusinterphex.co.kr/ko-kr.html?utm_source=coex&utm_medium=affiliate&utm_campaign=bix_awereness_visitor"
-  ],
-  "classification": "verified",
-  "evidence": "https://www.coex.co.kr/exhibitions/%eb%b0%94%ec%9d%b4%ec%98%a4%ed%94%8c%eb%9f%ac%ec%8a%a4-%ec%9d%b8%ed%84%b0%ed%8e%99%ec%8a%a4-%ec%bd%94%eb%a6%ac%ec%95%84-2026-bix2026/"
- },
- {
-  "event_id": "coex-%ec%84%a4%eb%a7%9e%ec%9d%b4-%eb%aa%85%ec%a0%88%ec%84%a0%eb%ac%bc%ec%a0%84-4",
-  "field": "registration_deadline",
-  "value": "2026-07-10",
-  "name": "설맞이 명절선물전",
-  "url": "https://fgfair.com/",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/%ec%84%a4%eb%a7%9e%ec%9d%b4-%eb%aa%85%ec%a0%88%ec%84%a0%eb%ac%bc%ec%a0%84-4/",
-   "https://fgfair.com/",
-   "https://fgfair.com/appli/joinReg.asp?snm=123"
-  ],
-  "classification": "unverified",
-  "evidence": ""
- },
- {
-  "event_id": "coex-%ec%84%a4%eb%a7%9e%ec%9d%b4-%eb%aa%85%ec%a0%88%ec%84%a0%eb%ac%bc%ec%a0%84-4",
+  "event_id": "coex-%ec%a0%9c20%ed%9a%8c-%ea%b5%ad%ec%a0%9c-%ec%8b%9c%ed%81%90%eb%a6%ac%ed%8b%b0-%ec%bd%98%ed%8d%bc%eb%9f%b0%ec%8a%a4",
   "field": "exhibitor_deadline",
   "value": "2026-07-10",
-  "name": "설맞이 명절선물전",
+  "name": "제20회 국제 시큐리티 콘퍼런스",
+  "url": "https://www.isecconference.org/2026/kor/index.html",
+  "evidence_urls": [
+   "https://www.coex.co.kr/exhibitions/%ec%a0%9c20%ed%9a%8c-%ea%b5%ad%ec%a0%9c-%ec%8b%9c%ed%81%90%eb%a6%ac%ed%8b%b0-%ec%bd%98%ed%8d%bc%eb%9f%b0%ec%8a%a4/",
+   "https://www.isecconference.org/2026/kor/index.html",
+   "https://www.isecconference.org/2026/kor/visitor.html",
+   "https://www.isecconference.org/2026/kor/info03.html"
+  ],
+  "classification": "unverified",
+  "evidence": ""
+ },
+ {
+  "event_id": "coex-2026-%ed%95%9c%ea%b0%80%ec%9c%84-%eb%aa%85%ec%a0%88%ec%84%a0%eb%ac%bc%ec%a0%84%ec%86%8c%ea%b8%88%eb%b0%95%eb%9e%8c%ed%9a%8c",
+  "field": "registration_deadline",
+  "value": "2026-07-10",
+  "name": "2026 한가위 명절선물전&소금박람회",
   "url": "https://fgfair.com/",
   "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/%ec%84%a4%eb%a7%9e%ec%9d%b4-%eb%aa%85%ec%a0%88%ec%84%a0%eb%ac%bc%ec%a0%84-4/",
+   "https://www.coex.co.kr/exhibitions/2026-%ed%95%9c%ea%b0%80%ec%9c%84-%eb%aa%85%ec%a0%88%ec%84%a0%eb%ac%bc%ec%a0%84%ec%86%8c%ea%b8%88%eb%b0%95%eb%9e%8c%ed%9a%8c/",
    "https://fgfair.com/",
    "https://fgfair.com/appli/joinReg.asp?snm=123"
   ],
@@ -102,30 +29,65 @@
   "evidence": ""
  },
  {
-  "event_id": "coex-%ec%84%a4%eb%a7%9e%ec%9d%b4-%eb%aa%85%ec%a0%88%ec%84%a0%eb%ac%bc%ec%a0%84-4",
-  "field": "register_url",
-  "value": "https://fgfair.com/appli/joinReg.asp?snm=123",
-  "name": "설맞이 명절선물전",
+  "event_id": "coex-2026-%ed%95%9c%ea%b0%80%ec%9c%84-%eb%aa%85%ec%a0%88%ec%84%a0%eb%ac%bc%ec%a0%84%ec%86%8c%ea%b8%88%eb%b0%95%eb%9e%8c%ed%9a%8c",
+  "field": "exhibitor_deadline",
+  "value": "2026-07-17",
+  "name": "2026 한가위 명절선물전&소금박람회",
   "url": "https://fgfair.com/",
   "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/%ec%84%a4%eb%a7%9e%ec%9d%b4-%eb%aa%85%ec%a0%88%ec%84%a0%eb%ac%bc%ec%a0%84-4/",
-   "https://fgfair.com/"
-  ],
-  "classification": "partial",
-  "evidence": "answers 200; link not found on source pages read"
- },
- {
-  "event_id": "coex-%ec%84%b8%ea%b3%84-%ec%a0%9c%ec%95%bd%e3%86%8d%eb%b0%94%ec%9d%b4%ec%98%a4%e3%86%8d%ea%b1%b4%ea%b0%95%ea%b8%b0%eb%8a%a5-%ec%82%b0%ec%97%85-%ec%a0%84%ec%8b%9c%ed%9a%8c-2026",
-  "field": "name_en",
-  "value": "CPHI/ Hi Korea 2026",
-  "name": "세계 제약ㆍ바이오ㆍ건강기능 산업 전시회 2026",
-  "url": "https://cphikorea.co.kr",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/%ec%84%b8%ea%b3%84-%ec%a0%9c%ec%95%bd%e3%86%8d%eb%b0%94%ec%9d%b4%ec%98%a4%e3%86%8d%ea%b1%b4%ea%b0%95%ea%b8%b0%eb%8a%a5-%ec%82%b0%ec%97%85-%ec%a0%84%ec%8b%9c%ed%9a%8c-2026/",
-   "https://cphikorea.co.kr"
+   "https://www.coex.co.kr/exhibitions/2026-%ed%95%9c%ea%b0%80%ec%9c%84-%eb%aa%85%ec%a0%88%ec%84%a0%eb%ac%bc%ec%a0%84%ec%86%8c%ea%b8%88%eb%b0%95%eb%9e%8c%ed%9a%8c/",
+   "https://fgfair.com/",
+   "https://fgfair.com/appli/joinReg.asp?snm=123"
   ],
   "classification": "verified",
-  "evidence": "https://www.coex.co.kr/exhibitions/%ec%84%b8%ea%b3%84-%ec%a0%9c%ec%95%bd%e3%86%8d%eb%b0%94%ec%9d%b4%ec%98%a4%e3%86%8d%ea%b1%b4%ea%b0%95%ea%b8%b0%eb%8a%a5-%ec%82%b0%ec%97%85-%ec%a0%84%ec%8b%9c%ed%9a%8c-2026/"
+  "evidence": "https://fgfair.com/appli/joinReg.asp?snm=123 :: px; word-break: keep-all;\">1. 전시자는 출품비 50&#37;에 해당하는 계약금을 출품신청서 제출 시 납입해야 하며, 잔금 50&#37;는 2026년 07월 17일까지 납입 해야한다.</dd><dd style=\"font-size: 16px; font-weight: 400; margin: 0px; padding: 0px; "
+ },
+ {
+  "event_id": "coex-%ec%a0%9c50%ed%9a%8c-%eb%b2%a0%ed%8e%98-%eb%b2%a0%ec%9d%b4%eb%b9%84%ed%8e%98%ec%96%b4",
+  "field": "exhibitor_deadline",
+  "value": "2026-08-14",
+  "name": "제50회 베페 베이비페어",
+  "url": "https://befe.co.kr/",
+  "evidence_urls": [
+   "https://www.coex.co.kr/exhibitions/%ec%a0%9c50%ed%9a%8c-%eb%b2%a0%ed%8e%98-%eb%b2%a0%ec%9d%b4%eb%b9%84%ed%8e%98%ec%96%b4/",
+   "https://www.befe.co.kr/",
+   "https://befe.co.kr/",
+   "https://www.befe.co.kr/register",
+   "https://www.befe.co.kr/exhibition"
+  ],
+  "classification": "unverified",
+  "evidence": ""
+ },
+ {
+  "event_id": "coex-%ec%bd%94%eb%a6%ac%ec%95%84-%eb%9d%bc%ec%9d%b4%ed%94%84%ec%82%ac%ec%9d%b4%ec%96%b8%ec%8a%a4-%ec%9c%84%ed%81%ac-2026",
+  "field": "exhibitor_deadline",
+  "value": "2026-07-31",
+  "name": "코리아 라이프사이언스 위크 2026",
+  "url": "https://www.lifescienceweek.com",
+  "evidence_urls": [
+   "https://www.coex.co.kr/exhibitions/%ec%bd%94%eb%a6%ac%ec%95%84-%eb%9d%bc%ec%9d%b4%ed%94%84%ec%82%ac%ec%9d%b4%ec%96%b8%ec%8a%a4-%ec%9c%84%ed%81%ac-2026/",
+   "https://www.lifescienceweek.com/kor/index.asp",
+   "https://www.lifescienceweek.com",
+   "https://www.lifescienceweek.com/kor/visitor/pre_regist.asp",
+   "https://www.lifescienceweek.com/kor/exhibitor/login.asp"
+  ],
+  "classification": "unverified",
+  "evidence": ""
+ },
+ {
+  "event_id": "coex-2026-%eb%b0%b0%ed%84%b0%eb%a6%ac%ec%bd%94%eb%a6%ac%ec%95%84",
+  "field": "exhibitor_deadline",
+  "value": "2026-10-06",
+  "name": "2026 배터리코리아",
+  "url": "https://www.batterykorea.org/2026/kor/index.html",
+  "evidence_urls": [
+   "https://www.coex.co.kr/exhibitions/2026-%eb%b0%b0%ed%84%b0%eb%a6%ac%ec%bd%94%eb%a6%ac%ec%95%84/",
+   "https://www.batterykorea.org/2026/kor/index.html",
+   "https://www.batterykorea.org/2026/kor/visitor.html",
+   "https://www.batterykorea.org/2026/kor/exhibitor_join.html"
+  ],
+  "classification": "wrong_type",
+  "evidence": "https://www.batterykorea.org/2026/kor/exhibitor_join.html :: <strong>제5조 참가비 납입조건</strong><br> <br> 1. 전시자는 참가신청서 제출시 참가비 30%를 계약금으로 납부하여야 하며, 2026년 10월 6일까지 잔금을 납부하여야 한다.<br> 2. 전시자가 잔금을 기한 내 납입하지 않을 경우 주최자는 참가계약을 해지할 수 있으며, 이 경우 전시자는 이미 납"
  },
  {
   "event_id": "coex-%ec%8a%a4%eb%a7%88%ed%8a%b8%eb%9d%bc%ec%9d%b4%ed%94%84%ec%9c%84%ed%81%acslw",
@@ -158,56 +120,36 @@
   "evidence": "https://slw.kr/kor/main.do :: on\"> <span class=\"cate\">미디어</span> <strong>[주요기사] 머니투데이 (2025.09.30.) 프라하·두바이 &#039;서울 스마트도시상&#039; 금상 수상</strong> <p>[주요기사] 머니"
  },
  {
-  "event_id": "coex-%ec%8a%a4%eb%a7%88%ed%8a%b8%eb%9d%bc%ec%9d%b4%ed%94%84%ec%9c%84%ed%81%acslw",
-  "field": "name_en",
-  "value": "SLW",
-  "name": "스마트라이프위크(SLW)",
-  "url": "https://slw.kr/kor/main.do",
+  "event_id": "coex-kes-2026%ed%95%9c%ea%b5%ad%ec%a0%84%ec%9e%90%ec%a0%84",
+  "field": "registration_deadline",
+  "value": "2026-07-31",
+  "name": "KES 2026(한국전자전)",
+  "url": "https://www.kes.org",
   "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/%ec%8a%a4%eb%a7%88%ed%8a%b8%eb%9d%bc%ec%9d%b4%ed%94%84%ec%9c%84%ed%81%acslw/",
-   "https://slw.kr/kor/main.do"
+   "https://www.coex.co.kr/exhibitions/kes-2026%ed%95%9c%ea%b5%ad%ec%a0%84%ec%9e%90%ec%a0%84/",
+   "https://kes.org/kor/",
+   "https://www.kes.org",
+   "https://www.kes.org/kor/visit/regist.asp",
+   "https://www.kes.org/kor/search/boothmap.asp"
   ],
-  "classification": "verified",
-  "evidence": "https://www.coex.co.kr/exhibitions/%ec%8a%a4%eb%a7%88%ed%8a%b8%eb%9d%bc%ec%9d%b4%ed%94%84%ec%9c%84%ed%81%acslw/"
+  "classification": "unverified",
+  "evidence": ""
  },
  {
-  "event_id": "coex-%ec%8a%a4%eb%a7%88%ed%8a%b8%ec%97%90%eb%84%88%ec%a7%80%ed%94%8c%eb%9f%ac%ec%8a%a4-2026",
-  "field": "name_en",
-  "value": "SMART ENERGY PLUS",
-  "name": "스마트에너지플러스 2026",
-  "url": "https://sep.kr/",
+  "event_id": "coex-kes-2026%ed%95%9c%ea%b5%ad%ec%a0%84%ec%9e%90%ec%a0%84",
+  "field": "exhibitor_deadline",
+  "value": "2026-08-14",
+  "name": "KES 2026(한국전자전)",
+  "url": "https://www.kes.org",
   "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/%ec%8a%a4%eb%a7%88%ed%8a%b8%ec%97%90%eb%84%88%ec%a7%80%ed%94%8c%eb%9f%ac%ec%8a%a4-2026/",
-   "https://sep.kr/"
+   "https://www.coex.co.kr/exhibitions/kes-2026%ed%95%9c%ea%b5%ad%ec%a0%84%ec%9e%90%ec%a0%84/",
+   "https://kes.org/kor/",
+   "https://www.kes.org",
+   "https://www.kes.org/kor/visit/regist.asp",
+   "https://www.kes.org/kor/search/boothmap.asp"
   ],
-  "classification": "verified",
-  "evidence": "https://www.coex.co.kr/exhibitions/%ec%8a%a4%eb%a7%88%ed%8a%b8%ec%97%90%eb%84%88%ec%a7%80%ed%94%8c%eb%9f%ac%ec%8a%a4-2026/"
- },
- {
-  "event_id": "coex-%ec%97%85%eb%9d%bc%ec%9d%b4%ec%a7%95-%ed%8e%98%ec%8a%a4%ed%83%80-vol-2",
-  "field": "register_url",
-  "value": "https://www.starartist.co/forms/1",
-  "name": "업라이징 페스타 Vol.2",
-  "url": "https://www.uprisingfesta.com",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/%ec%97%85%eb%9d%bc%ec%9d%b4%ec%a7%95-%ed%8e%98%ec%8a%a4%ed%83%80-vol-2/",
-   "https://www.uprisingfesta.com"
-  ],
-  "classification": "verified",
-  "evidence": "linked from https://www.uprisingfesta.com, answers 200"
- },
- {
-  "event_id": "coex-%ec%9d%b8%ea%b3%b5%ec%a7%80%eb%8a%a5-%ed%8e%98%ec%8a%a4%ed%83%80-2026",
-  "field": "name_en",
-  "value": "AI Festa",
-  "name": "인공지능 페스타 2026",
-  "url": "https://www.aifesta.kr/",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/%ec%9d%b8%ea%b3%b5%ec%a7%80%eb%8a%a5-%ed%8e%98%ec%8a%a4%ed%83%80-2026/",
-   "https://www.aifesta.kr/"
-  ],
-  "classification": "verified",
-  "evidence": "https://www.coex.co.kr/exhibitions/%ec%9d%b8%ea%b3%b5%ec%a7%80%eb%8a%a5-%ed%8e%98%ec%8a%a4%ed%83%80-2026/"
+  "classification": "unverified",
+  "evidence": ""
  },
  {
   "event_id": "coex-%ec%a0%9c-28%ed%9a%8c-%eb%b0%98%eb%8f%84%ec%b2%b4%eb%8c%80%ec%a0%84",
@@ -228,7 +170,7 @@
  {
   "event_id": "coex-%ec%a0%9c-28%ed%9a%8c-%eb%b0%98%eb%8f%84%ec%b2%b4%eb%8c%80%ec%a0%84",
   "field": "exhibitor_deadline",
-  "value": "2026-05-29",
+  "value": "2026-07-31",
   "name": "제 28회 반도체대전",
   "url": "http://www.sedex.org",
   "evidence_urls": [
@@ -237,6 +179,249 @@
    "http://www.sedex.org",
    "http://www.sedex.org/public_html/participation/participation_regi.asp",
    "http://www.sedex.org/public_html/information/information_booth.asp"
+  ],
+  "classification": "unverified",
+  "evidence": ""
+ },
+ {
+  "event_id": "coex-aiot-%ea%b5%ad%ec%a0%9c%ec%a0%84%ec%8b%9c%ed%9a%8c-2",
+  "field": "registration_deadline",
+  "value": "2026-09-18",
+  "name": "AIoT 국제전시회",
+  "url": "https://www.aiotkorea.or.kr/2026/kor/",
+  "evidence_urls": [
+   "https://www.coex.co.kr/exhibitions/aiot-%ea%b5%ad%ec%a0%9c%ec%a0%84%ec%8b%9c%ed%9a%8c-2/",
+   "https://www.aiotkorea.or.kr/2026/kor/",
+   "https://www.aiotkorea.or.kr/2026/kor/conference/preregistration.asp",
+   "https://www.aiotkorea.or.kr/2026/kor/about/application.asp"
+  ],
+  "classification": "partial",
+  "evidence": "https://www.aiotkorea.or.kr/2026/kor/about/application.asp :: es/about/ico_s3.png\" alt=\"\">참가비 잔금 납부</strong> <p><span style=\"font-weight:900;\">2026년 9월 18일(금)까지</span><br> 참가비 전액 납부</p> </div> </li> </ul> "
+ },
+ {
+  "event_id": "coex-aiot-%ea%b5%ad%ec%a0%9c%ec%a0%84%ec%8b%9c%ed%9a%8c-2",
+  "field": "exhibitor_deadline",
+  "value": "2026-09-18",
+  "name": "AIoT 국제전시회",
+  "url": "https://www.aiotkorea.or.kr/2026/kor/",
+  "evidence_urls": [
+   "https://www.coex.co.kr/exhibitions/aiot-%ea%b5%ad%ec%a0%9c%ec%a0%84%ec%8b%9c%ed%9a%8c-2/",
+   "https://www.aiotkorea.or.kr/2026/kor/",
+   "https://www.aiotkorea.or.kr/2026/kor/conference/preregistration.asp",
+   "https://www.aiotkorea.or.kr/2026/kor/about/application.asp"
+  ],
+  "classification": "partial",
+  "evidence": "https://www.aiotkorea.or.kr/2026/kor/about/application.asp :: es/about/ico_s3.png\" alt=\"\">참가비 잔금 납부</strong> <p><span style=\"font-weight:900;\">2026년 9월 18일(금)까지</span><br> 참가비 전액 납부</p> </div> </li> </ul> "
+ },
+ {
+  "event_id": "coex-%ec%a0%9c25%ed%9a%8c-%ec%84%9c%ec%9a%b8%ec%b9%b4%ed%8e%98%ec%87%bc",
+  "field": "registration_deadline",
+  "value": "2026-02-28",
+  "name": "제25회 서울카페쇼",
+  "url": "http://kor.cafeshow.com/kor/",
+  "evidence_urls": [
+   "https://www.coex.co.kr/exhibitions/%ec%a0%9c25%ed%9a%8c-%ec%84%9c%ec%9a%b8%ec%b9%b4%ed%8e%98%ec%87%bc/",
+   "http://kor.cafeshow.com/kor/",
+   "http://kor.cafeshow.com/kor/exhibitor/exhi_regis_2026.asp",
+   "http://kor.cafeshow.com/kor/booth_map/map.hall.all.asp"
+  ],
+  "classification": "unverified",
+  "evidence": ""
+ },
+ {
+  "event_id": "coex-%ec%a0%9c25%ed%9a%8c-%ec%84%9c%ec%9a%b8%ec%b9%b4%ed%8e%98%ec%87%bc",
+  "field": "exhibitor_deadline",
+  "value": "2026-07-31",
+  "name": "제25회 서울카페쇼",
+  "url": "http://kor.cafeshow.com/kor/",
+  "evidence_urls": [
+   "https://www.coex.co.kr/exhibitions/%ec%a0%9c25%ed%9a%8c-%ec%84%9c%ec%9a%b8%ec%b9%b4%ed%8e%98%ec%87%bc/",
+   "http://kor.cafeshow.com/kor/",
+   "http://kor.cafeshow.com/kor/exhibitor/exhi_regis_2026.asp",
+   "http://kor.cafeshow.com/kor/booth_map/map.hall.all.asp"
+  ],
+  "classification": "unverified",
+  "evidence": ""
+ },
+ {
+  "event_id": "coex-2026-%ec%84%9c%ec%9a%b8%ea%b5%ad%ec%a0%9c%eb%b0%9c%eb%aa%85%ec%a0%84%ec%8b%9c%ed%9a%8c",
+  "field": "registration_deadline",
+  "value": "2026-10-16",
+  "name": "2026 서울국제발명전시회",
+  "url": "https://kipa.org/siif",
+  "evidence_urls": [
+   "https://www.coex.co.kr/exhibitions/2026-%ec%84%9c%ec%9a%b8%ea%b5%ad%ec%a0%9c%eb%b0%9c%eb%aa%85%ec%a0%84%ec%8b%9c%ed%9a%8c/",
+   "https://kipa.org/siif/",
+   "https://kipa.org/siif",
+   "https://kipa.org/siif/jsp/2025/exhibitIntro.jsp"
+  ],
+  "classification": "unverified",
+  "evidence": ""
+ },
+ {
+  "event_id": "coex-2026-%ed%99%88%ed%85%8c%ec%9d%b4%eb%b8%94%eb%8d%b0%ec%bd%94%ed%8e%98%ec%96%b4",
+  "field": "registration_deadline",
+  "value": "2026-07-31",
+  "name": "2026 홈테이블데코페어",
+  "url": "https://www.hometabledeco.com/",
+  "evidence_urls": [
+   "https://www.coex.co.kr/exhibitions/2026-%ed%99%88%ed%85%8c%ec%9d%b4%eb%b8%94%eb%8d%b0%ec%bd%94%ed%8e%98%ec%96%b4/",
+   "https://www.hometabledeco.com/ko-kr/home.html",
+   "https://www.hometabledeco.com/",
+   "https://sub.hometabledeco.com/kor/visitor/pre_registration.asp",
+   "https://app.smartsheet.com/b/form/019f3b5438627c86ac05b0306cbc7d60"
+  ],
+  "classification": "wrong_type",
+  "evidence": "https://www.hometabledeco.com/ :: \"Button\", \"Button Preset\": \"defaultLinkTo\", \"Button Text\": \"2026 부스 참가 문의(조기신청기간 ~7/31까지) ▶\", \"Button URL\": \"https://app.smartsheet.com/b/form/019f3b5438627c86ac05b0306cbc7"
+ },
+ {
+  "event_id": "coex-%ec%84%a4%eb%a7%9e%ec%9d%b4-%eb%aa%85%ec%a0%88%ec%84%a0%eb%ac%bc%ec%a0%84-4",
+  "field": "registration_deadline",
+  "value": "2026-07-10",
+  "name": "설맞이 명절선물전",
+  "url": "https://fgfair.com/",
+  "evidence_urls": [
+   "https://www.coex.co.kr/exhibitions/%ec%84%a4%eb%a7%9e%ec%9d%b4-%eb%aa%85%ec%a0%88%ec%84%a0%eb%ac%bc%ec%a0%84-4/",
+   "https://fgfair.com/",
+   "https://fgfair.com/appli/joinReg.asp?snm=123"
+  ],
+  "classification": "unverified",
+  "evidence": ""
+ },
+ {
+  "event_id": "coex-%ec%84%a4%eb%a7%9e%ec%9d%b4-%eb%aa%85%ec%a0%88%ec%84%a0%eb%ac%bc%ec%a0%84-4",
+  "field": "exhibitor_deadline",
+  "value": "2026-07-17",
+  "name": "설맞이 명절선물전",
+  "url": "https://fgfair.com/",
+  "evidence_urls": [
+   "https://www.coex.co.kr/exhibitions/%ec%84%a4%eb%a7%9e%ec%9d%b4-%eb%aa%85%ec%a0%88%ec%84%a0%eb%ac%bc%ec%a0%84-4/",
+   "https://fgfair.com/",
+   "https://fgfair.com/appli/joinReg.asp?snm=123"
+  ],
+  "classification": "verified",
+  "evidence": "https://fgfair.com/appli/joinReg.asp?snm=123 :: px; word-break: keep-all;\">1. 전시자는 출품비 50&#37;에 해당하는 계약금을 출품신청서 제출 시 납입해야 하며, 잔금 50&#37;는 2026년 07월 17일까지 납입 해야한다.</dd><dd style=\"font-size: 16px; font-weight: 400; margin: 0px; padding: 0px; "
+ },
+ {
+  "event_id": "showala-2153",
+  "field": "registration_deadline",
+  "value": "2026-07-15",
+  "name": "2026 산업AI EXPO(Embodied AI: Beyond Physical AI)",
+  "url": "https://industrialaiexpo.or.kr",
+  "evidence_urls": [
+   "https://showala.com/ex/ex_detail.php?idx=2153",
+   "https://industrialaiexpo.or.kr/main.asp",
+   "https://industrialaiexpo.or.kr",
+   "https://industrialaiexpo.or.kr/Contents.asp?LoadPage=RegistrationGuide_2026",
+   "https://industrialaiexpo.or.kr/Contents.asp?LoadPage=Exhibition_2026"
+  ],
+  "classification": "unverified",
+  "evidence": ""
+ },
+ {
+  "event_id": "showala-2153",
+  "field": "exhibitor_deadline",
+  "value": "2026-07-15",
+  "name": "2026 산업AI EXPO(Embodied AI: Beyond Physical AI)",
+  "url": "https://industrialaiexpo.or.kr",
+  "evidence_urls": [
+   "https://showala.com/ex/ex_detail.php?idx=2153",
+   "https://industrialaiexpo.or.kr/main.asp",
+   "https://industrialaiexpo.or.kr",
+   "https://industrialaiexpo.or.kr/Contents.asp?LoadPage=RegistrationGuide_2026",
+   "https://industrialaiexpo.or.kr/Contents.asp?LoadPage=Exhibition_2026"
+  ],
+  "classification": "unverified",
+  "evidence": ""
+ },
+ {
+  "event_id": "showala-3346",
+  "field": "exhibitor_deadline",
+  "value": "2026-07-02",
+  "name": "2026 카페&베이커리페어 시즌2",
+  "url": "https://www.cafenbakeryfair.com/",
+  "evidence_urls": [
+   "https://showala.com/ex/ex_detail.php?idx=3346",
+   "https://www.cafenbakeryfair.com/",
+   "https://www.cafenbakeryfair.com/myreg/myreg25",
+   "https://www.cafenbakeryfair.com/myreg/myreg39"
+  ],
+  "classification": "unverified",
+  "evidence": ""
+ },
+ {
+  "event_id": "showala-3279",
+  "field": "registration_deadline",
+  "value": "2026-06-22",
+  "name": "제55회 맘앤베이비엑스포",
+  "url": "http://www.momnbabyexpo.co.kr/",
+  "evidence_urls": [
+   "https://showala.com/ex/ex_detail.php?idx=3279",
+   "http://www.momnbabyexpo.co.kr/",
+   "http://www.momnbabyexpo.co.kr/member/registration",
+   "http://www.momnbabyexpo.co.kr/exhibit"
+  ],
+  "classification": "unverified",
+  "evidence": ""
+ },
+ {
+  "event_id": "showala-3279",
+  "field": "exhibitor_deadline",
+  "value": "2026-07-07",
+  "name": "제55회 맘앤베이비엑스포",
+  "url": "http://www.momnbabyexpo.co.kr/",
+  "evidence_urls": [
+   "https://showala.com/ex/ex_detail.php?idx=3279",
+   "http://www.momnbabyexpo.co.kr/",
+   "http://www.momnbabyexpo.co.kr/member/registration",
+   "http://www.momnbabyexpo.co.kr/exhibit"
+  ],
+  "classification": "unverified",
+  "evidence": ""
+ },
+ {
+  "event_id": "showala-4077",
+  "field": "exhibitor_deadline",
+  "value": "2026-06-10",
+  "name": "새해 준비상점 N.27",
+  "url": "https://newyear-store.com/",
+  "evidence_urls": [
+   "https://showala.com/ex/ex_detail.php?idx=4077",
+   "https://newyear-store.com/",
+   "https://newyear-store.com/exhibitor/apply/step1",
+   "https://newyear-store.com/intro/exhibits"
+  ],
+  "classification": "partial",
+  "evidence": "https://newyear-store.com/ :: e) { e.preventDefault(); alert('6/10(수) 10시 오픈 예정입니다.'); } }); "
+ },
+ {
+  "event_id": "showala-4199",
+  "field": "exhibitor_deadline",
+  "value": "2027-01-29",
+  "name": "제 3회 ESG지속가능패키징페어",
+  "url": "https://www.esgpack.kr/kor/",
+  "evidence_urls": [
+   "https://showala.com/ex/ex_detail.php?idx=4199",
+   "https://esgpack.kr/kor/esgpack.asp",
+   "https://www.esgpack.kr/kor/",
+   "https://esgpack.kr/kor/esg/esgpack_v_info.asp",
+   "https://esgpack.kr/kor/exhibitor/login.asp"
+  ],
+  "classification": "unverified",
+  "evidence": ""
+ },
+ {
+  "event_id": "showala-4201",
+  "field": "exhibitor_deadline",
+  "value": "2027-02-26",
+  "name": "제12회 코스메틱 인사이드 코리아",
+  "url": "https://www.cikorea.org/kor",
+  "evidence_urls": [
+   "https://showala.com/ex/ex_detail.php?idx=4201",
+   "https://cikorea.org/kor/cikorea.asp",
+   "https://www.cikorea.org/kor",
+   "https://cikorea.org/kor/cosmetic/cikorea_v_info.asp",
+   "https://cikorea.org/kor/exhibitor/login.asp"
   ],
   "classification": "unverified",
   "evidence": ""
@@ -272,449 +457,29 @@
   "evidence": ""
  },
  {
-  "event_id": "coex-%ec%a0%9c14%ed%9a%8c%ea%b5%ad%ec%a0%9c%ec%b2%a8%eb%8b%a8%ec%86%8c%ec%9e%ac%ec%84%b8%eb%9d%bc%eb%af%b9-%ed%83%84%ec%86%8c-%ec%a0%91%ec%b0%a9%ec%bd%94%ed%8c%85%ed%95%84%eb%a6%84%ea%b8%b0%ec%88%a0",
-  "field": "register_url",
-  "value": "https://form.office.naver.com/form/responseView.cmd?formkey=MjBmY2U5MTktZDNjMC00ZGExLWE2NmYtOWMyZjBhNjU5OTY0&sourceId=urlshare",
-  "name": "제14회국제첨단소재(세라믹, 탄소, 접착코팅필름)기술대전",
-  "url": "http://www.intra.or.kr",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/%ec%a0%9c14%ed%9a%8c%ea%b5%ad%ec%a0%9c%ec%b2%a8%eb%8b%a8%ec%86%8c%ec%9e%ac%ec%84%b8%eb%9d%bc%eb%af%b9-%ed%83%84%ec%86%8c-%ec%a0%91%ec%b0%a9%ec%bd%94%ed%8c%85%ed%95%84%eb%a6%84%ea%b8%b0%ec%88%a0/",
-   "https://www.intra.or.kr/",
-   "http://www.intra.or.kr"
-  ],
-  "classification": "partial",
-  "evidence": "answers 200; link not found on source pages read"
- },
- {
-  "event_id": "coex-%ec%a0%9c20%ed%9a%8c-%ea%b5%ad%ec%a0%9c-%ec%8b%9c%ed%81%90%eb%a6%ac%ed%8b%b0-%ec%bd%98%ed%8d%bc%eb%9f%b0%ec%8a%a4",
-  "field": "exhibitor_deadline",
-  "value": "2026-07-10",
-  "name": "제20회 국제 시큐리티 콘퍼런스",
-  "url": "https://www.isecconference.org/2026/kor/index.html",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/%ec%a0%9c20%ed%9a%8c-%ea%b5%ad%ec%a0%9c-%ec%8b%9c%ed%81%90%eb%a6%ac%ed%8b%b0-%ec%bd%98%ed%8d%bc%eb%9f%b0%ec%8a%a4/",
-   "https://www.isecconference.org/2026/kor/index.html",
-   "https://www.isecconference.org/2026/kor/visitor.html",
-   "https://www.isecconference.org/2026/kor/info03.html"
-  ],
-  "classification": "unverified",
-  "evidence": ""
- },
- {
-  "event_id": "coex-%ec%a0%9c37%ed%9a%8c-%ec%84%9c%ec%9a%b8%ea%b5%ad%ec%a0%9c%eb%ac%b8%ea%b5%ac%ec%82%ac%eb%ac%b4%ec%9a%a9%ed%92%88%ec%a0%84%ec%8b%9c%ed%9a%8c",
-  "field": "register_url",
-  "value": "http://www.sisofair.co.kr/p_sisofair/sub02.php",
-  "name": "제37회 서울국제문구사무용품전시회",
-  "url": "http://www.sisofair.co.kr",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/%ec%a0%9c37%ed%9a%8c-%ec%84%9c%ec%9a%b8%ea%b5%ad%ec%a0%9c%eb%ac%b8%ea%b5%ac%ec%82%ac%eb%ac%b4%ec%9a%a9%ed%92%88%ec%a0%84%ec%8b%9c%ed%9a%8c/",
-   "http://www.sisofair.co.kr"
-  ],
-  "classification": "partial",
-  "evidence": "answers 200; link not found on source pages read"
- },
- {
-  "event_id": "coex-%ec%a0%9c57%ed%9a%8c-%ec%84%9c%ec%9a%b8%ea%b5%ad%ec%a0%9c%ec%9c%a0%ec%95%84%ea%b5%90%ec%9c%a1%ec%a0%84%ed%82%a4%ec%a6%88%ed%8e%98%ec%96%b4",
-  "field": "register_url",
-  "value": "https://www.educaremall.co.kr:498/regist01.asp",
-  "name": "제57회 서울국제유아교육전&키즈페어",
-  "url": "https://www.educare.co.kr/",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/%ec%a0%9c57%ed%9a%8c-%ec%84%9c%ec%9a%b8%ea%b5%ad%ec%a0%9c%ec%9c%a0%ec%95%84%ea%b5%90%ec%9c%a1%ec%a0%84%ed%82%a4%ec%a6%88%ed%8e%98%ec%96%b4/",
-   "https://www.educare.co.kr/"
-  ],
-  "classification": "verified",
-  "evidence": "linked from https://www.educare.co.kr/, answers 200"
- },
- {
-  "event_id": "coex-%ec%a0%9c58%ed%9a%8c-%ec%84%9c%ec%9a%b8%ea%b5%ad%ec%a0%9c%ec%9c%a0%ec%95%84%ea%b5%90%ec%9c%a1%ec%a0%84",
-  "field": "register_url",
-  "value": "https://www.educaremall.co.kr:498/regist01.asp",
-  "name": "제58회 서울국제유아교육전",
-  "url": "https://www.educare.co.kr/",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/%ec%a0%9c58%ed%9a%8c-%ec%84%9c%ec%9a%b8%ea%b5%ad%ec%a0%9c%ec%9c%a0%ec%95%84%ea%b5%90%ec%9c%a1%ec%a0%84/",
-   "https://www.educare.co.kr/"
-  ],
-  "classification": "verified",
-  "evidence": "linked from https://www.educare.co.kr/, answers 200"
- },
- {
-  "event_id": "coex-%ec%bd%94%eb%a6%ac%ec%95%84-%eb%9d%bc%ec%9d%b4%ed%94%84%ec%82%ac%ec%9d%b4%ec%96%b8%ec%8a%a4-%ec%9c%84%ed%81%ac-2026",
+  "event_id": "akei-103999",
   "field": "registration_deadline",
-  "value": "2026-07-31",
-  "name": "코리아 라이프사이언스 위크 2026",
-  "url": "https://www.lifescienceweek.com",
+  "value": "2026-06-02",
+  "name": "K-일러스트레이션페어 부산 2026",
+  "url": "http://k-illustrationfair.com/",
   "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/%ec%bd%94%eb%a6%ac%ec%95%84-%eb%9d%bc%ec%9d%b4%ed%94%84%ec%82%ac%ec%9d%b4%ec%96%b8%ec%8a%a4-%ec%9c%84%ed%81%ac-2026/",
-   "https://www.lifescienceweek.com/kor/index.asp",
-   "https://www.lifescienceweek.com",
-   "https://www.lifescienceweek.com/kor/visitor/pre_regist.asp",
-   "https://www.lifescienceweek.com/kor/exhibitor/login.asp"
+   "https://www.akei.or.kr/bbs/board.php?bo_table=schedule&wr_id=103999",
+   "https://k-illustrationfair.com/",
+   "http://k-illustrationfair.com/",
+   "https://k-illustrationfair.com/bbs/register.php",
+   "https://k-illustrationfair.com/page/42"
   ],
   "classification": "unverified",
   "evidence": ""
  },
  {
-  "event_id": "coex-%ec%bd%94%eb%a6%ac%ec%95%84-%eb%9d%bc%ec%9d%b4%ed%94%84%ec%82%ac%ec%9d%b4%ec%96%b8%ec%8a%a4-%ec%9c%84%ed%81%ac-2026",
-  "field": "exhibitor_deadline",
-  "value": "2026-07-31",
-  "name": "코리아 라이프사이언스 위크 2026",
-  "url": "https://www.lifescienceweek.com",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/%ec%bd%94%eb%a6%ac%ec%95%84-%eb%9d%bc%ec%9d%b4%ed%94%84%ec%82%ac%ec%9d%b4%ec%96%b8%ec%8a%a4-%ec%9c%84%ed%81%ac-2026/",
-   "https://www.lifescienceweek.com/kor/index.asp",
-   "https://www.lifescienceweek.com",
-   "https://www.lifescienceweek.com/kor/visitor/pre_regist.asp",
-   "https://www.lifescienceweek.com/kor/exhibitor/login.asp"
-  ],
-  "classification": "unverified",
-  "evidence": ""
- },
- {
-  "event_id": "coex-%ed%94%84%eb%a6%ac%ec%a6%88-%ec%84%9c%ec%9a%b8-2026",
-  "field": "name_en",
-  "value": "Frieze Seoul",
-  "name": "프리즈 서울 2026",
-  "url": "https://www.frieze.com/ko/fairs/frieze-seoul",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/%ed%94%84%eb%a6%ac%ec%a6%88-%ec%84%9c%ec%9a%b8-2026/",
-   "https://www.frieze.com/ko/fairs/frieze-seoul"
-  ],
-  "classification": "verified",
-  "evidence": "https://www.coex.co.kr/exhibitions/%ed%94%84%eb%a6%ac%ec%a6%88-%ec%84%9c%ec%9a%b8-2026/"
- },
- {
-  "event_id": "coex-2026%eb%85%84-%ea%b5%ad%ec%a0%9c%eb%b0%a9%ec%86%a1%ec%98%81%ec%83%81%eb%a7%88%ec%bc%93",
-  "field": "exhibitor_deadline",
-  "value": "2026-05-21",
-  "name": "2026년 국제방송영상마켓",
-  "url": "https://bcww.kr/",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/2026%eb%85%84-%ea%b5%ad%ec%a0%9c%eb%b0%a9%ec%86%a1%ec%98%81%ec%83%81%eb%a7%88%ec%bc%93/",
-   "https://bcww.kr/",
-   "https://bcww.kr/page_registernow.php"
-  ],
-  "classification": "unverified",
-  "evidence": ""
- },
- {
-  "event_id": "coex-2026%eb%85%84-%ea%b5%ad%ec%a0%9c%eb%b0%a9%ec%86%a1%ec%98%81%ec%83%81%eb%a7%88%ec%bc%93",
-  "field": "name_en",
-  "value": "BCWW",
-  "name": "2026년 국제방송영상마켓",
-  "url": "https://bcww.kr/",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/2026%eb%85%84-%ea%b5%ad%ec%a0%9c%eb%b0%a9%ec%86%a1%ec%98%81%ec%83%81%eb%a7%88%ec%bc%93/",
-   "https://bcww.kr/"
-  ],
-  "classification": "verified",
-  "evidence": "https://www.coex.co.kr/exhibitions/2026%eb%85%84-%ea%b5%ad%ec%a0%9c%eb%b0%a9%ec%86%a1%ec%98%81%ec%83%81%eb%a7%88%ec%bc%93/"
- },
- {
-  "event_id": "coex-2026-%eb%b0%b0%ed%84%b0%eb%a6%ac%ec%bd%94%eb%a6%ac%ec%95%84",
-  "field": "exhibitor_deadline",
-  "value": "2026-10-06",
-  "name": "2026 배터리코리아",
-  "url": "https://www.batterykorea.org/2026/kor/index.html",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/2026-%eb%b0%b0%ed%84%b0%eb%a6%ac%ec%bd%94%eb%a6%ac%ec%95%84/",
-   "https://www.batterykorea.org/2026/kor/index.html",
-   "https://www.batterykorea.org/2026/kor/visitor.html",
-   "https://www.batterykorea.org/2026/kor/exhibitor_join.html"
-  ],
-  "classification": "wrong_type",
-  "evidence": "https://www.batterykorea.org/2026/kor/exhibitor_join.html :: <strong>제5조 참가비 납입조건</strong><br> <br> 1. 전시자는 참가신청서 제출시 참가비 30%를 계약금으로 납부하여야 하며, 2026년 10월 6일까지 잔금을 납부하여야 한다.<br> 2. 전시자가 잔금을 기한 내 납입하지 않을 경우 주최자는 참가계약을 해지할 수 있으며, 이 경우 전시자는 이미 납"
- },
- {
-  "event_id": "coex-2026-%ec%84%9c%ec%9a%b8%ea%b5%ad%ec%a0%9c%eb%b0%9c%eb%aa%85%ec%a0%84%ec%8b%9c%ed%9a%8c",
-  "field": "registration_deadline",
-  "value": "2026-10-16",
-  "name": "2026 서울국제발명전시회",
-  "url": "https://kipa.org/siif",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/2026-%ec%84%9c%ec%9a%b8%ea%b5%ad%ec%a0%9c%eb%b0%9c%eb%aa%85%ec%a0%84%ec%8b%9c%ed%9a%8c/",
-   "https://kipa.org/siif/",
-   "https://kipa.org/siif",
-   "https://www.kipa.org/kipa/ip003/kw_culture_0504.jsp",
-   "https://kipa.org/siif/jsp/2025/exhibitIntro.jsp"
-  ],
-  "classification": "unverified",
-  "evidence": ""
- },
- {
-  "event_id": "coex-2026-%ec%84%9c%ec%9a%b8%ea%b5%ad%ec%a0%9c%eb%b0%9c%eb%aa%85%ec%a0%84%ec%8b%9c%ed%9a%8c",
-  "field": "register_url",
-  "value": "https://www.kipa.org/kipa/ip003/kw_culture_0504.jsp",
-  "name": "2026 서울국제발명전시회",
-  "url": "https://kipa.org/siif",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/2026-%ec%84%9c%ec%9a%b8%ea%b5%ad%ec%a0%9c%eb%b0%9c%eb%aa%85%ec%a0%84%ec%8b%9c%ed%9a%8c/",
-   "https://kipa.org/siif/",
-   "https://kipa.org/siif"
-  ],
-  "classification": "verified",
-  "evidence": "linked from https://kipa.org/siif/, answers 200"
- },
- {
-  "event_id": "coex-2026-%ec%97%90%eb%93%80%ed%85%8c%ed%81%ac-%ed%8e%98%ec%96%b4",
-  "field": "registration_deadline",
-  "value": "2026-08-14",
-  "name": "2026 에듀테크 페어",
-  "url": "https://edtechkorea.or.kr/fairDash.do?hl=KOR",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/2026-%ec%97%90%eb%93%80%ed%85%8c%ed%81%ac-%ed%8e%98%ec%96%b4/",
-   "https://edtechkorea.or.kr/fairDash.do?hl=KOR",
-   "https://edtechkorea.or.kr/fairSign.do",
-   "https://edtechkorea.or.kr/fairContents.do?FAIRMENU_IDX=13520&hl=KOR"
-  ],
-  "classification": "verified",
-  "evidence": "https://edtechkorea.or.kr/fairContents.do?FAIRMENU_IDX=13520&hl=KOR ::  <!-- ex_content {{ --><strong class=\"title01\">부스 참가 신청 절차</strong> <br> ※ 일반 참가 신청 마감: 2026년 8월 14일 (금) <ul class=\"booth-intro taC mt30\"> <!-- <img src=\"/home/2020/edutech2020/image/im"
- },
- {
-  "event_id": "coex-2026-%ec%97%90%eb%93%80%ed%85%8c%ed%81%ac-%ed%8e%98%ec%96%b4",
-  "field": "exhibitor_deadline",
-  "value": "2026-08-14",
-  "name": "2026 에듀테크 페어",
-  "url": "https://edtechkorea.or.kr/fairDash.do?hl=KOR",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/2026-%ec%97%90%eb%93%80%ed%85%8c%ed%81%ac-%ed%8e%98%ec%96%b4/",
-   "https://edtechkorea.or.kr/fairDash.do?hl=KOR",
-   "https://edtechkorea.or.kr/fairSign.do",
-   "https://edtechkorea.or.kr/fairContents.do?FAIRMENU_IDX=13520&hl=KOR"
-  ],
-  "classification": "verified",
-  "evidence": "https://edtechkorea.or.kr/fairContents.do?FAIRMENU_IDX=13520&hl=KOR ::  <!-- ex_content {{ --><strong class=\"title01\">부스 참가 신청 절차</strong> <br> ※ 일반 참가 신청 마감: 2026년 8월 14일 (금) <ul class=\"booth-intro taC mt30\"> <!-- <img src=\"/home/2020/edutech2020/image/im"
- },
- {
-  "event_id": "coex-2026-%ec%bd%94%eb%b2%a0-%eb%b2%a0%ec%9d%b4%eb%b9%84%ed%8e%98%ec%96%b4",
-  "field": "register_url",
-  "value": "https://exh.messeesang.com/cobee/",
-  "name": "2026 코베 베이비페어",
-  "url": "https://cobe.co.kr/__coex.php",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/2026-%ec%bd%94%eb%b2%a0-%eb%b2%a0%ec%9d%b4%eb%b9%84%ed%8e%98%ec%96%b4/",
-   "https://cobe.co.kr/__coex.php"
-  ],
-  "classification": "verified",
-  "evidence": "linked from https://cobe.co.kr/__coex.php, answers 200"
- },
- {
-  "event_id": "coex-2026-%ed%91%b8%eb%93%9c%ec%9c%84%ed%81%ac-%ec%bd%94%eb%a6%ac%ec%95%84%ec%a0%9c21%ed%9a%8c-%ec%84%9c%ec%9a%b8%ea%b5%ad%ec%a0%9c%ec%8b%9d%ed%92%88%ec%82%b0%ec%97%85%ec%a0%84",
-  "field": "name_en",
-  "value": "FOOD WEEK KOREA",
-  "name": "2026 푸드위크 코리아(제21회 서울국제식품산업전)",
-  "url": "http://www.foodweek.co.kr",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/2026-%ed%91%b8%eb%93%9c%ec%9c%84%ed%81%ac-%ec%bd%94%eb%a6%ac%ec%95%84%ec%a0%9c21%ed%9a%8c-%ec%84%9c%ec%9a%b8%ea%b5%ad%ec%a0%9c%ec%8b%9d%ed%92%88%ec%82%b0%ec%97%85%ec%a0%84/",
-   "https://www.foodweek.co.kr:443/",
-   "http://www.foodweek.co.kr"
-  ],
-  "classification": "verified",
-  "evidence": "https://www.coex.co.kr/exhibitions/2026-%ed%91%b8%eb%93%9c%ec%9c%84%ed%81%ac-%ec%bd%94%eb%a6%ac%ec%95%84%ec%a0%9c21%ed%9a%8c-%ec%84%9c%ec%9a%b8%ea%b5%ad%ec%a0%9c%ec%8b%9d%ed%92%88%ec%82%b0%ec%97%85%ec%a0%84/"
- },
- {
-  "event_id": "coex-2026-%ed%95%9c%ea%b0%80%ec%9c%84-%eb%aa%85%ec%a0%88%ec%84%a0%eb%ac%bc%ec%a0%84%ec%86%8c%ea%b8%88%eb%b0%95%eb%9e%8c%ed%9a%8c",
-  "field": "exhibitor_deadline",
-  "value": "2026-07-17",
-  "name": "2026 한가위 명절선물전&소금박람회",
-  "url": "https://fgfair.com/",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/2026-%ed%95%9c%ea%b0%80%ec%9c%84-%eb%aa%85%ec%a0%88%ec%84%a0%eb%ac%bc%ec%a0%84%ec%86%8c%ea%b8%88%eb%b0%95%eb%9e%8c%ed%9a%8c/",
-   "https://fgfair.com/",
-   "https://fgfair.com/appli/joinReg.asp?snm=123"
-  ],
-  "classification": "verified",
-  "evidence": "https://fgfair.com/appli/joinReg.asp?snm=123 :: px; word-break: keep-all;\">1. 전시자는 출품비 50&#37;에 해당하는 계약금을 출품신청서 제출 시 납입해야 하며, 잔금 50&#37;는 2026년 07월 17일까지 납입 해야한다.</dd><dd style=\"font-size: 16px; font-weight: 400; margin: 0px; padding: 0px; "
- },
- {
-  "event_id": "coex-2026-%ed%95%9c%ea%b0%80%ec%9c%84-%eb%aa%85%ec%a0%88%ec%84%a0%eb%ac%bc%ec%a0%84%ec%86%8c%ea%b8%88%eb%b0%95%eb%9e%8c%ed%9a%8c",
-  "field": "register_url",
-  "value": "https://fgfair.com/appli/joinReg.asp?snm=123",
-  "name": "2026 한가위 명절선물전&소금박람회",
-  "url": "https://fgfair.com/",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/2026-%ed%95%9c%ea%b0%80%ec%9c%84-%eb%aa%85%ec%a0%88%ec%84%a0%eb%ac%bc%ec%a0%84%ec%86%8c%ea%b8%88%eb%b0%95%eb%9e%8c%ed%9a%8c/",
-   "https://fgfair.com/"
-  ],
-  "classification": "partial",
-  "evidence": "answers 200; link not found on source pages read"
- },
- {
-  "event_id": "coex-2026-%ed%95%9c%ea%b5%ad%ea%b5%ad%ec%a0%9c%ec%b9%98%ea%b3%bc%ec%9d%98%eb%a3%8c%ea%b8%b0%ea%b8%b0-%ec%a0%84%ec%8b%9c%ed%9a%8c-%eb%b0%8f-%ed%95%99%ec%88%a0%eb%8c%80%ed%9a%8c",
-  "field": "register_url",
-  "value": "https://kdxkorea.co.kr/kr/participation/application.php",
-  "name": "2026 한국국제치과의료기기 전시회 및 학술대회",
-  "url": "https://kdxkorea.co.kr/",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/2026-%ed%95%9c%ea%b5%ad%ea%b5%ad%ec%a0%9c%ec%b9%98%ea%b3%bc%ec%9d%98%eb%a3%8c%ea%b8%b0%ea%b8%b0-%ec%a0%84%ec%8b%9c%ed%9a%8c-%eb%b0%8f-%ed%95%99%ec%88%a0%eb%8c%80%ed%9a%8c/",
-   "https://kdxkorea.co.kr/kr/intro.php",
-   "https://kdxkorea.co.kr/"
-  ],
-  "classification": "partial",
-  "evidence": "answers 200; link not found on source pages read"
- },
- {
-  "event_id": "coex-aiot-%ea%b5%ad%ec%a0%9c%ec%a0%84%ec%8b%9c%ed%9a%8c-2",
-  "field": "registration_deadline",
-  "value": "2026-09-18",
-  "name": "AIoT 국제전시회",
-  "url": "https://www.aiotkorea.or.kr/2026/kor/",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/aiot-%ea%b5%ad%ec%a0%9c%ec%a0%84%ec%8b%9c%ed%9a%8c-2/",
-   "https://www.aiotkorea.or.kr/2026/kor/",
-   "https://www.aiotkorea.or.kr/2026/kor/conference/preregistration.asp",
-   "https://www.aiotkorea.or.kr/2026/kor/about/application.asp"
-  ],
-  "classification": "partial",
-  "evidence": "https://www.aiotkorea.or.kr/2026/kor/about/application.asp :: es/about/ico_s3.png\" alt=\"\">참가비 잔금 납부</strong> <p><span style=\"font-weight:900;\">2026년 9월 18일(금)까지</span><br> 참가비 전액 납부</p> </div> </li> </ul> "
- },
- {
-  "event_id": "coex-aiot-%ea%b5%ad%ec%a0%9c%ec%a0%84%ec%8b%9c%ed%9a%8c-2",
-  "field": "exhibitor_deadline",
-  "value": "2026-09-18",
-  "name": "AIoT 국제전시회",
-  "url": "https://www.aiotkorea.or.kr/2026/kor/",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/aiot-%ea%b5%ad%ec%a0%9c%ec%a0%84%ec%8b%9c%ed%9a%8c-2/",
-   "https://www.aiotkorea.or.kr/2026/kor/",
-   "https://www.aiotkorea.or.kr/2026/kor/conference/preregistration.asp",
-   "https://www.aiotkorea.or.kr/2026/kor/about/application.asp"
-  ],
-  "classification": "partial",
-  "evidence": "https://www.aiotkorea.or.kr/2026/kor/about/application.asp :: es/about/ico_s3.png\" alt=\"\">참가비 잔금 납부</strong> <p><span style=\"font-weight:900;\">2026년 9월 18일(금)까지</span><br> 참가비 전액 납부</p> </div> </li> </ul> "
- },
- {
-  "event_id": "coex-ev%ed%8a%b8%eb%a0%8c%eb%93%9c%ec%bd%94%eb%a6%ac%ec%95%84-2026",
-  "field": "name_en",
-  "value": "EV TREND KOREA",
-  "name": "EV트렌드코리아 2026",
-  "url": "https://evtrendkorea.co.kr/",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/ev%ed%8a%b8%eb%a0%8c%eb%93%9c%ec%bd%94%eb%a6%ac%ec%95%84-2026/",
-   "https://evtrendkorea.co.kr/"
-  ],
-  "classification": "verified",
-  "evidence": "https://www.coex.co.kr/exhibitions/ev%ed%8a%b8%eb%a0%8c%eb%93%9c%ec%bd%94%eb%a6%ac%ec%95%84-2026/"
- },
- {
-  "event_id": "coex-kes-2026%ed%95%9c%ea%b5%ad%ec%a0%84%ec%9e%90%ec%a0%84",
-  "field": "registration_deadline",
-  "value": "2026-07-31",
-  "name": "KES 2026(한국전자전)",
-  "url": "https://www.kes.org",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/kes-2026%ed%95%9c%ea%b5%ad%ec%a0%84%ec%9e%90%ec%a0%84/",
-   "https://kes.org/kor/",
-   "https://www.kes.org",
-   "https://www.kes.org/kor/visit/regist.asp",
-   "https://www.kes.org/kor/search/boothmap.asp"
-  ],
-  "classification": "unverified",
-  "evidence": ""
- },
- {
-  "event_id": "coex-kes-2026%ed%95%9c%ea%b5%ad%ec%a0%84%ec%9e%90%ec%a0%84",
-  "field": "name_en",
-  "value": "KES 2026",
-  "name": "KES 2026(한국전자전)",
-  "url": "https://www.kes.org",
-  "evidence_urls": [
-   "https://www.coex.co.kr/exhibitions/kes-2026%ed%95%9c%ea%b5%ad%ec%a0%84%ec%9e%90%ec%a0%84/",
-   "https://kes.org/kor/",
-   "https://www.kes.org"
-  ],
-  "classification": "verified",
-  "evidence": "https://www.coex.co.kr/exhibitions/kes-2026%ed%95%9c%ea%b5%ad%ec%a0%84%ec%9e%90%ec%a0%84/"
- },
- {
-  "event_id": "kintex-26012601",
-  "field": "name_en",
-  "value": "KOFURN",
-  "name": "한국국제가구 및 인테리어산업대전 (코펀)",
-  "url": "http://www.kofurn.or.kr",
-  "evidence_urls": [
-   "https://www.kintex.com/web/ko/event/view.do?seq=26012601",
-   "http://www.kofurn.or.kr"
-  ],
-  "classification": "verified",
-  "evidence": "https://www.kintex.com/web/ko/event/view.do?seq=26012601"
- },
- {
-  "event_id": "kintex-26033003",
-  "field": "register_url",
-  "value": "https://exh.messeesang.com/cobee/",
-  "name": "2026 코베 베이비페어&유아교육전",
-  "url": "https://cobe.co.kr/__kintex.php",
-  "evidence_urls": [
-   "https://www.kintex.com/web/ko/event/view.do?seq=26033003",
-   "https://cobe.co.kr/__kintex.php"
-  ],
-  "classification": "verified",
-  "evidence": "linked from https://cobe.co.kr/__kintex.php, answers 200"
- },
- {
-  "event_id": "kintex-26033004",
-  "field": "register_url",
-  "value": "https://exh.messeesang.com/cobee/",
-  "name": "2026 코베 베이비페어&유아교육전",
-  "url": "https://cobe.co.kr/__kintex.php",
-  "evidence_urls": [
-   "https://www.kintex.com/web/ko/event/view.do?seq=26033004",
-   "https://cobe.co.kr/__kintex.php"
-  ],
-  "classification": "verified",
-  "evidence": "linked from https://cobe.co.kr/__kintex.php, answers 200"
- },
- {
-  "event_id": "kintex-26040310",
-  "field": "name_en",
-  "value": "H₂ MEET 2026",
-  "name": "WORLD HYDROGEN EXPO 2026 (H₂ MEET 2026)",
-  "url": "http://www.h2meet.com",
-  "evidence_urls": [
-   "https://www.kintex.com/web/ko/event/view.do?seq=26040310",
-   "https://h2meet.com/html/ko/main.php",
-   "http://www.h2meet.com"
-  ],
-  "classification": "verified",
-  "evidence": "https://www.kintex.com/web/ko/event/view.do?seq=26040310"
- },
- {
-  "event_id": "kintex-26040606",
-  "field": "name_en",
-  "value": "K-BATTERY SHOW 2026",
-  "name": "이차전지 소재 · 부품 및 장비전 (K-BATTERY SHOW 2026)",
-  "url": "http://www.kbatteryshow.com",
-  "evidence_urls": [
-   "https://www.kintex.com/web/ko/event/view.do?seq=26040606",
-   "https://www.kbatteryshow.com/",
-   "http://www.kbatteryshow.com"
-  ],
-  "classification": "verified",
-  "evidence": "https://www.kintex.com/web/ko/event/view.do?seq=26040606"
- },
- {
-  "event_id": "kintex-26041504",
-  "field": "name_en",
-  "value": "SCM FAIR 2026",
-  "name": "제6회 국제 운송 · 공급망관리 산업전",
-  "url": "http://www.scmfair.kr",
-  "evidence_urls": [
-   "https://www.kintex.com/web/ko/event/view.do?seq=26041504",
-   "http://www.scmfair.kr"
-  ],
-  "classification": "verified",
-  "evidence": "https://www.kintex.com/web/ko/event/view.do?seq=26041504"
- },
- {
-  "event_id": "showala-3279",
+  "event_id": "akei-104007",
   "field": "registration_deadline",
   "value": "2026-06-22",
-  "name": "제55회 맘앤베이비엑스포",
+  "name": "제54회 맘앤베이비엑스포",
   "url": "http://www.momnbabyexpo.co.kr/",
   "evidence_urls": [
-   "https://showala.com/ex/ex_detail.php?idx=3279",
+   "https://www.akei.or.kr/bbs/board.php?bo_table=schedule&wr_id=104007",
    "http://www.momnbabyexpo.co.kr/",
    "http://www.momnbabyexpo.co.kr/member/registration",
    "http://www.momnbabyexpo.co.kr/exhibit"
@@ -723,13 +488,13 @@
   "evidence": ""
  },
  {
-  "event_id": "showala-3279",
+  "event_id": "akei-104007",
   "field": "exhibitor_deadline",
   "value": "2026-07-07",
-  "name": "제55회 맘앤베이비엑스포",
+  "name": "제54회 맘앤베이비엑스포",
   "url": "http://www.momnbabyexpo.co.kr/",
   "evidence_urls": [
-   "https://showala.com/ex/ex_detail.php?idx=3279",
+   "https://www.akei.or.kr/bbs/board.php?bo_table=schedule&wr_id=104007",
    "http://www.momnbabyexpo.co.kr/",
    "http://www.momnbabyexpo.co.kr/member/registration",
    "http://www.momnbabyexpo.co.kr/exhibit"
@@ -738,117 +503,61 @@
   "evidence": ""
  },
  {
-  "event_id": "showala-3367",
-  "field": "register_url",
-  "value": "https://exh.messeesang.com/cobee/",
-  "name": "킨텍스 코베 베이비페어&유아교육전(8월)",
-  "url": "https://cobe.co.kr/__kintex.php",
+  "event_id": "akei-104031",
+  "field": "registration_deadline",
+  "value": "2026-06-12",
+  "name": "2026 마곡리빙마켓",
+  "url": "https://magoklivingdesignfair.kr/fairDash.do?hl=KO",
   "evidence_urls": [
-   "https://showala.com/ex/ex_detail.php?idx=3367",
-   "https://cobe.co.kr/__kintex.php"
+   "https://www.akei.or.kr/bbs/board.php?bo_table=schedule&wr_id=104031",
+   "https://magoklivingdesignfair.kr/fairDash.do?hl=KO",
+   "https://magoklivingdesignfair.micehub.com/fairCorp2.do",
+   "https://magoklivingdesignfair.kr/fairContents.do;jsessionid=F73D9782BB89239E01087AE6166C947B?FAIRMENU_IDX=16254&hl=KOR"
   ],
   "classification": "verified",
-  "evidence": "linked from https://cobe.co.kr/__kintex.php, answers 200"
+  "evidence": "https://magoklivingdesignfair.micehub.com/fairCorp2.do :: 50% 계약금 입금 <br> - ~4월 30일까지 신청한 현장신청 할인 “전시자”는 5월 14일까지 계약금 100%를 납부하여야 한다. <br> - ~6월 12일까지 신청한 조기신청 할인 “전시자”는 7월 10일까지 참가비 100%를 납부하여야 한다. <br> - 6월 13일 이후 참가 신청된 경우 7월 31일까지"
  },
  {
-  "event_id": "showala-3371",
-  "field": "register_url",
-  "value": "https://exh.messeesang.com/cobee/",
-  "name": "킨텍스 코베 베이비페어&유아교육전(10월)",
-  "url": "https://cobe.co.kr/__kintex.php",
+  "event_id": "akei-104031",
+  "field": "exhibitor_deadline",
+  "value": "2026-09-08",
+  "name": "2026 마곡리빙마켓",
+  "url": "https://magoklivingdesignfair.kr/fairDash.do?hl=KO",
   "evidence_urls": [
-   "https://showala.com/ex/ex_detail.php?idx=3371",
-   "https://cobe.co.kr/__kintex.php"
+   "https://www.akei.or.kr/bbs/board.php?bo_table=schedule&wr_id=104031",
+   "https://magoklivingdesignfair.kr/fairDash.do?hl=KO",
+   "https://magoklivingdesignfair.micehub.com/fairCorp2.do",
+   "https://magoklivingdesignfair.kr/fairContents.do;jsessionid=F73D9782BB89239E01087AE6166C947B?FAIRMENU_IDX=16254&hl=KOR"
   ],
   "classification": "verified",
-  "evidence": "linked from https://cobe.co.kr/__kintex.php, answers 200"
+  "evidence": "https://magoklivingdesignfair.kr/fairContents.do;jsessionid=F73D9782BB89239E01087AE6166C947B?FAIRMENU_IDX=16254&hl=KOR :: 마감일 기준</td> </tr> <tr> <td>부스 장치 공사 및 전시품 반입</td> <td>독립부스: 2026.09.08~09 | 조립부스: 2026.09.09</td> </tr> <tr> <td>전시품 반출 및 장치물 철거</td> "
  },
  {
-  "event_id": "showala-4077",
-  "field": "exhibitor_deadline",
-  "value": "2026-06-10",
-  "name": "새해 준비상점 N.27",
-  "url": "https://newyear-store.com/",
+  "event_id": "akei-104034",
+  "field": "registration_deadline",
+  "value": "2026-09-10",
+  "name": "2026 부산캣쇼",
+  "url": "https://cat-show.co.kr/",
   "evidence_urls": [
-   "https://showala.com/ex/ex_detail.php?idx=4077",
-   "https://newyear-store.com/",
-   "https://newyear-store.com/exhibitor/apply/step1",
-   "https://newyear-store.com/intro/exhibits"
-  ],
-  "classification": "partial",
-  "evidence": "https://newyear-store.com/ :: e) { e.preventDefault(); alert('6/10(수) 10시 오픈 예정입니다.'); } }); "
- },
- {
-  "event_id": "showala-4077",
-  "field": "register_url",
-  "value": "https://newyear-store.com/exhibitor/apply/step1",
-  "name": "새해 준비상점 N.27",
-  "url": "https://newyear-store.com/",
-  "evidence_urls": [
-   "https://showala.com/ex/ex_detail.php?idx=4077",
-   "https://newyear-store.com/"
+   "https://www.akei.or.kr/bbs/board.php?bo_table=schedule&wr_id=104034",
+   "https://www.cat-show.co.kr/",
+   "https://cat-show.co.kr/",
+   "https://www.cat-show.co.kr/page/page159"
   ],
   "classification": "verified",
-  "evidence": "linked from https://newyear-store.com/, answers 200"
+  "evidence": "https://www.cat-show.co.kr/page/page159 :: \"> <span class=\"icon__1263545__\"></span> <span class=\"text__1263545__\">9월 10일(목)까지 사전등록 시 무료입장</span> </p> </div> </div> </div> <div "
  },
  {
-  "event_id": "showala-4201",
+  "event_id": "akei-104034",
   "field": "exhibitor_deadline",
-  "value": "2027-02-26",
-  "name": "제12회 코스메틱 인사이드 코리아",
-  "url": "https://www.cikorea.org/kor",
+  "value": "2026-07-31",
+  "name": "2026 부산캣쇼",
+  "url": "https://cat-show.co.kr/",
   "evidence_urls": [
-   "https://showala.com/ex/ex_detail.php?idx=4201",
-   "https://cikorea.org/kor/cikorea.asp",
-   "https://www.cikorea.org/kor",
-   "https://cikorea.org/kor/cosmetic/cikorea_v_info.asp",
-   "https://cikorea.org/kor/exhibitor/login.asp"
-  ],
-  "classification": "unverified",
-  "evidence": ""
- },
- {
-  "event_id": "showala-4201",
-  "field": "register_url",
-  "value": "https://cikorea.org/kor/cosmetic/cikorea_v_info.asp",
-  "name": "제12회 코스메틱 인사이드 코리아",
-  "url": "https://www.cikorea.org/kor",
-  "evidence_urls": [
-   "https://showala.com/ex/ex_detail.php?idx=4201",
-   "https://cikorea.org/kor/cikorea.asp",
-   "https://www.cikorea.org/kor"
-  ],
-  "classification": "partial",
-  "evidence": "answers 200; link not found on source pages read"
- },
- {
-  "event_id": "showala-4204",
-  "field": "exhibitor_deadline",
-  "value": "2027-01-29",
-  "name": "제 19회 국제화학장치·공전기술전",
-  "url": "https://www.koreachem.org/",
-  "evidence_urls": [
-   "https://showala.com/ex/ex_detail.php?idx=4204",
-   "https://koreachem.org/kor/koreachem.asp",
-   "https://www.koreachem.org/",
-   "https://koreachem.org/kor/chem/koreachem_v_info.asp",
-   "https://koreachem.org/kor/exhibitor/login.asp"
-  ],
-  "classification": "unverified",
-  "evidence": ""
- },
- {
-  "event_id": "showala-4205",
-  "field": "exhibitor_deadline",
-  "value": "2027-01-29",
-  "name": "제17회 국제물류산업대전",
-  "url": "https://www.koreamat.org",
-  "evidence_urls": [
-   "https://showala.com/ex/ex_detail.php?idx=4205",
-   "https://koreamat.org/kor/koreamat.asp",
-   "https://www.koreamat.org",
-   "https://koreamat.org/kor/mat/koreamat_v_info.asp",
-   "https://koreamat.org/kor/exhibitor/login.asp"
+   "https://www.akei.or.kr/bbs/board.php?bo_table=schedule&wr_id=104034",
+   "https://www.cat-show.co.kr/",
+   "https://cat-show.co.kr/",
+   "https://www.cat-show.co.kr/page/page159"
   ],
   "classification": "unverified",
   "evidence": ""

@@ -35,12 +35,33 @@ func normalizeDeadline(raw string) (string, bool) {
 	return fmt.Sprintf("%04d-%02d-%02d", year, month, day), true
 }
 
-// dateEvidence reports whether the ISO date is actually present, in any of the
-// shapes Korean pages write it, in text the agent read. A deadline the model
-// asserts but no read page contains is discarded: an accuracy audit of 26
-// model-supplied deadlines found only 3 with page evidence and 1 that named
-// the opposite deadline type, which is too wrong to store unchecked.
-func dateEvidence(texts []string, iso string) bool {
+// deadlineKind names which deadline a date is claimed to be, so evidence can
+// be checked against the right context words.
+type deadlineKind int
+
+const (
+	registrationDeadlineKind deadlineKind = iota
+	exhibitorDeadlineKind
+)
+
+// Context vocabularies mirror eval/audit.py. The 2026-07-29 audit found two
+// stored values whose page context named the opposite deadline type (a fee
+// balance date stored as a booth deadline, a booth early-application date
+// stored as visitor registration), so type context is now checked at write
+// time, not just at audit time.
+var (
+	deadlineWords   = []string{"마감", "까지", "접수", "신청", "deadline", "due", "close"}
+	registerContext = []string{"등록", "참가 신청", "참가신청", "참관", "사전등록", "registration", "register"}
+	exhibitContext  = []string{"부스", "출품", "전시 신청", "전시신청", "참가업체", "exhibitor", "booth", "exhibit"}
+)
+
+const evidenceWindowBytes = 120
+
+// typedDateEvidence reports whether the ISO date appears in text the agent
+// read, with BOTH a deadline word and this deadline type's own context words
+// nearby. A date the model asserts but no read page supports — or one whose
+// surrounding context belongs to the other deadline type — is discarded.
+func typedDateEvidence(texts []string, iso string, kind deadlineKind) bool {
 	match := isoDate.FindStringSubmatch(iso)
 	if match == nil {
 		return false
@@ -51,11 +72,36 @@ func dateEvidence(texts []string, iso string) bool {
 		regexp.MustCompile(year + `\s*[-./년]\s*0?` + month + `\s*[-./월]\s*0?` + day),
 		regexp.MustCompile(`(^|[^0-9])0?` + month + `\s*[./월]\s*0?` + day + `($|[^0-9])`),
 	}
+	context := registerContext
+	if kind == exhibitorDeadlineKind {
+		context = exhibitContext
+	}
 	for _, text := range texts {
+		lower := strings.ToLower(text)
 		for _, pattern := range patterns {
-			if pattern.MatchString(text) {
-				return true
+			for _, loc := range pattern.FindAllStringIndex(lower, -1) {
+				lo := loc[0] - evidenceWindowBytes
+				if lo < 0 {
+					lo = 0
+				}
+				hi := loc[1] + evidenceWindowBytes
+				if hi > len(lower) {
+					hi = len(lower)
+				}
+				window := lower[lo:hi]
+				if containsAny(window, deadlineWords) && containsAny(window, context) {
+					return true
+				}
 			}
+		}
+	}
+	return false
+}
+
+func containsAny(s string, words []string) bool {
+	for _, w := range words {
+		if strings.Contains(s, w) {
+			return true
 		}
 	}
 	return false

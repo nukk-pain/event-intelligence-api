@@ -351,3 +351,15 @@ func ListChanges(ctx context.Context, db *sql.DB, filter ChangeFilter) ([]model.
 	}
 	return out, next, nil
 }
+
+// CountUpcomingWithDeadline reports how many events starting on or after
+// today carry at least one deadline. Logged after each ingest: deadlines are
+// ratchet facts now, so this number falling is the cheapest regression alarm.
+func CountUpcomingWithDeadline(ctx context.Context, db *sql.DB, today string) (int, error) {
+	var n int
+	err := db.QueryRowContext(ctx, `
+SELECT COUNT(*) FROM events
+WHERE superseded = 0 AND start_date >= ?
+  AND (registration_deadline IS NOT NULL OR exhibitor_deadline IS NOT NULL)`, today).Scan(&n)
+	return n, err
+}
