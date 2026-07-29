@@ -35,6 +35,11 @@ type Config struct {
 	// UserAgent is sent on every outbound HTTP request.
 	UserAgent string `json:"user_agent"`
 
+	// RenderMaxPages caps headless renders per batch. 0 uses the render
+	// package default. Raising it costs wall-clock, so it must be weighed
+	// against IngestDeadline, not set in isolation.
+	RenderMaxPages int `json:"render_max_pages"`
+
 	// RateLimitPerMinute caps outbound fetches per minute per host.
 	RateLimitPerMinute int `json:"rate_limit_per_minute"`
 
@@ -166,6 +171,11 @@ func FromEnv() Config {
 	if v := os.Getenv("EVENTSINTEL_INGEST_DEADLINE"); v != "" {
 		if d, err := time.ParseDuration(v); err == nil && d > 0 {
 			c.IngestDeadline = d
+		}
+	}
+	if v := os.Getenv("EVENTSINTEL_RENDER_MAX_PAGES"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			c.RenderMaxPages = n
 		}
 	}
 	if v := os.Getenv("EVENTSINTEL_MAX_DISCOVER"); v != "" {

@@ -112,6 +112,9 @@ func runIngest(cfg config.Config) error {
 		return err
 	}
 	renderConfig := render.DefaultConfig(cfg.UserAgent)
+	if cfg.RenderMaxPages > 0 {
+		renderConfig.MaxPages = cfg.RenderMaxPages
+	}
 	// Chrome receives every resource through the reviewed production-host
 	// fetcher. The broader officialFetcher remains limited to server-side
 	// action-page enrichment; it must not become browser-reachable through the

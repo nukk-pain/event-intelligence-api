@@ -159,3 +159,18 @@ func TestFromEnv_CFPurgeOverrides(t *testing.T) {
 		t.Fatalf("CFPurgeToken = %q, want secret-token", cfg.CFPurgeToken)
 	}
 }
+
+func TestLoad_RenderMaxPagesFromEnv(t *testing.T) {
+	t.Setenv("EVENTSINTEL_RENDER_MAX_PAGES", "55")
+	cfg := FromEnv()
+	if cfg.RenderMaxPages != 55 {
+		t.Fatalf("RenderMaxPages = %d, want 55", cfg.RenderMaxPages)
+	}
+}
+
+func TestLoad_RenderMaxPagesDefault(t *testing.T) {
+	cfg := FromEnv()
+	if cfg.RenderMaxPages != 0 {
+		t.Fatalf("RenderMaxPages = %d, want 0 (package default applies)", cfg.RenderMaxPages)
+	}
+}

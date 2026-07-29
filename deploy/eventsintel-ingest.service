@@ -16,7 +16,18 @@ Environment=EVENTSINTEL_LOCK_PATH=/srv/developer/events-intel/data/ingest.lock
 Environment=EVENTSINTEL_RATE_PER_MIN=30
 Environment=EVENTSINTEL_SOURCE_CONCURRENCY=2
 Environment=EVENTSINTEL_DETAIL_WORKERS=4
-Environment=EVENTSINTEL_INGEST_DEADLINE=20m
+# 20m was inherited from the crawl-only era and had no rationale on record.
+# The rule the code states is "comfortably below CrawlInterval", and the timer
+# runs every 24h, so 20m was self-imposed: it forced the render budget down
+# rather than the other way round. 2h keeps every protection (a runaway batch
+# still exits and releases the flock, truncation still stays graceful and
+# still refuses to poison a cut-short source's discovery baseline) while
+# leaving room to render the pages that actually need it.
+Environment=EVENTSINTEL_INGEST_DEADLINE=2h
+# Renders per batch. The eligible pool (upcoming, deadline-less, within 120
+# days) is ~52 shells per run; 55 covers it without relying on the 4-day
+# rotation to catch the remainder.
+Environment=EVENTSINTEL_RENDER_MAX_PAGES=55
 Environment=HOME=/var/lib/eventsintel
 # Solar enrichment credentials and switches live in a root-only env file on the
 # host, never in this unit or the repo. Absent file = enrichment off, which is

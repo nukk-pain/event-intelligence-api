@@ -700,3 +700,24 @@ contract and must not acquire live LLM work as a side effect.
   coverage rose from 17 to 28, both target deadlines were stored, public
   `deploy/verify.sh` passed, and `make eval-report` reports `wrong_type 0`
   after excluding the two rows migration 0011 revoked from the active audit.
+
+### ingest 데드라인 20m → 2h, 렌더 cap 30 → 55 (2026-07-29)
+
+- Status: accepted
+- Context: 렌더 게이트 도입 후에도 배치당 22건이 cap에 걸려 밀렸다. cap을 올리려
+  하자 배치 소요(17분 51초)가 20분 데드라인에 근접해 막혔다.
+- 확인한 사실: 20m은 최초 커밋부터 있던 값으로 결정 기록이 없고, 개발 중에는
+  4~5m으로 실험한 흔적만 있다. 코드가 명시한 규칙은 "CrawlInterval보다 넉넉히
+  아래"인데 타이머 주기는 24h다. 즉 20m은 주기 대비 1.4%로, 스스로 만든 제약이었다.
+- 반려한 대안: **데드라인 제거**. systemd 쪽에 TimeoutStartSec/RuntimeMaxSec이
+  전혀 없어 앱 데드라인이 유일한 백스톱이다. 없애면 재시도 루프나 대량 순회로
+  배치가 늘어질 때 flock 때문에 후속 타이머가 조용히 전부 스킵된다. 또 이
+  데드라인은 단순 타이머가 아니라 **우아한 절단 장치**다 — 아이템·소스 경계에서
+  멈추고 Truncated를 표시하며 잘린 소스의 discovery 기준선을 갱신하지 않는다.
+  SIGTERM 강제 종료로 대체하면 이 오염 방지가 사라진다.
+- 반려한 대안: **크론 주기 연장**. 마감 정보가 제품 가치인데 주기를 늘리면
+  데이터만 낡는다. 여유는 이미 23시간 넘게 있었으므로 필요한 건 더 긴 간격이
+  아니라 더 큰 데드라인이었다.
+- Decision: 주기 24h 유지, 데드라인 2h(주기의 8%), 렌더 cap 55.
+- 검증 대상: 2시간 여유에서 Chrome이 오래 살아 있을 때 VPS 메모리(가용 930Mi)가
+  견디는지, 배치 소요와 커버리지가 어떻게 변하는지 실측할 것.
