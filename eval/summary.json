@@ -1,18 +1,18 @@
 {
- "total": 37,
+ "total": 35,
  "by_classification": {
   "unverified": 25,
   "verified": 5,
-  "wrong_type": 2,
   "partial": 5
  },
+ "revoked": 2,
  "by_field": {
   "exhibitor_deadline": {
-   "total": 21,
+   "total": 20,
    "verified": 3
   },
   "registration_deadline": {
-   "total": 16,
+   "total": 15,
    "verified": 2
   }
  }

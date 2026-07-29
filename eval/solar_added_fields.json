@@ -68,6 +68,7 @@
   "event_id": "coex-2026-%eb%b0%b0%ed%84%b0%eb%a6%ac%ec%bd%94%eb%a6%ac%ec%95%84",
   "field": "exhibitor_deadline",
   "value": "2026-10-06",
+  "retired": true,
   "name": "2026 배터리코리아",
   "url": "https://www.batterykorea.org/2026/kor/index.html",
   "evidence_urls": [
@@ -104,10 +105,10 @@
   ]
  },
  {
-  "event_id": "coex-kes-2026%ed%95%9c%ea%b5%ad%ec%a0%84%ec%9e%90%ec%a0%84",
-  "field": "registration_deadline",
-  "value": "2026-07-31",
-  "name": "KES 2026(한국전자전)",
+ "event_id": "coex-kes-2026%ed%95%9c%ea%b5%ad%ec%a0%84%ec%9e%90%ec%a0%84",
+ "field": "registration_deadline",
+ "value": "2026-07-31",
+ "name": "KES 2026(한국전자전)",
   "url": "https://www.kes.org",
   "evidence_urls": [
    "https://www.coex.co.kr/exhibitions/kes-2026%ed%95%9c%ea%b5%ad%ec%a0%84%ec%9e%90%ec%a0%84/",
@@ -225,10 +226,11 @@
   ]
  },
  {
-  "event_id": "coex-2026-%ed%99%88%ed%85%8c%ec%9d%b4%eb%b8%94%eb%8d%b0%ec%bd%94%ed%8e%98%ec%96%b4",
-  "field": "registration_deadline",
-  "value": "2026-07-31",
-  "name": "2026 홈테이블데코페어",
+ "event_id": "coex-2026-%ed%99%88%ed%85%8c%ec%9d%b4%eb%b8%94%eb%8d%b0%ec%bd%94%ed%8e%98%ec%96%b4",
+ "field": "registration_deadline",
+ "value": "2026-07-31",
+  "retired": true,
+ "name": "2026 홈테이블데코페어",
   "url": "https://www.hometabledeco.com/",
   "evidence_urls": [
    "https://www.coex.co.kr/exhibitions/2026-%ed%99%88%ed%85%8c%ec%9d%b4%eb%b8%94%eb%8d%b0%ec%bd%94%ed%8e%98%ec%96%b4/",

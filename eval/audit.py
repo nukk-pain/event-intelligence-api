@@ -153,6 +153,9 @@ def run_audit() -> None:
             verdict = classify_register_url(row, pages)
         else:
             verdict = {"classification": "unaudited", "evidence": ""}
+        if row.get("retired"):
+            verdict["historical_classification"] = verdict["classification"]
+            verdict["classification"] = "revoked"
         results.append({**row, **verdict})
         print(f"[{i:2}/{len(rows)}] {row['field']:<22} {verdict['classification']:<12} {row['event_id'][:40]}")
     (HERE / "audit_results.json").write_text(
@@ -163,24 +166,39 @@ def run_audit() -> None:
 def report() -> None:
     results = json.loads((HERE / "audit_results.json").read_text())
     from collections import Counter
-    total = len(results)
-    by_class = Counter(r["classification"] for r in results)
+    retired_keys = {
+        (row["event_id"], row["field"], row["value"])
+        for row in json.loads((HERE / "solar_added_fields.json").read_text())
+        if row.get("retired")
+    }
+    active, retired = [], []
+    for row in results:
+        key = (row["event_id"], row["field"], row["value"])
+        if key in retired_keys or row.get("classification") == "revoked":
+            retired.append(row)
+        else:
+            active.append(row)
+    total = len(active)
+    by_class = Counter(r["classification"] for r in active)
     print("\n== Solar enrichment accuracy audit ==")
     print(f"fields audited: {total}")
+    if retired:
+        print(f"  revoked      {len(retired):>3}  (historical rows removed by migration)")
     for cls in ["verified", "partial", "unverified", "wrong_type", "broken", "unreachable"]:
-        if by_class.get(cls):
+        if by_class.get(cls) or cls == "wrong_type":
             print(f"  {cls:<12} {by_class[cls]:>3}  ({by_class[cls]/total*100:.0f}%)")
     print("\nby field:")
-    fields = sorted({r["field"] for r in results})
+    fields = sorted({r["field"] for r in active})
     for f in fields:
-        sub = [r for r in results if r["field"] == f]
+        sub = [r for r in active if r["field"] == f]
         v = sum(1 for r in sub if r["classification"] == "verified")
         print(f"  {f:<24} verified {v}/{len(sub)}")
     summary = {
         "total": total,
         "by_classification": dict(by_class),
-        "by_field": {f: {"total": len([r for r in results if r["field"] == f]),
-                          "verified": len([r for r in results if r["field"] == f and r["classification"] == "verified"])}
+        "revoked": len(retired),
+        "by_field": {f: {"total": len([r for r in active if r["field"] == f]),
+                          "verified": len([r for r in active if r["field"] == f and r["classification"] == "verified"])}
                      for f in fields},
     }
     (HERE / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=1))

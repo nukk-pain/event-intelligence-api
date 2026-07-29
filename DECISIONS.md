@@ -674,8 +674,9 @@ contract and must not acquire live LLM work as a side effect.
   per ingest batch, caps the batch at 30 rendered pages, gives each page 15
   seconds, identifies itself with the configured User-Agent, and closes the
   browser when the batch ends. Chrome receives the page through a loopback
-  origin; same-origin scripts and XHRs route back through the existing fetcher,
-  and direct browser egress is blocked.
+  origin; same-origin scripts and explicitly reviewed third-party resources
+  route back through the production allowlist fetcher, and direct browser
+  egress is blocked.
 - The existing HTTP fetcher remains the only SSRF, allowlist, rate-limit, and
   robots boundary. The ingest unit runs Chrome as the unprivileged
   `eventsintel` account with the sandbox enabled. Rendering changes readable page content only; it cannot
@@ -685,8 +686,17 @@ contract and must not acquire live LLM work as a side effect.
 - Managed challenges and explicit bot blocks are not bypassed. Non-200 pages
   never reach Chrome. A reviewed benchmark catalog entry with a human-confirmed
   source note remains the honest alternative for such cases.
+- The KHF fragment-routed SPA's public configuration points to a cross-origin
+  API. Its bounded, no-direct-egress renderer did not expose a deadline, so the
+  reviewed KHF visitor guide became the catalog source: it states the
+  2026-08-18 23:59 registration deadline and links to the unchanged direct SPA
+  registration URL. This preserves an official source and avoids broadening
+  browser network authority. Current KOFURN evidence comes from the official
+  `/to_exhibit` page and stores `exhibitor_deadline=2026-07-31`.
 - Consequences: the VPS needs Chromium installed and its 1 GB memory must be
   checked during the first manual run. The worst-case sequential render budget
-  is 7m30s, below the ingest unit's 20-minute deadline. Production proof still
-  requires the next deploy's manual ingest, coverage comparison from baseline
-  17, `make eval-report` with `wrong_type` 0, and `deploy/verify.sh`.
+  is 7m30s, below the ingest unit's 20-minute deadline. Final production proof
+  on 2026-07-29: ingest completed in 17m39s with a 648.3MiB peak, deadline
+  coverage rose from 17 to 28, both target deadlines were stored, public
+  `deploy/verify.sh` passed, and `make eval-report` reports `wrong_type 0`
+  after excluding the two rows migration 0011 revoked from the active audit.
