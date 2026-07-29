@@ -1,6 +1,9 @@
 package enrich
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestExtractActionsFindsOfficialPageSignals(t *testing.T) {
 	html := []byte(`
@@ -161,5 +164,35 @@ func TestDeadlineOnActionPage_ExhibitRecruitmentWindow(t *testing.T) {
 	// Then
 	if got == nil || *got != "2026년 7월 31일" {
 		t.Fatalf("DeadlineOnActionPage(exhibit) = %v, want 2026년 7월 31일", got)
+	}
+}
+
+func TestDeadlineOnActionPage_SkipsEarlierLabelOccurrenceWithoutDate(t *testing.T) {
+	// Real shape from sofurn-kofurn.bizforu.net: 사전등록 appears as a nav
+	// menu link (no date nearby) before the countdown block that actually
+	// carries the deadline. The label loop must not stop at the first hit.
+	filler := strings.Repeat("메뉴 항목 ", 40) // >120 bytes, forces a bounded window past the first hit to miss
+	html := []byte(`<html><body>
+		<nav><a>사전등록</a> <a>부스배치도</a> <a>참가업체리스트</a></nav>
+		` + filler + `
+		<div>사전등록 가능 기간 ~2026.08.26(수) 23시 59분 59초</div>
+	</body></html>`)
+	got := DeadlineOnActionPage(html, RegisterPage)
+	if got == nil || *got != "2026.08.26" {
+		t.Fatalf("DeadlineOnActionPage = %v, want 2026.08.26 (must scan past label occurrences with no date)", got)
+	}
+}
+
+func TestDeadlineNear_SkipsEarlierLabelOccurrenceWithoutDate(t *testing.T) {
+	html := []byte(`<html><body>
+		<p>참가 신청 마감 안내 페이지</p>
+		<p>참가 신청 마감 2026년 9월 1일</p>
+	</body></html>`)
+	signals, err := ExtractActions("https://expo.example.com/", html)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if signals.RegistrationDeadline == nil || *signals.RegistrationDeadline != "2026년 9월 1일" {
+		t.Fatalf("RegistrationDeadline = %v, want 2026년 9월 1일 (first label occurrence has no date)", signals.RegistrationDeadline)
 	}
 }

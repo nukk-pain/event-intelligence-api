@@ -121,32 +121,44 @@ var (
 	allDeadlineLabels = append(append([]string{}, registrationDeadlineLabels...), exhibitorDeadlineLabels...)
 )
 
-// deadlineNear finds a date after a deadline label ("마감: 날짜"). Only the
-// after side is searched: goquery joins text nodes without whitespace, so the
-// previous fact's date can touch the label at distance zero and a
-// before-window would steal it (observed: "…2026.07.31부스 신청 마감…").
-// The window also stops at the next deadline label so one fact's date cannot
-// leak into another ("사전등록 마감부스마감 2026/08/15"). A missed deadline
-// is recoverable; a wrong one misleads users.
+// deadlineNear finds a date after a deadline label ("마감: 날짜"). A label
+// can appear many times on a real page — nav menus repeat every link — so
+// every occurrence is checked in order and the first one with a date wins,
+// not just the label's first occurrence (live finding: kofurn's registration
+// page says "사전등록" seven times; the deadline sits after the third, and
+// stopping at the first occurrence returned nil for a date that was there in
+// perfectly static HTML). Only the after side is searched: goquery joins text
+// nodes without whitespace, so the previous fact's date can touch the label
+// at distance zero and a before-window would steal it (observed:
+// "…2026.07.31부스 신청 마감…"). The window also stops at the next deadline
+// label so one fact's date cannot leak into another
+// ("사전등록 마감부스마감 2026/08/15"). A missed deadline is recoverable; a
+// wrong one misleads users.
 func deadlineNear(text string, labels []string) *string {
 	for _, label := range labels {
-		idx := strings.Index(text, strings.ToLower(label))
-		if idx < 0 {
-			continue
-		}
-		winStart := idx + len(label)
-		end := winStart + 80
-		if end > len(text) {
-			end = len(text)
-		}
-		window := text[winStart:end]
-		for _, boundary := range allDeadlineLabels {
-			if b := strings.Index(window, boundary); b >= 0 {
-				window = window[:b]
+		lower := strings.ToLower(label)
+		searchFrom := 0
+		for {
+			rel := strings.Index(text[searchFrom:], lower)
+			if rel < 0 {
+				break
 			}
-		}
-		if found := dateRe.FindString(window); found != "" {
-			return strPtr(canonicalDateText(found))
+			idx := searchFrom + rel
+			winStart := idx + len(lower)
+			end := winStart + 80
+			if end > len(text) {
+				end = len(text)
+			}
+			window := text[winStart:end]
+			for _, boundary := range allDeadlineLabels {
+				if b := strings.Index(window, boundary); b >= 0 {
+					window = window[:b]
+				}
+			}
+			if found := dateRe.FindString(window); found != "" {
+				return strPtr(canonicalDateText(found))
+			}
+			searchFrom = idx + 1
 		}
 	}
 	return nil
@@ -198,21 +210,24 @@ func DeadlineOnActionPage(body []byte, kind ActionPageKind) *string {
 	}
 
 	for _, label := range periodLabels {
-		idx := strings.Index(text, label)
-		if idx < 0 {
-			continue
-		}
-		end := idx + len(label) + 120
-		if end > len(text) {
-			end = len(text)
-		}
-		window := text[idx:end]
-		if !strings.Contains(window, "~") && !strings.Contains(window, "까지") {
-			continue
-		}
-		dates := dateRe.FindAllString(window, -1)
-		if len(dates) > 0 {
-			return strPtr(canonicalDateText(dates[len(dates)-1]))
+		searchFrom := 0
+		for {
+			rel := strings.Index(text[searchFrom:], label)
+			if rel < 0 {
+				break
+			}
+			idx := searchFrom + rel
+			end := idx + len(label) + 120
+			if end > len(text) {
+				end = len(text)
+			}
+			window := text[idx:end]
+			if strings.Contains(window, "~") || strings.Contains(window, "까지") {
+				if dates := dateRe.FindAllString(window, -1); len(dates) > 0 {
+					return strPtr(canonicalDateText(dates[len(dates)-1]))
+				}
+			}
+			searchFrom = idx + 1
 		}
 	}
 	return nil
