@@ -66,6 +66,34 @@ type Fallback struct {
 	maxPages int64
 	timeout  time.Duration
 	used     atomic.Int64
+
+	shellDetected   atomic.Int64
+	renderSucceeded atomic.Int64
+	renderFailed    atomic.Int64
+	capSkipped      atomic.Int64
+}
+
+// Stats reports one batch's shell-detection and render outcomes so ingest can
+// log them (there is no other way to tell "rendering never got a JS-shell
+// candidate" apart from "it got one and Chrome failed silently").
+type Stats struct {
+	ShellDetected   int64
+	RenderSucceeded int64
+	RenderFailed    int64
+	CapSkipped      int64
+}
+
+// Stats is safe on a nil *Fallback (rendering disabled this run).
+func (f *Fallback) Stats() Stats {
+	if f == nil {
+		return Stats{}
+	}
+	return Stats{
+		ShellDetected:   f.shellDetected.Load(),
+		RenderSucceeded: f.renderSucceeded.Load(),
+		RenderFailed:    f.renderFailed.Load(),
+		CapSkipped:      f.capSkipped.Load(),
+	}
 }
 
 // New returns the Chrome-backed selector used by one daily ingest batch.
@@ -104,7 +132,12 @@ func DefaultConfig(userAgent string) Config {
 // succeeds. A renderer failure is returned with the original static body so
 // callers can safely keep the deterministic ingest path non-fatal.
 func (f *Fallback) Text(ctx context.Context, rawURL string, staticBody []byte) ([]byte, error) {
-	if f == nil || !isJSShell(rawURL, staticBody) || !f.claimPage() {
+	if f == nil || !isJSShell(rawURL, staticBody) {
+		return staticBody, nil
+	}
+	f.shellDetected.Add(1)
+	if !f.claimPage() {
+		f.capSkipped.Add(1)
 		return staticBody, nil
 	}
 	renderCtx, cancel := context.WithTimeout(ctx, f.timeout)
@@ -112,11 +145,14 @@ func (f *Fallback) Text(ctx context.Context, rawURL string, staticBody []byte) (
 
 	rendered, err := f.renderer.Render(renderCtx, rawURL, staticBody)
 	if err != nil {
+		f.renderFailed.Add(1)
 		return staticBody, fmt.Errorf("render %q: %w", rawURL, err)
 	}
 	if len(bytes.TrimSpace(rendered)) == 0 {
+		f.renderFailed.Add(1)
 		return staticBody, fmt.Errorf("render %q: empty DOM", rawURL)
 	}
+	f.renderSucceeded.Add(1)
 	return rendered, nil
 }
 

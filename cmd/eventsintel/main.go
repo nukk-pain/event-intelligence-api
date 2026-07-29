@@ -121,7 +121,12 @@ func runIngest(cfg config.Config) error {
 	if err != nil {
 		return fmt.Errorf("headless renderer: %w", err)
 	}
-	defer textSelector.Close()
+	defer func() {
+		st := textSelector.Stats()
+		log.Printf("headless render: shell_detected=%d succeeded=%d failed=%d cap_skipped=%d (cap=%d)",
+			st.ShellDetected, st.RenderSucceeded, st.RenderFailed, st.CapSkipped, renderConfig.MaxPages)
+		textSelector.Close()
+	}()
 
 	// Register the venue adapters (single registration point).
 	sources.Register(coex.New())

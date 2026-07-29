@@ -241,3 +241,64 @@ func TestFallback_CloseIsSafeBeforeFirstRender(t *testing.T) {
 
 	// Then
 }
+
+func TestFallback_StatsCountShellAttemptsAndOutcomes(t *testing.T) {
+	r := &fakeRenderer{body: []byte("<html>rendered enough text to pass the shell check comfortably now, yes indeed this is plenty long</html>")}
+	f, err := NewWithRenderer(Config{UserAgent: "ua", MaxPages: 5, Timeout: time.Second}, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	shellBody := []byte(`<html><body><div id="root"></div></body></html>`)
+	staticBody := []byte(strings.Repeat("a", 500)) // not a shell
+
+	if _, err := f.Text(context.Background(), "https://a.example.com/", shellBody); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.Text(context.Background(), "https://b.example.com/", staticBody); err != nil {
+		t.Fatal(err)
+	}
+	stats := f.Stats()
+	if stats.ShellDetected != 1 {
+		t.Errorf("ShellDetected = %d, want 1", stats.ShellDetected)
+	}
+	if stats.RenderSucceeded != 1 {
+		t.Errorf("RenderSucceeded = %d, want 1", stats.RenderSucceeded)
+	}
+	if stats.RenderFailed != 0 {
+		t.Errorf("RenderFailed = %d, want 0", stats.RenderFailed)
+	}
+}
+
+func TestFallback_StatsCountRenderFailure(t *testing.T) {
+	r := &fakeRenderer{err: errors.New("boom")}
+	f, err := NewWithRenderer(Config{UserAgent: "ua", MaxPages: 5, Timeout: time.Second}, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	shellBody := []byte(`<html><body><div id="app"></div></body></html>`)
+	if _, err := f.Text(context.Background(), "https://a.example.com/", shellBody); err == nil {
+		t.Fatal("expected error surfaced")
+	}
+	stats := f.Stats()
+	if stats.ShellDetected != 1 || stats.RenderSucceeded != 0 || stats.RenderFailed != 1 {
+		t.Fatalf("stats = %+v, want shell=1 succeeded=0 failed=1", stats)
+	}
+}
+
+func TestFallback_StatsCountCapSkipped(t *testing.T) {
+	r := &fakeRenderer{body: []byte(strings.Repeat("x", 500))}
+	f, err := NewWithRenderer(Config{UserAgent: "ua", MaxPages: 1, Timeout: time.Second}, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	shellBody := []byte(`<html><body><div id="root"></div></body></html>`)
+	f.Text(context.Background(), "https://a.example.com/", shellBody)
+	f.Text(context.Background(), "https://b.example.com/", shellBody) // over cap
+	stats := f.Stats()
+	if stats.ShellDetected != 2 {
+		t.Errorf("ShellDetected = %d, want 2 (both are shells, cap is separate)", stats.ShellDetected)
+	}
+	if stats.CapSkipped != 1 {
+		t.Errorf("CapSkipped = %d, want 1", stats.CapSkipped)
+	}
+}
