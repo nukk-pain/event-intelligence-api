@@ -121,10 +121,13 @@ func runIngest(cfg config.Config) error {
 	if err != nil {
 		return fmt.Errorf("headless renderer: %w", err)
 	}
-	defer func() {
+	renderStats := func() {
 		st := textSelector.Stats()
 		log.Printf("headless render: shell_detected=%d succeeded=%d failed=%d cap_skipped=%d (cap=%d)",
 			st.ShellDetected, st.RenderSucceeded, st.RenderFailed, st.CapSkipped, renderConfig.MaxPages)
+	}
+	defer func() {
+		renderStats()
 		textSelector.Close()
 	}()
 
@@ -212,6 +215,10 @@ func runIngest(cfg config.Config) error {
 		return err
 	}
 
+	if eligible, gated := p.RenderGateStats(); eligible+gated > 0 {
+		log.Printf("render gate: eligible=%d gated=%d (upcoming, deadline-less, within %d days, rotation 1/%d)",
+			eligible, gated, pipeline.RenderHorizonDays, pipeline.RenderRotationBuckets)
+	}
 	log.Printf("ingest batch %s complete", rep.BatchID)
 	if rep.Truncated {
 		log.Printf("  WARNING: run truncated by deadline/cancellation (%s); "+

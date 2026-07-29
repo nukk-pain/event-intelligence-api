@@ -22,6 +22,7 @@
 package pipeline
 
 import (
+	"sync/atomic"
 	"time"
 
 	"github.com/smpain/event-intelligence-api/internal/fetch"
@@ -71,6 +72,10 @@ type Pipeline struct {
 	detailWorkers     int
 	officialFetcher   *fetch.Fetcher
 	textSelector      render.TextSelector
+	// Render-gate accounting: how many official-page reads were allowed to
+	// reach the browser versus skipped as unable to benefit.
+	renderEligibleCount atomic.Int64
+	renderGated         atomic.Int64
 	// enricher optionally resolves fields the deterministic parse could not.
 	// Nil keeps ingest fully deterministic.
 	enricher EventEnricher

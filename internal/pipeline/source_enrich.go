@@ -25,7 +25,7 @@ func (p *Pipeline) enrichActions(ctx context.Context, f *fetch.Fetcher, parsed *
 	if err != nil || res.NotModified || res.StatusCode != 200 {
 		return
 	}
-	body := p.officialPageText(ctx, res.URL, res.Body)
+	body := p.officialPageText(ctx, res.URL, res.Body, renderEligible(parsed, now, renderRotationBuckets))
 	signals, err := enrich.ExtractActions(res.URL, body)
 	if err != nil {
 		return
@@ -93,7 +93,7 @@ func (p *Pipeline) enrichDeadlinesFromActionPages(ctx context.Context, f *fetch.
 		if err != nil || res.NotModified || res.StatusCode != 200 {
 			return
 		}
-		found := enrich.DeadlineOnActionPage(p.officialPageText(ctx, *pageURL, res.Body), kind)
+		found := enrich.DeadlineOnActionPage(p.officialPageText(ctx, *pageURL, res.Body, renderEligible(parsed, now, renderRotationBuckets)), kind)
 		if found == nil {
 			return
 		}
@@ -109,8 +109,24 @@ func (p *Pipeline) enrichDeadlinesFromActionPages(ctx context.Context, f *fetch.
 	try(parsed.Actions.ExhibitURL, &parsed.Actions.ExhibitorDeadline, enrich.ExhibitPage)
 }
 
-func (p *Pipeline) officialPageText(ctx context.Context, pageURL string, staticBody []byte) []byte {
+// officialPageText returns the page text ingest should parse, rendering it
+// only when a render could change the outcome. The gate is applied here (not
+// inside the renderer) so a skipped page never enters the browser's own
+// counters and the cap is spent entirely on pages that can benefit.
+func (p *Pipeline) officialPageText(ctx context.Context, pageURL string, staticBody []byte, eligible bool) []byte {
+	if !eligible {
+		p.renderGated.Add(1)
+		return staticBody
+	}
+	p.renderEligibleCount.Add(1)
 	return render.StaticOrRendered(ctx, p.textSelector, pageURL, staticBody)
+}
+
+// RenderGateStats reports how the render budget was allocated this batch:
+// pages allowed to reach the browser, and pages skipped because a render
+// could not have helped.
+func (p *Pipeline) RenderGateStats() (eligible, gated int64) {
+	return p.renderEligibleCount.Load(), p.renderGated.Load()
 }
 
 // eventUpcoming reports whether the event's end (or start) date parses and is

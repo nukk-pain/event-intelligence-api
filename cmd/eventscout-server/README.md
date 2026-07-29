@@ -24,8 +24,9 @@ request, and must not be committed or logged.
 export EVENTSINTEL_SOLAR_API_KEY='...'
 export EVENTSINTEL_SOLAR_BASE_URL='https://api.upstage.ai/v1' # optional override
 export EVENTSINTEL_SOLAR_MODEL='solar-open2'                  # optional override
-# `solar-open2` is deleted 2026-08-02 midnight; use 'solar-pro4' from
-# 2026-08-03 18:00. Endpoint and key are unchanged — only this value moves.
+# `solar-open2` stops working 2026-08-04 midnight; 'solar-pro4' is callable
+# from 2026-08-03 18:00. Switch during that overlap — endpoint and key are
+# unchanged, only this value moves.
 
 # eventscout-server reads EVENTSCOUT_HTTP_ADDR; its default is 127.0.0.1:8081.
 EVENTSCOUT_HTTP_ADDR='127.0.0.1:8081' \
