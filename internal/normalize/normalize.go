@@ -225,7 +225,7 @@ func Normalize(p *sources.ParsedEvent, now string) (*model.Event, error) {
 	mf.add("scale.visitors")
 	mf.add("scale.exhibitors")
 
-	applyActionSignals(e, p, mf)
+	applyActionSignals(e, p, mf, now)
 
 	// --- homepage (validated URL) ---
 	if hp := validURL(p.HomepageURL); hp != nil {

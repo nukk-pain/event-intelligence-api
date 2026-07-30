@@ -117,13 +117,24 @@ func ApplyBatch(ctx context.Context, db *sql.DB, events []model.Event, batchID s
 		// not erase a stored value (observed live: fills and wipes canceling
 		// at ~20/day, coverage stuck near zero). A wrong stored value is
 		// removed by audit/migration, never by enrichment silence.
+		//
+		// The ratchet preserves facts, and a deadline that cannot belong to
+		// this event is not one. Carrying those forward would undo the write-
+		// time plausibility rule on the very next run: 14 of the 35 upcoming
+		// deadlines on 2026-07-30 had already passed, inherited from organizer
+		// pages describing a different edition. Rejecting them here is the
+		// audit the comment above calls for, applied continuously.
 		if found {
-			if e.RegistrationDeadline == nil && prev.RegistrationDeadline != nil {
-				e.RegistrationDeadline = prev.RegistrationDeadline
+			carry := func(dst **string, prev *string) {
+				if *dst != nil || prev == nil {
+					return
+				}
+				if model.DeadlinePlausible(*prev, derefOr(e.StartDate), e.LastCheckedAt) {
+					*dst = prev
+				}
 			}
-			if e.ExhibitorDeadline == nil && prev.ExhibitorDeadline != nil {
-				e.ExhibitorDeadline = prev.ExhibitorDeadline
-			}
+			carry(&e.RegistrationDeadline, prev.RegistrationDeadline)
+			carry(&e.ExhibitorDeadline, prev.ExhibitorDeadline)
 		}
 
 		newHash := ContentHash(e)
@@ -333,4 +344,11 @@ func decodeStringSlice(ns sql.NullString, dst *[]string) error {
 		return nil
 	}
 	return json.Unmarshal([]byte(ns.String), dst)
+}
+
+func derefOr(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

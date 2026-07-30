@@ -762,3 +762,69 @@ func deadlineColumns(t *testing.T, db *sql.DB, id string) (reg, exh sql.NullStri
 	}
 	return reg, exh
 }
+
+// The ratchet exists so enrichment silence never erases a stored deadline. It
+// must not also preserve a value that cannot belong to the event: 14 of the 35
+// upcoming deadlines on 2026-07-30 were already past, inherited from an
+// organizer page describing a different edition. Without this the plausibility
+// rule at write time would be undone on the next run, forever.
+func TestApplyBatchRatchetDropsImplausibleCarryForward(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+
+	e := newEvent()
+	e.StartDate = strptr("2026-11-26")
+	e.EndDate = strptr("2026-11-29")
+	e.RegistrationDeadline = strptr("2026-06-22")
+	e.LastCheckedAt = "2026-06-21T10:00:00Z" // deadline still in the future here
+	if err := store.ApplyBatch(ctx, db, []model.Event{e}, "batch-001"); err != nil {
+		t.Fatalf("ApplyBatch run1: %v", err)
+	}
+
+	// A later run parses no deadline, and by now the stored one has passed
+	// while the event is still four months out.
+	e2 := newEvent()
+	e2.StartDate = strptr("2026-11-26")
+	e2.EndDate = strptr("2026-11-29")
+	e2.RegistrationDeadline = nil
+	e2.LastCheckedAt = "2026-07-30T10:00:00Z"
+	if err := store.ApplyBatch(ctx, db, []model.Event{e2}, "batch-002"); err != nil {
+		t.Fatalf("ApplyBatch run2: %v", err)
+	}
+	if got := deadlineOf(t, db, e.EventID); got.Valid {
+		t.Errorf("registration_deadline = %q, want cleared", got.String)
+	}
+}
+
+func TestApplyBatchRatchetStillCarriesAPlausibleDeadline(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+
+	e := newEvent()
+	e.StartDate = strptr("2026-11-26")
+	e.RegistrationDeadline = strptr("2026-10-30")
+	if err := store.ApplyBatch(ctx, db, []model.Event{e}, "batch-001"); err != nil {
+		t.Fatalf("ApplyBatch run1: %v", err)
+	}
+	e2 := newEvent()
+	e2.StartDate = strptr("2026-11-26")
+	e2.RegistrationDeadline = nil
+	e2.LastCheckedAt = "2026-07-30T10:00:00Z"
+	if err := store.ApplyBatch(ctx, db, []model.Event{e2}, "batch-002"); err != nil {
+		t.Fatalf("ApplyBatch run2: %v", err)
+	}
+	if got := deadlineOf(t, db, e.EventID); !got.Valid || got.String != "2026-10-30" {
+		t.Errorf("registration_deadline = %+v, want 2026-10-30 preserved", got)
+	}
+}
+
+// deadlineOf reads the column directly: rowSnapshot selects a fixed list that
+// does not include it, and would silently report every deadline as absent.
+func deadlineOf(t *testing.T, db *sql.DB, id string) sql.NullString {
+	t.Helper()
+	var v sql.NullString
+	if err := db.QueryRow(`SELECT registration_deadline FROM events WHERE event_id=?`, id).Scan(&v); err != nil {
+		t.Fatalf("deadlineOf %s: %v", id, err)
+	}
+	return v
+}
