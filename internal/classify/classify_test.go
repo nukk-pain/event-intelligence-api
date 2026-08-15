@@ -50,6 +50,34 @@ func TestClassify_LabeledCases(t *testing.T) {
 			want:       []string{CategoryDigitalHealth},
 			confidence: "high",
 		},
+		// --- AI infra: the category covers it (taxonomy.go), so a data-center
+		// event must land in "ai" rather than falling through to excluded.
+		// Real miss: 2026 데이터센터코리아 (aT센터, 11/05) was stored excluded with no
+		// category while its booth application was open.
+		{
+			name:       "datacenter_ko",
+			text:       "2026 데이터센터코리아 — (사)대한설비융합협회 데이터센터기술위원회, (주)메쎄이상",
+			want:       []string{CategoryAI},
+			wantExact:  true,
+			confidence: "high",
+		},
+		{
+			name:       "datacenter_en",
+			text:       "DATA CENTER KOREA 2026",
+			want:       []string{CategoryAI},
+			wantExact:  true,
+			confidence: "high",
+		},
+		// The keywords must stay narrow: a general IT event that merely mentions
+		// the cloud is NOT AI infra, and must keep falling through to excluded.
+		{
+			name:       "cloud_alone_not_ai_infra",
+			text:       "제12회 클라우드 도입 전략 세미나",
+			want:       nil,
+			wantExact:  true,
+			excluded:   true,
+			confidence: "low",
+		},
 		// --- multi-category event (AI + medical devices) ---
 		{
 			name: "ai_plus_medical",

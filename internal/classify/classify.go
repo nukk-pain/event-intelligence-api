@@ -62,6 +62,13 @@ var categoryRules = []rule{
 			"ai ", " ai", "ai엑스포", "ai expo", "인공지능", "artificial intelligence",
 			"generative", "생성형", "딥러닝", "deep learning", "머신러닝",
 			"machine learning", "llm", "챗봇", "데이터 사이언스",
+			// AI infra is part of this category by definition (see taxonomy.go),
+			// but no keyword reached it: 2026 데이터센터코리아 fell through to the
+			// no-match branch below and was excluded from the public listing.
+			// gpu/hpc/클라우드/idc are deliberately NOT here — they also name
+			// general-purpose IT events, and a wrong category costs more than a
+			// missed one.
+			"데이터센터", "데이터 센터", "data center", "datacenter", "data centre",
 		},
 	}, {
 		category: CategoryHumanoidRobotics,
