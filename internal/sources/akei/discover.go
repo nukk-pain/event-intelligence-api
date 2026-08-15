@@ -15,9 +15,14 @@ import (
 var wrIDRe = regexp.MustCompile(`bo_table=schedule[^"']*?wr_id=(\d+)`)
 
 const (
-	// monthsAhead is the rolling window: current month plus two, matching how
-	// far ahead organizers reliably list on this board.
-	monthsAhead = 3
+	// monthsAhead is the rolling window: current month plus five. Three months
+	// was too short to be useful — an event lands in the API only once its month
+	// enters the window, and exhibitor/booth deadlines usually fall before that.
+	// 2026 데이터센터코리아 (aT센터, 11/04) sat on the November board while the window
+	// covered Aug–Oct, so the API did not have it while its booth application was
+	// still open. AKEI is the only source for aT/EXCO/BEXCO-class venues, so the
+	// window is what bounds lead time there.
+	monthsAhead = 6
 	// maxPagesPerMonth bounds paging per month view; paging also stops early on
 	// the first page that yields no new wr_id.
 	maxPagesPerMonth = 6

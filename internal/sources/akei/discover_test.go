@@ -43,7 +43,10 @@ func TestDiscoverDedupesAcrossMonthsAndPages(t *testing.T) {
 	}
 	var requests int
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requests++
+		// Count listing fetches only; the fetcher also pulls robots.txt.
+		if strings.Contains(r.URL.Path, "board.php") {
+			requests++
+		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = w.Write(body)
 	}))
@@ -72,10 +75,65 @@ func TestDiscoverDedupesAcrossMonthsAndPages(t *testing.T) {
 			t.Errorf("ref URL %q not an absolute detail URL", r.URL)
 		}
 	}
-	// 3 months, but every page repeats the same ids, so paging must stop after
-	// page 1 + one no-new page per month: at most 2 requests for month one and
-	// 1 no-new page for each later month.
-	if requests > 6 {
+	// Every page repeats the same ids, so paging must stop after page 1 + one
+	// no-new page per month: 2 listing fetches for month one (page 1 yields the
+	// ids, page 2 yields nothing new) and 1 for each later month.
+	if requests > monthsAhead+1 {
 		t.Errorf("requests = %d, early-stop paging failed", requests)
+	}
+}
+
+// The window is what bounds lead time for aT/EXCO/BEXCO-class venues, which no
+// other source covers. A month that falls inside monthsAhead must be reachable:
+// 2026 데이터센터코리아 (11/04) was missed because a 3-month window starting in
+// August stopped at October. Each month view here answers with its own wr_id, so
+// a ref for month N proves that month was actually requested.
+func TestDiscoverReachesTheFullWindow(t *testing.T) {
+	var asked []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		ym := q.Get("searchYear") + "-" + q.Get("searchMonth")
+		id := strings.ReplaceAll(ym, "-", "")
+		if q.Get("page") == "1" {
+			asked = append(asked, ym)
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write([]byte(`<a href="/bbs/board.php?bo_table=schedule&wr_id=` + id + `">x</a>`))
+			return
+		}
+		// Later pages repeat page 1, so discovery stops on the first no-new page.
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(`<a href="/bbs/board.php?bo_table=schedule&wr_id=` + id + `">x</a>`))
+	}))
+	defer srv.Close()
+
+	// August 2026 — the month the miss was found in.
+	fixed := time.Date(2026, 8, 15, 12, 0, 0, 0, time.UTC)
+	s := New(WithBaseURL(srv.URL), WithClock(func() time.Time { return fixed }))
+	refs, err := s.Discover(context.Background(), testFetcher(t, srv))
+	if err != nil {
+		t.Fatalf("Discover: %v", err)
+	}
+
+	want := []string{"2026-08", "2026-09", "2026-10", "2026-11", "2026-12", "2027-01"}
+	want = want[:monthsAhead]
+	if len(asked) != len(want) {
+		t.Fatalf("months requested = %v, want %v", asked, want)
+	}
+	for i, ym := range want {
+		if asked[i] != ym {
+			t.Errorf("month %d requested = %s, want %s", i, asked[i], ym)
+		}
+	}
+
+	got := map[string]bool{}
+	for _, r := range refs {
+		got[r.EventID] = true
+	}
+	// The November board is where 데이터센터코리아 sits.
+	if !got["akei-202611"] {
+		t.Errorf("November 2026 not discovered; refs = %v", refs)
+	}
+	if len(refs) != len(want) {
+		t.Errorf("refs = %d, want one per month in the window (%d)", len(refs), len(want))
 	}
 }
