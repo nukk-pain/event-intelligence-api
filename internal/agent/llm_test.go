@@ -44,7 +44,7 @@ func Test_BackendChat_sets_minimal_reasoning_for_solar_open2(t *testing.T) {
 	}
 }
 
-func Test_LoadBackends_solar_default_model_is_solar_pro3(t *testing.T) {
+func Test_LoadBackends_solar_default_model_is_solar_pro4(t *testing.T) {
 	// Decision 2026-08-29 (DECISIONS.md): default is the documented current Upstage model; smoke-verified live.
 	t.Setenv("EVENTSINTEL_SOLAR_API_KEY", "test-key")
 	t.Setenv("EVENTSINTEL_SOLAR_MODEL", "")
@@ -60,7 +60,7 @@ func Test_LoadBackends_solar_default_model_is_solar_pro3(t *testing.T) {
 	if solar == nil {
 		t.Fatal("solar backend not loaded with EVENTSINTEL_SOLAR_API_KEY set")
 	}
-	if solar.Model != "solar-pro3" {
-		t.Fatalf("solar default Model = %q, want solar-pro3", solar.Model)
+	if solar.Model != "solar-pro4" {
+		t.Fatalf("solar default Model = %q, want solar-pro4", solar.Model)
 	}
 }

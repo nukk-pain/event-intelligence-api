@@ -51,7 +51,7 @@ func LoadBackends() []Backend {
 			Name:    "solar",
 			BaseURL: getenv("EVENTSINTEL_SOLAR_BASE_URL", "https://api.upstage.ai/v1"),
 			APIKey:  key,
-			Model:   getenv("EVENTSINTEL_SOLAR_MODEL", "solar-pro3"),
+			Model:   getenv("EVENTSINTEL_SOLAR_MODEL", "solar-pro4"),
 		})
 	}
 	return out

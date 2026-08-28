@@ -107,7 +107,7 @@ func Default() Config {
 		SourceConcurrency:    2,
 		DetailWorkers:        4,
 		SolarBaseURL:         "https://api.upstage.ai/v1",
-		SolarModel:           "solar-pro3",
+		SolarModel:           "solar-pro4",
 		SolarMaxCalls:        600,
 		SolarMaxConcurrent:   6,
 		DBPath:               "eventsintel.db",
