@@ -64,7 +64,6 @@ var ProductionAllowedHosts = []string{
 	// rollover next-edition URLs and the 25 newly added benchmark families.
 	"2027.ieee-icra.org",
 	"2027.aclweb.org",
-	"s2027.siggraph.org",
 	"kdd.org",
 	"ijcai.org",
 	"www.mwcbarcelona.com",

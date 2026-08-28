@@ -108,7 +108,7 @@ var refresh2026Catalog = []catalogEvent{
 	},
 	{
 		EventID:      "benchmark-siggraph-2027",
-		URL:          "https://s2027.siggraph.org/",
+		URL:          "https://s2026.siggraph.org/",
 		Name:         "SIGGRAPH 2027",
 		StartRaw:     "2027-08-08",
 		EndRaw:       "2027-08-12",
@@ -123,7 +123,7 @@ var refresh2026Catalog = []catalogEvent{
 		Actions: sources.ActionSignals{
 			CanRegister: boolPtr(true),
 			CanExhibit:  boolPtr(true),
-			RegisterURL: stringPtr("https://s2027.siggraph.org/"),
+			RegisterURL: stringPtr("https://s2026.siggraph.org/"),
 			CostHint:    stringPtr("unknown"),
 		},
 		Notes: "SIGGRAPH 2026 official site (s2026.siggraph.org) announces the 54th conference Aug 8-12, 2027 in Anaheim, CA.",
