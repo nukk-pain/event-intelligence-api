@@ -44,13 +44,13 @@ const techCrunchFixture = `<!doctype html><html><head>
 <meta property="og:url" content="https://techcrunch.com/events/techcrunch-disrupt/">
 </head><body></body></html>`
 
-func TestDiscover_ReturnsFortyFiveBenchmarkRefs(t *testing.T) {
+func TestDiscover_ReturnsSeventyBenchmarkRefs(t *testing.T) {
 	refs, err := New().Discover(context.Background(), nil)
 	if err != nil {
 		t.Fatalf("Discover: %v", err)
 	}
-	if len(refs) != 45 {
-		t.Fatalf("refs len = %d, want 45", len(refs))
+	if len(refs) != 70 {
+		t.Fatalf("refs len = %d, want 70", len(refs))
 	}
 	seen := map[string]bool{}
 	for _, ref := range refs {
@@ -64,29 +64,168 @@ func TestDiscover_ReturnsFortyFiveBenchmarkRefs(t *testing.T) {
 	}
 }
 
-func TestParse_ICMLFromCatalogFallback(t *testing.T) {
-	parsed, err := New().Parse(context.Background(), result("https://icml.cc/Conferences/2026", "<!doctype html><html><head></head><body></body></html>"))
+func TestCatalog_EventIDsAndURLsAreUnique(t *testing.T) {
+	ids := map[string]bool{}
+	urls := map[string]bool{}
+	for _, e := range catalog {
+		if e.EventID == "" {
+			t.Fatal("catalog entry with empty EventID")
+		}
+		if e.URL == "" {
+			t.Fatalf("catalog entry %q with empty URL", e.EventID)
+		}
+		if ids[e.EventID] {
+			t.Fatalf("duplicate EventID %q", e.EventID)
+		}
+		if urls[e.URL] {
+			t.Fatalf("duplicate URL %q (EventID %q)", e.URL, e.EventID)
+		}
+		ids[e.EventID] = true
+		urls[e.URL] = true
+	}
+}
+
+// refreshFamilies is the 2026-08-29 daily-refresh set: the 14 rolled-forward
+// families (5 with a confirmed next edition, 9 honest family/TBA records) plus
+// the 25 newly added families — 39 in total.
+var refreshFamilies = []string{
+	// Rollovers with a confirmed next edition.
+	"benchmark-robotics-summit-2027",
+	"benchmark-vivatech-2027",
+	"benchmark-ieee-icra-2027",
+	"benchmark-acl-2027",
+	"benchmark-siggraph-2027",
+	// Rollovers as honest stable family/TBA records.
+	"benchmark-medical-taiwan",
+	"benchmark-himss-ai-healthcare-forum-boston",
+	"benchmark-gitex-ai-europe",
+	"benchmark-waic-shanghai",
+	"benchmark-world-robot-conference-beijing",
+	"benchmark-icml",
+	"benchmark-kdd",
+	"benchmark-ijcai",
+	"benchmark-khf",
+	// Additions.
+	"benchmark-mwc-barcelona-2027",
+	"benchmark-4yfn-2027",
+	"benchmark-jpm-healthcare-2027",
+	"benchmark-gitex-global-2026",
+	"benchmark-hannover-messe-2027",
+	"benchmark-vive-2027",
+	"benchmark-ecr-2027",
+	"benchmark-cmef-2026",
+	"benchmark-corl-2026",
+	"benchmark-humanoids-2026",
+	"benchmark-rss-2027",
+	"benchmark-eccv",
+	"benchmark-iccv-2027",
+	"benchmark-naacl-2027",
+	"benchmark-interspeech-2027",
+	"benchmark-gitex-asia-2027",
+	"benchmark-ivs-kyoto",
+	"benchmark-sus-hi-tech-2027",
+	"benchmark-south-summit",
+	"benchmark-bits-and-pretzels-2026",
+	"benchmark-bio-europe-spring-2027",
+	"benchmark-cphi-2027",
+	"benchmark-slas-2027",
+	"benchmark-automate-2027",
+	"benchmark-irex",
+}
+
+func TestCatalog_ContainsAllRequestedRolloverAndAdditionFamilies(t *testing.T) {
+	present := map[string]bool{}
+	for _, e := range catalog {
+		present[e.EventID] = true
+	}
+	var missing []string
+	for _, id := range refreshFamilies {
+		if !present[id] {
+			missing = append(missing, id)
+		}
+	}
+	if len(missing) != 0 {
+		t.Fatalf("missing refresh families: %v", missing)
+	}
+	// Every refresh family is discoverable (event ID + URL both populated).
+	refs, err := New().Discover(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("Discover: %v", err)
+	}
+	refByID := map[string]string{}
+	for _, ref := range refs {
+		refByID[ref.EventID] = ref.URL
+	}
+	for _, id := range refreshFamilies {
+		u, ok := refByID[id]
+		if !ok || u == "" {
+			t.Fatalf("refresh family %q not discoverable (url %q)", id, u)
+		}
+	}
+}
+
+func TestParse_TBAFamilyNormalizesLowDateConfidenceWithDateMissingFields(t *testing.T) {
+	parsed, err := New().Parse(context.Background(), result("https://icml.cc/Conferences/FutureMeetings", "<!doctype html><html><head></head><body></body></html>"))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if parsed.EventID != "benchmark-icml" {
+		t.Fatalf("EventID = %q, want benchmark-icml", parsed.EventID)
+	}
+
+	event, err := normalize.Normalize(parsed, "2026-08-29T00:00:00Z")
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	if event.StartDate != nil || event.EndDate != nil {
+		t.Fatalf("TBA entry must have null dates, got start=%v end=%v", event.StartDate, event.EndDate)
+	}
+	if event.DateConfidence != "low" {
+		t.Fatalf("DateConfidence = %q, want low", event.DateConfidence)
+	}
+	for _, field := range []string{"start_date", "end_date"} {
+		if !containsString(event.MissingFields, field) {
+			t.Fatalf("missing_fields = %v, want %q", event.MissingFields, field)
+		}
+	}
+}
+
+func TestParse_UnknownInternationalCountryDoesNotFallBackToKR(t *testing.T) {
+	parsed, err := New().Parse(context.Background(), result("https://icml.cc/Conferences/FutureMeetings", "<!doctype html><html><head></head><body></body></html>"))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	event, err := normalize.Normalize(parsed, "2026-08-29T00:00:00Z")
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	// ICML 2027 is officially slated for South America with no country
+	// published; the catalog stores the ISO 3166-1 unknown sentinel ZZ rather
+	// than letting normalize's default (KR) claim a country.
+	if event.Country != "ZZ" {
+		t.Fatalf("Country = %q, want ZZ (unknown international, must not be KR)", event.Country)
+	}
+}
+
+func TestParse_KHFFamilyEntryHasNoStaleEditionDeadline(t *testing.T) {
+	parsed, err := New().Parse(context.Background(), result("https://khospital.org/", "<!doctype html><html><head></head><body></body></html>"))
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
 
-	if parsed.EventID != "benchmark-icml-2026" {
+	if parsed.EventID != "benchmark-khf" {
 		t.Fatalf("EventID = %q", parsed.EventID)
 	}
-	if parsed.StartRaw == nil || *parsed.StartRaw != "2026-07-06" {
-		t.Fatalf("StartRaw = %v", parsed.StartRaw)
+	// The 2026 visitor-guide deadline (2026-08-18) belonged to the ended
+	// edition; the family/TBA row must not carry it forward.
+	if parsed.Actions.RegistrationDeadline != nil {
+		t.Fatalf("RegistrationDeadline = %v, want nil for family row", *parsed.Actions.RegistrationDeadline)
 	}
-	if parsed.EndRaw == nil || *parsed.EndRaw != "2026-07-11" {
-		t.Fatalf("EndRaw = %v", parsed.EndRaw)
+	if parsed.StartRaw != nil && *parsed.StartRaw != "" {
+		t.Fatalf("StartRaw = %v, want empty for family row", *parsed.StartRaw)
 	}
 	if parsed.Country == nil || *parsed.Country != "KR" {
-		t.Fatalf("Country = %v", parsed.Country)
-	}
-	if parsed.VenueName == nil || *parsed.VenueName != "COEX Convention & Exhibition Center" {
-		t.Fatalf("VenueName = %v", parsed.VenueName)
-	}
-	if parsed.Actions.CanRegister == nil || !*parsed.Actions.CanRegister {
-		t.Fatalf("CanRegister = %v, want true", parsed.Actions.CanRegister)
+		t.Fatalf("Country = %v, want KR", parsed.Country)
 	}
 }
 
@@ -123,23 +262,6 @@ func TestParse_UsesCatalogFallbackDatesAndActions(t *testing.T) {
 	}
 	if parsed.SummaryText == nil || *parsed.SummaryText == "" {
 		t.Fatalf("SummaryText = %v, want catalog fallback summary", parsed.SummaryText)
-	}
-}
-
-func TestParse_KHFUsesReviewedDeadlineAndDirectRegistrationURL(t *testing.T) {
-	parsed, err := New().Parse(context.Background(), result("https://khospital.org/visitor/visitor-guide/", "<!doctype html><html><head></head><body></body></html>"))
-	if err != nil {
-		t.Fatalf("Parse: %v", err)
-	}
-
-	if parsed.EventID != "benchmark-khf-2026" {
-		t.Fatalf("EventID = %q", parsed.EventID)
-	}
-	if parsed.Actions.RegisterURL == nil || *parsed.Actions.RegisterURL != "https://khospital.org/registration/#/pre-reg/891" {
-		t.Fatalf("RegisterURL = %v, want direct KHF registration URL", parsed.Actions.RegisterURL)
-	}
-	if parsed.Actions.RegistrationDeadline == nil || *parsed.Actions.RegistrationDeadline != "2026-08-18" {
-		t.Fatalf("RegistrationDeadline = %v, want official-guide deadline", parsed.Actions.RegistrationDeadline)
 	}
 }
 

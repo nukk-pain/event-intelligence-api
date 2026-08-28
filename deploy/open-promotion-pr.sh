@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Open a human-review pull request carrying the day's discovery packet.
 # Called by run-scout-discovery.sh only when EVENTSCOUT_PROMOTE_PR_TOKEN is
-# present; without the token the weekly run keeps its packet-on-disk behavior.
+# present; without the token the daily run keeps its packet-on-disk behavior.
 #
 # The PR delivers the review packet — it never edits catalog code or the crawl
 # allowlist itself. Merging the packet changes nothing at runtime; a human
@@ -66,7 +66,7 @@ BODY=$(python3 - "$PACKET_DATE" "$CANDIDATES" "$NEW_HOSTS" <<'PY'
 import json, sys
 date, count, hosts = sys.argv[1], sys.argv[2], sys.argv[3]
 body = (
-    f"Weekly discovery delivered {count} model-accepted source candidate(s) "
+    f"Daily discovery delivered {count} model-accepted source candidate(s) "
     f"on {date}.\n\n"
     f"- Packet: `discovery-packets/{date}/` (candidates, paste-ready catalog "
     f"snippet, allowlist diff)\n"
@@ -75,7 +75,7 @@ body = (
     "the packet against the official page, fill the missing fields, and land "
     "the catalog/allowlist change as a normal reviewed commit "
     "(DECISIONS.md 2026-07-28).\n\n"
-    "Opened automatically by the eventscout weekly timer."
+    "Opened automatically by the eventscout daily timer."
 )
 print(json.dumps({
     "title": f"scout: discovery packet {date} ({count} candidates)",

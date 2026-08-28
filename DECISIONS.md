@@ -721,3 +721,50 @@ contract and must not acquire live LLM work as a side effect.
 - Decision: 주기 24h 유지, 데드라인 2h(주기의 8%), 렌더 cap 55.
 - 검증 대상: 2시간 여유에서 Chrome이 오래 살아 있을 때 VPS 메모리(가용 930Mi)가
   견디는지, 배치 소요와 커버리지가 어떻게 변하는지 실측할 것.
+
+### Daily benchmark catalog refresh + discovery cadence + Solar default (2026-08-29)
+
+- Status: accepted
+- Context: the reviewed benchmark catalog carried 45 rows. On 2026-08-29,
+  14 families (Medical Taiwan, Robotics Summit & Expo, VivaTech, IEEE ICRA,
+  HIMSS AI in Healthcare Forum-Boston, GITEX AI Europe, WAIC Shanghai, World
+  Robot Conference Beijing, ICML, ACL, KDD, IJCAI-ECAI, SIGGRAPH, K-HOSPITAL+
+  HEALTH TECH FAIR) had their 2026 editions already ended, and 25 high-signal
+  families were still missing from the catalog. Separately, eventscout source
+  discovery ran weekly on the VPS, and the `internal/agent` Solar default
+  (`solar-pro`) no longer exists on the Upstage API.
+- Decision:
+  - Roll each ended family forward with its next officially verified edition
+    (official organizer page only); where the next edition is not yet
+    officially dated, add an honest stable family/TBA record with empty
+    start/end/place so normalize emits `null` + `missing_fields` with
+    `date_confidence=low` — a year-specific edition is never invented. The 14
+    ended refs are REPLACED in the Discover catalog (count 45→70): historical
+    rows survive in the live SQLite because ApplyBatch's disappearance path is
+    intentionally non-deleting, so the DB after ingest may hold 84 rows. Add
+    the 25 missing families the same source-backed way. New entries live in
+    `catalog_refresh_2026.go` with minimal aggregate wiring; every new host is
+    added to the reviewed `fetch.ProductionAllowedHosts` so production ingest
+    can fetch the refs (SSRF boundary stays in reviewed code, 2026-07-28
+    decision unchanged). An internationally unknown country on a TBA row uses
+    the ISO 3166-1 sentinel `ZZ` (e.g. ICML 2027 is officially only "South
+    America") instead of falling back to `KR`, and a test locks that in.
+    `docs/benchmark-source-seed.jsonl` remains the historical seed snapshot.
+  - Change eventscout source discovery from weekly to daily:
+    `deploy/eventscout-discovery.timer` moves to `OnCalendar=*-*-* 06:30:00`,
+    keeping `Persistent=true` and `RandomizedDelaySec=15m`. Wording in
+    `deploy/README.md`, the service unit, `run-scout-discovery.sh`, and
+    `open-promotion-pr.sh` now says daily.
+  - Solar default: `internal/agent/llm.go` and `internal/config/config.go`
+    (the production-ingest default) changed to `solar-pro3` — the documented
+    current Upstage model. A server smoke with
+    `EVENTSINTEL_SOLAR_MODEL=solar-pro3` reached the model successfully.
+    `select-model` had suggested OpenRouter DeepSeek for
+    ko/structured_json/instruct/relaxed/cheapest/public_api, but that provider
+    migration is rejected: this deployed path already holds direct Upstage
+    credentials and there is no task-specific OpenRouter regression eval, so
+    switching providers would ship unmeasured quality risk.
+- Promotion boundary preserved: daily discovery may create a promotion PR
+  (`open-promotion-pr.sh`); it never auto-merges and never writes the live
+  SQLite catalog directly. Promoting a source still goes through the reviewed
+  code path (2026-07-28 decisions unchanged).

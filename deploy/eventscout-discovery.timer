@@ -1,8 +1,8 @@
 [Unit]
-Description=Weekly eventscout source discovery
+Description=Daily eventscout source discovery
 
 [Timer]
-OnCalendar=Mon *-*-* 06:30:00
+OnCalendar=*-*-* 06:30:00
 Persistent=true
 RandomizedDelaySec=15m
 

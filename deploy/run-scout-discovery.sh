@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Weekly keyless source discovery on the VPS: crawl the curated seed catalog,
+# Daily keyless source discovery on the VPS: crawl the curated seed catalog,
 # let Solar judge candidates, and write a promotion review packet for a human.
 # Promotion itself stays a reviewed code change (DECISIONS.md 2026-07-28).
 #

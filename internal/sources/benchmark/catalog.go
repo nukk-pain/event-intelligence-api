@@ -22,7 +22,7 @@ type catalogEvent struct {
 	Notes        string
 }
 
-var catalog = append(append(append(append([]catalogEvent{}, baseCatalog...), oracleCatalog...), chinaCatalog...), academicCatalog...)
+var catalog = append(append(append(append(append([]catalogEvent{}, baseCatalog...), oracleCatalog...), chinaCatalog...), academicCatalog...), refresh2026Catalog...)
 
 var baseCatalog = []catalogEvent{
 	{
@@ -196,28 +196,6 @@ var baseCatalog = []catalogEvent{
 			RegisterURL:       stringPtr("https://hlth.com/events/usa"),
 			CostHint:          stringPtr("paid"),
 		},
-	},
-	{
-		EventID:      "benchmark-khf-2026",
-		URL:          "https://khospital.org/visitor/visitor-guide/",
-		Name:         "K-HOSPITAL+ HEALTH TECH FAIR 2026",
-		StartRaw:     "2026-08-19",
-		EndRaw:       "2026-08-21",
-		Country:      "KR",
-		Timezone:     "Asia/Seoul",
-		Format:       "onsite",
-		VenueName:    "COEX Hall C,D",
-		City:         "Seoul",
-		Organizer:    "Korean Hospital Association",
-		Summary:      "K-HOSPITAL+ HEALTH TECH FAIR 2026 is a Seoul digital-health and medical-technology exhibition for hospitals, healthcare professionals, and industry operators.",
-		ClassifyHint: "digital health healthcare medical technology AI hospitals",
-		Actions: sources.ActionSignals{
-			CanRegister:          boolPtr(true),
-			RegisterURL:          stringPtr("https://khospital.org/registration/#/pre-reg/891"),
-			RegistrationDeadline: stringPtr("2026-08-18"),
-			CostHint:             stringPtr("mixed"),
-		},
-		Notes: "The official visitor guide states that personal pre-registration closes on 2026-08-18 at 23:59 and links to the direct SPA registration URL.",
 	},
 	{
 		EventID:      "benchmark-kofurn-2026",

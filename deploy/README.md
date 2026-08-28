@@ -18,6 +18,7 @@ Reverse-proxied Go service on the shared DigitalOcean VPS `developer-vps`
 
 - `eventsintel-api.service` — systemd unit, runs `eventsintel serve` on `127.0.0.1:3005`.
 - `eventsintel-ingest.service` + `.timer` — 24h ingest batch (flock single-flight, 30/min polite rate).
+- `eventscout-discovery.service` + `.timer` — daily keyless source discovery (06:30, `Persistent=true`, 15m jitter; produces a human-review promotion packet/PR, promotion stays a reviewed commit).
 - `events.nukk.net.caddy` — Caddy site block.
 
 ## Headless DOM fallback runtime

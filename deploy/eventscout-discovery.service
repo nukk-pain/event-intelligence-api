@@ -1,5 +1,5 @@
 [Unit]
-Description=eventscout weekly keyless source discovery (promotion packet for human review)
+Description=eventscout daily keyless source discovery (promotion packet for human review)
 Wants=network-online.target
 After=network-online.target
 
