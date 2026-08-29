@@ -190,6 +190,20 @@ func TestParse_TBAFamilyNormalizesLowDateConfidenceWithDateMissingFields(t *test
 	}
 }
 
+func TestParse_TBAFamilyIgnoresEndedEditionSchemaDates(t *testing.T) {
+	body := `<!doctype html><html><head><script type="application/ld+json">{
+  "@context":"https://schema.org","@type":"Event","name":"GITEX AI Europe 2026",
+  "startDate":"2026-06-30","endDate":"2026-07-01"
+}</script></head><body></body></html>`
+	parsed, err := New().Parse(context.Background(), result("https://www.gitexeurope.com/", body))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if parsed.StartRaw == nil || *parsed.StartRaw != "" || parsed.EndRaw == nil || *parsed.EndRaw != "" {
+		t.Fatalf("TBA family revived ended schema dates: start=%v end=%v", parsed.StartRaw, parsed.EndRaw)
+	}
+}
+
 func TestParse_UnknownInternationalCountryDoesNotFallBackToKR(t *testing.T) {
 	parsed, err := New().Parse(context.Background(), result("https://icml.cc/Conferences/FutureMeetings", "<!doctype html><html><head></head><body></body></html>"))
 	if err != nil {

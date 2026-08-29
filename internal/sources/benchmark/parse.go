@@ -78,12 +78,9 @@ func applySchemaEvent(parsed *sources.ParsedEvent, event schemaEvent, entry cata
 	if event.Name != "" && entry.Name == "" {
 		parsed.Name = event.Name
 	}
-	if event.StartDate != "" && entry.StartRaw == "" {
-		parsed.StartRaw = ptr(event.StartDate)
-	}
-	if event.EndDate != "" && entry.EndRaw == "" {
-		parsed.EndRaw = ptr(event.EndDate)
-	}
+	// Benchmark dates are review-owned catalog facts. An empty catalog date is
+	// an intentional TBA, not permission to revive the ended edition still
+	// advertised in JSON-LD on a stable family URL.
 	if event.URL != "" && !isRootURL(event.URL) {
 		parsed.HomepageURL = ptr(event.URL)
 	}

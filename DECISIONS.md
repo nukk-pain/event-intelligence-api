@@ -722,6 +722,22 @@ contract and must not acquire live LLM work as a side effect.
 - 검증 대상: 2시간 여유에서 Chrome이 오래 살아 있을 때 VPS 메모리(가용 930Mi)가
   견디는지, 배치 소요와 커버리지가 어떻게 변하는지 실측할 것.
 
+### Default UI is upcoming-first; history remains opt-in (2026-08-29)
+
+- Status: accepted
+- Context: disappearance from a reviewed benchmark catalog intentionally does
+  not delete historical SQLite rows. After the 2026 rollover, 15 ended rows
+  therefore remained visible in the unbounded overseas UI list.
+- Decision: normal list views request events whose final known date is today or
+  later and include genuinely undated rows. `지난 행사 포함` explicitly removes
+  that floor; calendar navigation remains month-authoritative, including past
+  months. Stored history is preserved. On reads, only `scheduled` rows whose
+  final date is before today in the event timezone render as `ended`; explicit
+  cancelled/postponed states win. Benchmark dates remain catalog-authoritative,
+  so a stable TBA family URL cannot revive its ended edition from page JSON-LD.
+- API compatibility: unfiltered API calls remain historical/all-time; the new
+  default is a human-UI policy built from existing overlap parameters.
+
 ### Daily benchmark catalog refresh + discovery cadence + Solar default (2026-08-29)
 
 - Status: accepted

@@ -115,7 +115,6 @@ func TestRootIndexHTMLUsesHumanFriendlyCopy(t *testing.T) {
 		"Data sourced from COEX and KINTEX. API:",
 		"서비스 정보",
 		"데이터 항목",
-		"지난 행사",
 		"전체 기간",
 		"accent-dot",
 		"COEX·KINTEX 행사 모아보기<span",
@@ -145,6 +144,7 @@ func TestRootIndexHTMLUsesHumanFriendlyCopy(t *testing.T) {
 		`src="/assets/ask.js?v=`,
 		`id="view-calendar"`,
 		`id="calendar-grid"`,
+		`id="f-include-past"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("root HTML missing human-friendly copy %q", want)

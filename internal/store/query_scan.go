@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/smpain/event-intelligence-api/internal/model"
 )
@@ -74,6 +75,36 @@ func scanEvent(row rowScanner) (model.Event, error) {
 			return model.Event{}, fmt.Errorf("decode sources for %s: %w", e.EventID, err)
 		}
 	}
+	e.Status = effectiveStatusAt(e, time.Now())
 
 	return e, nil
+}
+
+// effectiveStatusAt keeps preserved historical rows truthful without deleting
+// them or rewriting their audit history. Explicit cancellation/postponement
+// states win; only a scheduled event whose final known date is before today in
+// its own timezone becomes ended on reads.
+func effectiveStatusAt(e model.Event, now time.Time) string {
+	if e.Status != "scheduled" {
+		return e.Status
+	}
+	last := e.EndDate
+	if last == nil {
+		last = e.StartDate
+	}
+	if last == nil {
+		return e.Status
+	}
+	tz := "UTC"
+	if e.Timezone != nil && *e.Timezone != "" {
+		tz = *e.Timezone
+	}
+	loc, err := time.LoadLocation(tz)
+	if err != nil {
+		loc = time.UTC
+	}
+	if *last < now.In(loc).Format("2006-01-02") {
+		return "ended"
+	}
+	return e.Status
 }

@@ -16,6 +16,7 @@
     search: "",
     dateFrom: "",
     dateTo: "",
+    includePast: false,
     categoryCounts: [],
     view: "list",
     month: todayKST().slice(0, 7)
@@ -32,6 +33,7 @@
     fDateFrom: document.getElementById("f-date-from"),
     fDateTo: document.getElementById("f-date-to"),
     fSearch: document.getElementById("f-search"),
+    fIncludePast: document.getElementById("f-include-past"),
     count: document.getElementById("filter-count"),
     overlay: document.getElementById("modal-overlay"),
     viewList: document.getElementById("view-list"),
@@ -218,6 +220,7 @@
     el.grid.classList.toggle("hidden", calendar);
     el.fDateFrom.disabled = calendar;
     el.fDateTo.disabled = calendar;
+    el.fIncludePast.disabled = calendar;
     if (calendar) el.loadMore.classList.add("hidden");
   }
   function showState(msg, isError) {
@@ -245,15 +248,16 @@
 
   function eventsURL(cursor) {
     var url = "/api/v1/events?limit=100&list=" + encodeURIComponent(state.list);
-    // Default the venue list to upcoming events (since=today) unless the user set
-    // an explicit start date; benchmark has no implicit date floor.
+    // Lists default to events that are still active, upcoming, or undated.
+    // Explicit date filters and the history toggle preserve deliberate history reads.
     if (state.view === "calendar") {
       var bounds = monthBounds(state.month);
       url += "&active_from=" + bounds.from + "&active_before=" + bounds.before + "&include_undated=1";
-    } else {
-      var since = state.dateFrom || (state.list === "venue" ? todayKST() : "");
-      if (since) url += "&since=" + since;
+    } else if (state.dateFrom || state.dateTo) {
+      if (state.dateFrom) url += "&since=" + state.dateFrom;
       if (state.dateTo) url += "&before=" + state.dateTo;
+    } else if (!state.includePast) {
+      url += "&active_from=" + todayKST() + "&include_undated=1";
     }
     if (state.category) url += "&category=" + encodeURIComponent(state.category);
     if (state.venue && state.list === "venue") url += "&venue=" + encodeURIComponent(state.venue);
@@ -397,6 +401,7 @@
     if (state.dateFrom) p.set("from", state.dateFrom);
     if (state.dateTo) p.set("to", state.dateTo);
     if (state.search) p.set("q", state.search);
+    if (state.includePast) p.set("past", "1");
     if (state.view === "calendar") {
       p.set("view", "calendar");
       p.set("month", state.month);
@@ -417,6 +422,7 @@
     state.dateFrom = p.get("from") || "";
     state.dateTo = p.get("to") || "";
     state.search = p.get("q") || "";
+    state.includePast = p.get("past") === "1";
     state.view = p.get("view") === "calendar" ? "calendar" : "list";
     state.month = /^\d{4}-\d{2}$/.test(p.get("month") || "") ? p.get("month") : todayKST().slice(0, 7);
     el.fList.value = state.list;
@@ -424,6 +430,7 @@
     el.fDateFrom.value = state.dateFrom;
     el.fDateTo.value = state.dateTo;
     el.fSearch.value = state.search;
+    el.fIncludePast.checked = state.includePast;
   }
 
   function reloadFresh() {
@@ -458,6 +465,10 @@
     serializeFilters();
     renderCurrent();
   }, 200));
+  el.fIncludePast.addEventListener("change", function() {
+    state.includePast = el.fIncludePast.checked;
+    reloadFresh();
+  });
   function setView(view) {
     if (state.view === view) return;
     state.view = view;
