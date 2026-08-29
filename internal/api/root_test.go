@@ -143,6 +143,8 @@ func TestRootIndexHTMLUsesHumanFriendlyCopy(t *testing.T) {
 		`src="/assets/events.js?v=`,
 		`src="/assets/app.js?v=`,
 		`src="/assets/ask.js?v=`,
+		`id="view-calendar"`,
+		`id="calendar-grid"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("root HTML missing human-friendly copy %q", want)

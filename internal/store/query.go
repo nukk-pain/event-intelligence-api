@@ -39,6 +39,11 @@ type EventFilter struct {
 	// MaxStartDate keeps only events whose start_date is <= this date (YYYY-MM-DD).
 	// Events with NULL start_date are excluded when this is set. Empty means no filter.
 	MaxStartDate string
+	// ActiveFrom/ActiveBefore keep events whose date span overlaps the requested
+	// range. IncludeUndated additionally keeps rows with no announced start date.
+	ActiveFrom     string
+	ActiveBefore   string
+	IncludeUndated bool
 	// Limit caps the page size. Callers should clamp/default before calling; a
 	// non-positive Limit falls back to defaultQueryLimit.
 	Limit int
@@ -176,6 +181,24 @@ func (f EventFilter) commonWhere() (where []string, args []any) {
 	if f.MaxStartDate != "" {
 		where = append(where, "e.start_date IS NOT NULL AND e.start_date <= ?")
 		args = append(args, f.MaxStartDate)
+	}
+	if f.ActiveFrom != "" || f.ActiveBefore != "" {
+		var overlap []string
+		var overlapArgs []any
+		if f.ActiveBefore != "" {
+			overlap = append(overlap, "e.start_date <= ?")
+			overlapArgs = append(overlapArgs, f.ActiveBefore)
+		}
+		if f.ActiveFrom != "" {
+			overlap = append(overlap, "COALESCE(e.end_date, e.start_date) >= ?")
+			overlapArgs = append(overlapArgs, f.ActiveFrom)
+		}
+		predicate := "e.start_date IS NOT NULL AND " + strings.Join(overlap, " AND ")
+		if f.IncludeUndated {
+			predicate = "((" + predicate + ") OR e.start_date IS NULL)"
+		}
+		where = append(where, predicate)
+		args = append(args, overlapArgs...)
 	}
 	return where, args
 }

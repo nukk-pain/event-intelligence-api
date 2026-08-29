@@ -6,13 +6,13 @@
 <meta name="description" content="국내 AI와 로봇, 헬스케어 행사 일정과 해외 주요 행사를 날짜순으로 봅니다.">
 <title>AI·로봇·헬스케어 행사 모아보기</title>
 <link rel="stylesheet" href="/assets/theme.css?v=20260623-filterux">
-<link rel="stylesheet" href="/assets/index.css?v=20260623-filterux">
+<link rel="stylesheet" href="/assets/index.css?v=20260829-calendar">
 <link rel="stylesheet" href="/assets/list.css?v=20260623-filterux">
 <link rel="stylesheet" href="/assets/detail.css?v=20260623-filterux">
 <script defer src="/assets/ui.js?v=20260623-filterux"></script>
 <script defer src="/assets/events.js?v=20260623-filterux"></script>
 <script defer src="/assets/detail.js?v=20260727-nameen"></script>
-<script defer src="/assets/app.js?v=20260728-copy"></script>
+<script defer src="/assets/app.js?v=20260829-calendar"></script>
 <script defer src="/assets/ask.js?v=20260728-askui"></script>
 </head>
 <body>
@@ -68,6 +68,13 @@
       <label for="f-search" class="sr-only">검색</label>
       <input id="f-search" type="search" placeholder="행사명 검색" aria-label="행사명 검색">
     </div>
+    <div class="view-field">
+      <span class="cat-field-label">보기</span>
+      <div class="view-toggle" role="group" aria-label="보기 방식">
+        <button id="view-list" class="view-btn" type="button" aria-pressed="true">목록</button>
+        <button id="view-calendar" class="view-btn" type="button" aria-pressed="false">달력</button>
+      </div>
+    </div>
     <div class="cat-field">
       <span class="cat-field-label">분야</span>
       <div id="f-category-chips" class="cat-chips" role="group" aria-label="분야 필터"></div>
@@ -77,6 +84,16 @@
 </section>
 
 <main>
+  <section id="calendar-view" class="calendar-view hidden" aria-label="월간 행사 달력">
+    <div class="calendar-toolbar">
+      <button id="calendar-prev" type="button" aria-label="이전 달">이전</button>
+      <h2 id="calendar-label"></h2>
+      <button id="calendar-today" type="button">오늘</button>
+      <button id="calendar-next" type="button" aria-label="다음 달">다음</button>
+    </div>
+    <div id="calendar-grid" class="calendar-grid" aria-live="polite"></div>
+    <section id="calendar-undated" class="calendar-undated hidden" aria-label="일정 미정 행사"></section>
+  </section>
   <div id="grid" class="grid" aria-live="polite"></div>
   <div id="state" class="state hidden"></div>
   <button id="load-more" class="load-more hidden" type="button">더 보기</button>

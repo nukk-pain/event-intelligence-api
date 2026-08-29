@@ -16,7 +16,9 @@
     search: "",
     dateFrom: "",
     dateTo: "",
-    categoryCounts: []
+    categoryCounts: [],
+    view: "list",
+    month: todayKST().slice(0, 7)
   };
 
   var el = {
@@ -31,7 +33,16 @@
     fDateTo: document.getElementById("f-date-to"),
     fSearch: document.getElementById("f-search"),
     count: document.getElementById("filter-count"),
-    overlay: document.getElementById("modal-overlay")
+    overlay: document.getElementById("modal-overlay"),
+    viewList: document.getElementById("view-list"),
+    viewCalendar: document.getElementById("view-calendar"),
+    calendarView: document.getElementById("calendar-view"),
+    calendarGrid: document.getElementById("calendar-grid"),
+    calendarLabel: document.getElementById("calendar-label"),
+    calendarUndated: document.getElementById("calendar-undated"),
+    calendarPrev: document.getElementById("calendar-prev"),
+    calendarToday: document.getElementById("calendar-today"),
+    calendarNext: document.getElementById("calendar-next")
   };
 
   function fmtDateRange(s, e) {
@@ -125,8 +136,93 @@
       btn.addEventListener("click", function() { openDetail(btn.getAttribute("data-id")); });
     });
   }
+
+  function monthParts(month) {
+    var m = /^(\d{4})-(\d{2})$/.exec(month || "");
+    return m ? { year: Number(m[1]), month: Number(m[2]) } : monthParts(todayKST().slice(0, 7));
+  }
+  function monthBounds(month) {
+    var p = monthParts(month);
+    var last = new Date(Date.UTC(p.year, p.month, 0)).getUTCDate();
+    return { from: month + "-01", before: month + "-" + String(last).padStart(2, "0"), days: last };
+  }
+  function shiftMonth(month, delta) {
+    var p = monthParts(month);
+    var d = new Date(Date.UTC(p.year, p.month - 1 + delta, 1));
+    return d.getUTCFullYear() + "-" + String(d.getUTCMonth() + 1).padStart(2, "0");
+  }
+  function dateUTC(s) {
+    var p = String(s).split("-").map(Number);
+    return new Date(Date.UTC(p[0], p[1] - 1, p[2]));
+  }
+  function dateString(d) { return d.toISOString().slice(0, 10); }
+  function renderCalendar() {
+    var p = monthParts(state.month);
+    var bounds = monthBounds(state.month);
+    var weekdays = ["월", "화", "수", "목", "금", "토", "일"];
+    var buckets = {};
+    var undated = [];
+    visibleEvents().forEach(function(e) {
+      if (!e.start_date) { undated.push(e); return; }
+      var start = e.start_date < bounds.from ? bounds.from : e.start_date;
+      var end = (e.end_date || e.start_date) > bounds.before ? bounds.before : (e.end_date || e.start_date);
+      if (start > end) return;
+      for (var d = dateUTC(start), stop = dateUTC(end); d <= stop; d.setUTCDate(d.getUTCDate() + 1)) {
+        var key = dateString(d);
+        (buckets[key] = buckets[key] || []).push({ event: e, continues: key !== e.start_date });
+      }
+    });
+    el.calendarLabel.textContent = p.year + "년 " + p.month + "월";
+    var html = weekdays.map(function(w) { return '<div class="calendar-weekday" aria-hidden="true">' + w + '</div>'; }).join("");
+    var first = new Date(Date.UTC(p.year, p.month - 1, 1));
+    var offset = (first.getUTCDay() + 6) % 7;
+    for (var i = 0; i < offset; i++) html += '<div class="calendar-day outside" aria-hidden="true"></div>';
+    for (var day = 1; day <= bounds.days; day++) {
+      var key = state.month + "-" + String(day).padStart(2, "0");
+      var items = buckets[key] || [];
+      var weekday = weekdays[(offset + day - 1) % 7];
+      html += '<section class="calendar-day' + (items.length ? '' : ' empty') + '" data-date="' + key + '">' +
+        '<time class="calendar-date" datetime="' + key + '"><span class="desktop-label">' + day + '</span><span class="mobile-label">' + p.month + '월 ' + day + '일 (' + weekday + ')</span></time>';
+      items.slice(0, 3).forEach(function(item) {
+        html += '<button class="calendar-event' + (item.continues ? ' continues' : '') + '" type="button" data-id="' + ui.escapeHtml(item.event.event_id) + '">' + ui.escapeHtml(item.event.name) + '</button>';
+      });
+      if (items.length > 3) html += '<button class="calendar-more" type="button">+' + (items.length - 3) + '개</button>';
+      html += '</section>';
+    }
+    el.calendarGrid.innerHTML = html;
+    el.calendarGrid.querySelectorAll(".calendar-event").forEach(function(btn) {
+      btn.addEventListener("click", function() { openDetail(btn.getAttribute("data-id")); });
+    });
+    el.calendarGrid.querySelectorAll(".calendar-more").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        var cell = btn.closest(".calendar-day");
+        var items = buckets[cell.getAttribute("data-date")] || [];
+        btn.remove();
+        items.slice(3).forEach(function(item) {
+          var b = document.createElement("button"); b.type = "button"; b.className = "calendar-event"; b.textContent = item.event.name;
+          b.onclick = function() { openDetail(item.event.event_id); }; cell.appendChild(b);
+        });
+      });
+    });
+    el.calendarUndated.classList.toggle("hidden", undated.length === 0);
+    el.calendarUndated.innerHTML = undated.length ? '<h3>일정 미정</h3><p>날짜가 발표되면 달력에 자동으로 표시됩니다.</p><div class="calendar-undated-list">' + undated.map(renderCard).join("") + '</div>' : '';
+    el.calendarUndated.querySelectorAll(".card").forEach(function(btn) { btn.onclick = function() { openDetail(btn.getAttribute("data-id")); }; });
+    updateCount(visibleEvents().length);
+  }
+  function renderCurrent() { if (state.view === "calendar") renderCalendar(); else renderList(); }
+  function syncViewControls() {
+    var calendar = state.view === "calendar";
+    el.viewList.setAttribute("aria-pressed", String(!calendar));
+    el.viewCalendar.setAttribute("aria-pressed", String(calendar));
+    el.calendarView.classList.toggle("hidden", !calendar);
+    el.grid.classList.toggle("hidden", calendar);
+    el.fDateFrom.disabled = calendar;
+    el.fDateTo.disabled = calendar;
+    if (calendar) el.loadMore.classList.add("hidden");
+  }
   function showState(msg, isError) {
     el.grid.innerHTML = "";
+    el.calendarGrid.innerHTML = "";
     el.stateBox.textContent = msg;
     el.stateBox.className = "state" + (isError ? " error" : "");
     el.stateBox.classList.remove("hidden");
@@ -136,7 +232,8 @@
     el.stateBox.classList.add("hidden");
     var html = "";
     for (var i = 0; i < n; i++) html += '<div class="skeleton-card"></div>';
-    el.grid.innerHTML = html;
+    if (state.view === "calendar") el.calendarGrid.innerHTML = '<div class="state">달력을 불러오는 중...</div>';
+    else el.grid.innerHTML = html;
   }
   function fetchJSON(url) {
     return fetch(url, { headers: { "Accept": "application/json" } }).then(function(r) {
@@ -150,9 +247,14 @@
     var url = "/api/v1/events?limit=100&list=" + encodeURIComponent(state.list);
     // Default the venue list to upcoming events (since=today) unless the user set
     // an explicit start date; benchmark has no implicit date floor.
-    var since = state.dateFrom || (state.list === "venue" ? todayKST() : "");
-    if (since) url += "&since=" + since;
-    if (state.dateTo) url += "&before=" + state.dateTo;
+    if (state.view === "calendar") {
+      var bounds = monthBounds(state.month);
+      url += "&active_from=" + bounds.from + "&active_before=" + bounds.before + "&include_undated=1";
+    } else {
+      var since = state.dateFrom || (state.list === "venue" ? todayKST() : "");
+      if (since) url += "&since=" + since;
+      if (state.dateTo) url += "&before=" + state.dateTo;
+    }
     if (state.category) url += "&category=" + encodeURIComponent(state.category);
     if (state.venue && state.list === "venue") url += "&venue=" + encodeURIComponent(state.venue);
     if (cursor) url += "&cursor=" + encodeURIComponent(cursor);
@@ -181,7 +283,7 @@
     return fetchJSON(eventsURL(append ? state.cursor : null)).then(function(d) {
       if (seq !== loadSeq) return added; // superseded by a newer load; drop this page
       var nextAdded = added + applyPage(d, append);
-      var shouldLookAhead = state.scope === "categorized" && !state.category && !state.search;
+      var shouldLookAhead = state.view === "calendar" || (state.scope === "categorized" && !state.category && !state.search);
       if (shouldLookAhead && state.hasMore && pagesLeft > 1) {
         return loadPageBatch(true, pagesLeft - 1, nextAdded, seq);
       }
@@ -202,7 +304,7 @@
       if (seq !== loadSeq) return; // a newer load started; let it own the UI/state
       state.loading = false;
       if (state.events.length === 0 && !state.search) showState("조건에 맞는 행사가 없습니다.", false);
-      else renderList();
+      else renderCurrent();
       renderCategoryChips();
       el.loadMore.textContent = "더 보기";
       el.loadMore.disabled = false;
@@ -275,6 +377,7 @@
       el.fVenue.value = "";
       state.venue = "";
     }
+    syncViewControls();
   }
 
   // restoreVenueControl reflects state.venue onto the select once its <option>
@@ -294,6 +397,10 @@
     if (state.dateFrom) p.set("from", state.dateFrom);
     if (state.dateTo) p.set("to", state.dateTo);
     if (state.search) p.set("q", state.search);
+    if (state.view === "calendar") {
+      p.set("view", "calendar");
+      p.set("month", state.month);
+    }
     var qs = p.toString();
     history.replaceState(null, "", qs ? "?" + qs : location.pathname);
   }
@@ -310,6 +417,8 @@
     state.dateFrom = p.get("from") || "";
     state.dateTo = p.get("to") || "";
     state.search = p.get("q") || "";
+    state.view = p.get("view") === "calendar" ? "calendar" : "list";
+    state.month = /^\d{4}-\d{2}$/.test(p.get("month") || "") ? p.get("month") : todayKST().slice(0, 7);
     el.fList.value = state.list;
     el.fScope.value = state.scope;
     el.fDateFrom.value = state.dateFrom;
@@ -347,8 +456,20 @@
   el.fSearch.addEventListener("input", debounce(function() {
     state.search = el.fSearch.value.trim();
     serializeFilters();
-    renderList();
+    renderCurrent();
   }, 200));
+  function setView(view) {
+    if (state.view === view) return;
+    state.view = view;
+    syncViewControls();
+    reloadFresh();
+  }
+  el.viewList.addEventListener("click", function() { setView("list"); });
+  el.viewCalendar.addEventListener("click", function() { setView("calendar"); });
+  function moveMonth(delta) { state.month = shiftMonth(state.month, delta); serializeFilters(); reloadFresh(); }
+  el.calendarPrev.addEventListener("click", function() { moveMonth(-1); });
+  el.calendarNext.addEventListener("click", function() { moveMonth(1); });
+  el.calendarToday.addEventListener("click", function() { state.month = todayKST().slice(0, 7); serializeFilters(); reloadFresh(); });
   el.loadMore.addEventListener("click", function() { loadEvents(true); });
   document.addEventListener("keydown", function(e) {
     if (e.key === "Escape" && !el.overlay.classList.contains("hidden")) {

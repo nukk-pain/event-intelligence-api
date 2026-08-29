@@ -62,16 +62,20 @@ func handleListEvents(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		activeFrom, activeBefore := q.Get("active_from"), q.Get("active_before")
 		filter := store.EventFilter{
-			ListKind:     q.Get("list"),
-			UpdatedSince: q.Get("updated_since"),
-			ChangedSince: q.Get("changed_since"),
-			Category:     q.Get("category"),
-			Venue:        q.Get("venue"),
-			MinStartDate: defaultMinStartDate(q.Get("list"), q.Get("since")),
-			MaxStartDate: q.Get("before"),
-			Limit:        limit,
-			Cursor:       store.EventCursor{UpdatedAt: cur.UpdatedAt, EventID: cur.EventID},
+			ListKind:       q.Get("list"),
+			UpdatedSince:   q.Get("updated_since"),
+			ChangedSince:   q.Get("changed_since"),
+			Category:       q.Get("category"),
+			Venue:          q.Get("venue"),
+			MinStartDate:   defaultMinStartDate(q.Get("list"), q.Get("since"), activeFrom, activeBefore),
+			MaxStartDate:   q.Get("before"),
+			ActiveFrom:     activeFrom,
+			ActiveBefore:   activeBefore,
+			IncludeUndated: q.Get("include_undated") == "1" || q.Get("include_undated") == "true",
+			Limit:          limit,
+			Cursor:         store.EventCursor{UpdatedAt: cur.UpdatedAt, EventID: cur.EventID},
 		}
 
 		events, next, err := store.ListEvents(r.Context(), db, filter)
@@ -108,8 +112,8 @@ func handleListEvents(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func defaultMinStartDate(listKind, explicitSince string) string {
-	if explicitSince != "" || listKind != "venue" {
+func defaultMinStartDate(listKind, explicitSince, activeFrom, activeBefore string) string {
+	if explicitSince != "" || activeFrom != "" || activeBefore != "" || listKind != "venue" {
 		return explicitSince
 	}
 	loc, err := time.LoadLocation("Asia/Seoul")

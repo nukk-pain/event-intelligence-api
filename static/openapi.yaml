@@ -103,6 +103,24 @@ paths:
           schema:
             type: string
             format: date
+        - name: active_from
+          in: query
+          description: Start of an overlap window in YYYY-MM-DD form; includes events already in progress.
+          schema:
+            type: string
+            format: date
+        - name: active_before
+          in: query
+          description: End of an overlap window in YYYY-MM-DD form; pair with active_from.
+          schema:
+            type: string
+            format: date
+        - name: include_undated
+          in: query
+          description: With an active window, also include events whose start_date is not announced.
+          schema:
+            type: boolean
+            default: false
         - name: category
           in: query
           description: Taxonomy category slug.

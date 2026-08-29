@@ -24,6 +24,12 @@ func withStart(e model.Event, start string) model.Event {
 	return e
 }
 
+func withRange(e model.Event, start, end string) model.Event {
+	e.StartDate = strptr(start)
+	e.EndDate = strptr(end)
+	return e
+}
+
 func getFacet(t *testing.T, url string) facetEnvelope {
 	t.Helper()
 	resp, err := http.Get(url)
@@ -121,6 +127,32 @@ func TestListEvents_BeforeFilter(t *testing.T) {
 	}
 	if c := countOf(env2, "ai"); c != 1 {
 		t.Errorf("facet ai under since+before = %d, want 1", c)
+	}
+}
+
+func TestListEvents_ActiveRangeOverlapAndUndated(t *testing.T) {
+	undated := seedEvent("ev-tba", "coex", "ai", false)
+	undated.StartDate = nil
+	events := []model.Event{
+		withRange(seedEvent("ev-cross", "coex", "ai", false), "2026-08-30", "2026-09-02"),
+		withStart(seedEvent("ev-single", "coex", "bio", false), "2026-09-15"),
+		withRange(seedEvent("ev-old", "coex", "ai", false), "2026-08-01", "2026-08-02"),
+		withStart(seedEvent("ev-future", "coex", "ai", false), "2026-10-01"),
+		undated,
+	}
+	srv := newServer(t, events)
+	base := srv.URL + "/api/v1/events?limit=100&active_from=2026-09-01&active_before=2026-09-30"
+	env := getFacet(t, base)
+	got := idSet(env.Data)
+	if !got["ev-cross"] || !got["ev-single"] || got["ev-old"] || got["ev-future"] || got["ev-tba"] {
+		t.Fatalf("overlap filter returned unexpected events: %v", got)
+	}
+	if countOf(env, "ai") != 1 || countOf(env, "bio") != 1 {
+		t.Fatalf("facet did not share overlap filter: ai=%d bio=%d", countOf(env, "ai"), countOf(env, "bio"))
+	}
+	withTBA := getFacet(t, base+"&include_undated=1")
+	if !idSet(withTBA.Data)["ev-tba"] {
+		t.Fatalf("include_undated=1 did not include undated event")
 	}
 }
 
