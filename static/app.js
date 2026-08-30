@@ -91,7 +91,7 @@
 
   function updateCount(visible) {
     var total = state.events.length;
-    var label = state.list === "benchmark" ? "개 해외 주요 행사" : "개 국내 행사";
+    var label = state.list === "benchmark" ? "개 글로벌 주요 행사" : "개 국내 행사";
     if (state.list === "venue" && state.scope === "categorized") label = "개 주요 국내 행사";
     if (state.search && visible !== total) {
       el.count.textContent = total + "개 중 " + visible + "개 표시" + (state.hasMore ? "+" : "");
@@ -496,6 +496,12 @@
     state.events = [];
     loadEvents(false).then(restoreVenueControl);
   });
+
+  // The benchmark catalog is global rather than strictly overseas: high-signal
+  // families such as ICRA can be hosted in Korea. Reflect that distinction in
+  // the UI without changing the public list=benchmark API contract.
+  var benchmarkOption = el.fList.querySelector('option[value="benchmark"]');
+  if (benchmarkOption) benchmarkOption.textContent = "글로벌 주요 행사";
 
   deserializeFilters();
   syncListControls();

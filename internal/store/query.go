@@ -20,8 +20,8 @@ import (
 // EventFilter narrows and paginates a ListEvents call. The zero value lists the
 // first page of all events ordered by (updated_at, event_id).
 type EventFilter struct {
-	// ListKind separates venue-calendar rows from benchmark event-family rows.
-	// Empty and "all" preserve the original unscoped API listing.
+	// ListKind separates Korean venue-calendar rows from benchmark event-family
+	// rows. Empty and "all" preserve the original unscoped API listing.
 	ListKind string
 	// UpdatedSince keeps only events whose updated_at is >= this RFC3339 value.
 	UpdatedSince string
@@ -158,11 +158,10 @@ func (f EventFilter) commonWhere() (where []string, args []any) {
 	}
 	switch f.ListKind {
 	case "venue":
-		// "venue" means the domestic list. It began as COEX/KINTEX only; since
-		// the AKEI nationwide directory (2026-07-28) domestic events happen at
-		// venues we have no venue_id for, so the partition is defined by what
-		// it is NOT: the international benchmark family.
-		where = append(where, "e.event_id NOT LIKE 'benchmark-%'")
+		// "venue" is the domestic schedule, not merely every non-benchmark
+		// source. AKEI occasionally carries overseas exhibitions in its nominally
+		// domestic directory, so require the normalized country as well.
+		where = append(where, "e.event_id NOT LIKE 'benchmark-%'", "e.country = 'KR'")
 	case "benchmark":
 		where = append(where, "e.event_id LIKE 'benchmark-%'")
 	}

@@ -66,6 +66,33 @@ func TestParseStructuredDetailTable(t *testing.T) {
 	}
 }
 
+func TestForeignLocation(t *testing.T) {
+	tests := []struct {
+		venue    string
+		country  string
+		timezone string
+	}{
+		{venue: "자카르타(Jakarta)", country: "ID", timezone: "Asia/Jakarta"},
+		{venue: "타이페이 World Trade center", country: "TW", timezone: "Asia/Taipei"},
+		{venue: "베트남(Vietnam)", country: "VN", timezone: "Asia/Ho_Chi_Minh"},
+		{venue: "VEC(Vietnam Exposition Center)", country: "VN", timezone: "Asia/Ho_Chi_Minh"},
+		{venue: "베튼마 호치민 SECC 전시장", country: "VN", timezone: "Asia/Ho_Chi_Minh"},
+		{venue: "Magic Box, LA, USA", country: "US", timezone: "America/Los_Angeles"},
+		{venue: "American Dream, New Jesey, USA", country: "US", timezone: "America/New_York"},
+		{venue: "코엑스(COEX)"},
+		{venue: "한라체육관"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.venue, func(t *testing.T) {
+			country, timezone := foreignLocation(tt.venue)
+			if country != tt.country || timezone != tt.timezone {
+				t.Fatalf("foreignLocation(%q) = %q/%q, want %q/%q", tt.venue, country, timezone, tt.country, tt.timezone)
+			}
+		})
+	}
+}
+
 func strDeref(p *string) string {
 	if p == nil {
 		return ""
