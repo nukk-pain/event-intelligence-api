@@ -784,3 +784,17 @@ contract and must not acquire live LLM work as a side effect.
   (`open-promotion-pr.sh`); it never auto-merges and never writes the live
   SQLite catalog directly. Promoting a source still goes through the reviewed
   code path (2026-07-28 decisions unchanged).
+
+### Domestic and overseas lists follow host country (2026-08-31)
+
+- Status: accepted
+- Context: the legacy `list=venue` / `list=benchmark` partition used source and
+  event-ID families. That placed overseas AKEI rows in the domestic view and
+  Korea-hosted benchmark families in the global view even after their country
+  values were corrected.
+- Decision: preserve the public enum values for compatibility, but determine
+  membership only from normalized host country. `list=venue` means
+  `country=KR`; `list=benchmark` means a known non-KR country. `ZZ` and empty
+  country values are not guessed into either list and remain available through
+  `list=all`. Source adapter, event-ID prefix, and organizer nationality do not
+  affect the partition.

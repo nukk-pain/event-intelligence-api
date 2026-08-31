@@ -20,8 +20,9 @@ import (
 // EventFilter narrows and paginates a ListEvents call. The zero value lists the
 // first page of all events ordered by (updated_at, event_id).
 type EventFilter struct {
-	// ListKind separates Korean venue-calendar rows from benchmark event-family
-	// rows. Empty and "all" preserve the original unscoped API listing.
+	// ListKind preserves the public venue/benchmark vocabulary while partitioning
+	// rows by normalized event country: venue=Korea, benchmark=known non-Korea.
+	// Empty and "all" preserve the original unscoped API listing.
 	ListKind string
 	// UpdatedSince keeps only events whose updated_at is >= this RFC3339 value.
 	UpdatedSince string
@@ -140,8 +141,8 @@ func ListEvents(ctx context.Context, db *sql.DB, filter EventFilter) ([]model.Ev
 }
 
 // commonWhere builds the filter predicates shared by ListEvents and
-// CategoryCounts: the updated_since floor, the list-kind partition (venue vs
-// benchmark), an explicit venue, the changed_since existence check, and the
+// CategoryCounts: the updated_since floor, the list-kind country partition,
+// an explicit venue, the changed_since existence check, and the
 // start_date range. It deliberately OMITS the category-membership clause and the
 // keyset cursor so each caller appends those itself. Sharing one builder keeps
 // the facet's list/venue/date scope locked to the list it annotates; the facet
@@ -158,12 +159,13 @@ func (f EventFilter) commonWhere() (where []string, args []any) {
 	}
 	switch f.ListKind {
 	case "venue":
-		// "venue" is the domestic schedule, not merely every non-benchmark
-		// source. AKEI occasionally carries overseas exhibitions in its nominally
-		// domestic directory, so require the normalized country as well.
-		where = append(where, "e.event_id NOT LIKE 'benchmark-%'", "e.country = 'KR'")
+		// Public compatibility keeps list=venue, but membership is determined only
+		// by the actual host country. Korean-hosted benchmark families belong here.
+		where = append(where, "e.country = 'KR'")
 	case "benchmark":
-		where = append(where, "e.event_id LIKE 'benchmark-%'")
+		// Public compatibility keeps list=benchmark for the overseas view. Do not
+		// guess when the country is unknown (ZZ) or absent; those rows remain in all.
+		where = append(where, "e.country NOT IN ('KR', 'ZZ', '')")
 	}
 	if f.Venue != "" {
 		where = append(where, "e.venue_id = ?")

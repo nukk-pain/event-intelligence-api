@@ -641,6 +641,7 @@ next core-product action after the Solar submission.
 | 2026-06-21 | Target user = founders/operators; format = JSONL; created schema + seed prototype | Resolved gating decisions and executed the documented Next Action |
 | 2026-07-26 | Governed public yield diagnostics and smoke semantics | Keep count-only observability request-local and prevent a zero accepted-source classification from being misreported as a failed live result |
 | 2026-07-29 | Headless-render production validation complete | Store KHF/KOFURN official deadline evidence without weakening renderer egress controls |
+| 2026-08-31 | Domestic/overseas partition changed to host country | Source family no longer overrides the actual event location |
 
 ## Current Implementation Checkpoint (2026-07-29)
 

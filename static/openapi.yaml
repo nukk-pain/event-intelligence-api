@@ -53,10 +53,10 @@ paths:
       operationId: listEvents
       summary: List events
       description: >-
-        Keyset-paginated, filterable event listing. Use list=venue for
-        domestic (Korea) event schedules — COEX/KINTEX plus nationwide
-        events from the AKEI exhibition directory and association boards —
-        and list=benchmark for event-family benchmark records. When list=venue and since is omitted, the server
+        Keyset-paginated, filterable event listing. For compatibility, use
+        list=venue for events hosted in Korea (country=KR) and list=benchmark
+        for events hosted in a known non-Korean country, regardless of source
+        family. Unknown-country rows remain available through list=all. When list=venue and since is omitted, the server
         defaults since to today's date in Asia/Seoul so venue reads show current
         and upcoming schedules by default.
       parameters:
@@ -87,7 +87,7 @@ paths:
             format: date-time
         - name: list
           in: query
-          description: List family: all records, venue schedules, or benchmark event families.
+          description: "Location partition: all records, Korea-hosted events (venue), or known overseas-hosted events (benchmark)."
           schema:
             type: string
             enum: [all, venue, benchmark]

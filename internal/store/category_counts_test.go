@@ -35,6 +35,9 @@ func TestCategoryCounts(t *testing.T) {
 	seed("coex-d", "coex", []string{"ai"}, "2026-05-01", false) // past
 	seed("coex-x", "coex", []string{}, "2026-07-20", true)      // excluded → uncounted
 	seed("benchmark-e", "websummit", []string{"medical-devices"}, "2026-09-01", false)
+	if _, err := db.Exec(`UPDATE events SET country = 'FR' WHERE event_id = 'benchmark-e'`); err != nil {
+		t.Fatalf("mark benchmark-e overseas: %v", err)
+	}
 
 	got := func(t *testing.T, f store.EventFilter) map[string]int {
 		t.Helper()
@@ -72,13 +75,13 @@ func TestCategoryCounts(t *testing.T) {
 		}
 	})
 
-	t.Run("venue list excludes benchmark", func(t *testing.T) {
+	t.Run("venue list contains Korean hosts", func(t *testing.T) {
 		m := got(t, store.EventFilter{ListKind: "venue"})
 		want(t, m, "ai", 3)
 		want(t, m, "medical-devices", 0) // benchmark-e dropped
 	})
 
-	t.Run("benchmark list only benchmark ids", func(t *testing.T) {
+	t.Run("benchmark list contains overseas hosts", func(t *testing.T) {
 		m := got(t, store.EventFilter{ListKind: "benchmark"})
 		want(t, m, "medical-devices", 1)
 		want(t, m, "ai", 0)

@@ -21,26 +21,35 @@ func TestListEvents_ListKindFilter(t *testing.T) {
 	benchmarkEvent.Sources = []model.Source{
 		{URL: "https://vivatech.com/", Type: "organizer", Publisher: "VivaTech", RetrievedAt: "2026-06-23T00:00:00Z"},
 	}
-	srv := newServer(t, []model.Event{venueEvent, regionalEvent, overseasAggregatorEvent, benchmarkEvent})
+	koreanBenchmarkEvent := seedEvent("benchmark-icra-2027", "", "humanoid-robotics", false)
+	koreanBenchmarkEvent.Venue = &model.Venue{Name: "COEX", City: "Seoul"}
+	unknownCountryEvent := seedEvent("benchmark-tba", "", "ai", false)
+	unknownCountryEvent.Country = "ZZ"
+	srv := newServer(t, []model.Event{venueEvent, regionalEvent, overseasAggregatorEvent, benchmarkEvent, koreanBenchmarkEvent, unknownCountryEvent})
 
 	venue, _ := getEnvelope(t, srv.URL+"/api/v1/events?list=venue&limit=100")
-	if len(venue.Data) != 2 {
-		t.Fatalf("list=venue returned %+v, want ev-coex and akei-104742", eventIDs(venue.Data))
+	if len(venue.Data) != 3 {
+		t.Fatalf("list=venue returned %+v, want the three KR-hosted events", eventIDs(venue.Data))
 	}
 	for _, e := range venue.Data {
-		if e.EventID == "benchmark-vivatech" || e.EventID == "akei-104896" {
-			t.Fatalf("list=venue must contain only Korean non-benchmark rows: %+v", eventIDs(venue.Data))
+		if e.Country != "KR" {
+			t.Fatalf("list=venue must contain only KR-hosted rows: %+v", eventIDs(venue.Data))
 		}
 	}
 
 	benchmark, _ := getEnvelope(t, srv.URL+"/api/v1/events?list=benchmark&limit=100")
-	if len(benchmark.Data) != 1 || benchmark.Data[0].EventID != "benchmark-vivatech" {
-		t.Fatalf("list=benchmark returned %+v, want only benchmark-vivatech", eventIDs(benchmark.Data))
+	if len(benchmark.Data) != 2 {
+		t.Fatalf("list=benchmark returned %+v, want the two known overseas events", eventIDs(benchmark.Data))
+	}
+	for _, e := range benchmark.Data {
+		if e.Country == "KR" || e.Country == "ZZ" || e.Country == "" {
+			t.Fatalf("list=benchmark must contain only known non-KR rows: %+v", eventIDs(benchmark.Data))
+		}
 	}
 
 	all, _ := getEnvelope(t, srv.URL+"/api/v1/events?list=all&limit=100")
-	if len(all.Data) != 4 {
-		t.Fatalf("list=all returned %d events, want 4", len(all.Data))
+	if len(all.Data) != 6 {
+		t.Fatalf("list=all returned %d events, want 6", len(all.Data))
 	}
 }
 

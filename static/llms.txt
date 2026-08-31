@@ -43,6 +43,9 @@ Exceeding either returns HTTP 429 with a `Retry-After` header.
   updated_since, changed_since, category, venue. Pagination: limit, cursor.
   When list=venue and since is omitted, since defaults to today's Asia/Seoul
   date so the domestic venue feed is current/upcoming by default.
+  For compatibility, list=venue means country=KR and list=benchmark means a
+  known non-KR country; source family and event_id prefix do not determine the
+  partition. Unknown-country rows are available through list=all.
   Response also carries category_counts: the per-category event count under the
   active (non-category) filters, in canonical taxonomy order.
 - GET /api/v1/events/{event_id} — single event detail with provenance.
