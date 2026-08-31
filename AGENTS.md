@@ -33,11 +33,26 @@ At the start of a new session in this project:
 
 ## Verification
 
-For documentation-only work, validate structure against the relevant template
-and check for trailing whitespace.
+- Narrow package check: `go test ./internal/<package> -count=1`.
+- Full repository gates: `make test`, `make vet`, then `make build`.
+- Concurrency-sensitive changes under `internal/pipeline`, `internal/fetch`, or
+  `internal/store`: also run `go test -race ./internal/<package> -count=1`.
+- Enrichment audit changes: run `make eval-report`; this invokes
+  `python3 eval/audit.py --report` against the current audit inputs.
+- `make refresh-fixtures` is a placeholder that exits successfully without
+  refreshing anything. Do not cite it as fixture-validation evidence.
 
-Before implementation starts, add project-specific commands for:
+## Deployment Routing
 
-- Schema/data validation for the manual event dataset.
-- API contract checks, ideally from an OpenAPI spec.
-- Build/test/manual QA commands for the chosen web/API stack.
+- Before any VPS, Caddy, Cloudflare, systemd, or public-URL work, read
+  `deploy/README.md` and `../docs/workspace/deployment/AGENTS.md`.
+- Build the production artifact with the exact CGo-free linux/amd64 command in
+  `deploy/README.md`; preserve the SQLite data directory and migration order.
+- Every deploy ends with `deploy/verify.sh`. For an origin-first check, run
+  `deploy/verify.sh http://127.0.0.1:3005` on the VPS before the public-edge
+  check. A service being active is not release evidence.
+- If a deployment changes the public inventory, run
+  `python3 ../docs/workspace/deployment/update-public-deployments.py` and inspect
+  the generated inventory diff.
+- Package-specific rules live under `internal/*/AGENTS.md`; the normal read API
+  and the isolated discovery service have separate HTTP and deployment bounds.
