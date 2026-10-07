@@ -10,10 +10,11 @@
 
 ## Current Focus
 
-(2026-10-07) C3a security implementation is in progress. Scoped evidence and
-contracts live in `.tasks/261007-vps-security-c3a/PROGRESS.md`. API/MCP identity,
-quota, cancellation and toolchain changes are local only. Unit hardening and
-Linux permission/deployment verification follow in C3b.
+(2026-10-07) C3a security implementation is committed locally. Scoped evidence
+and contracts live in `.tasks/261007-vps-security-c3a/PROGRESS.md`. Scoped security
+tests and race checks, vet, builds and source/Linux binary audits pass. The full
+test gate awaits the coordinator's decision on a pre-existing dated fixture.
+Unit hardening and Linux permission/deployment verification follow in C3b.
 
 (2026-08-29 삽입) 기본 UI 목록을 진행·예정·일정 미정 중심으로 전환하고
 `지난 행사 포함`을 명시적 선택으로 분리했다. 보존된 과거 회차는 읽을 때

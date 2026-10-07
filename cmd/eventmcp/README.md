@@ -100,3 +100,12 @@ The durable daily limit covers only anonymous HTTP `ask_events` provider
 requests. Stdio and ingest do not use this journal. Provider redirects are
 disabled for this HTTP path to preserve one request per reservation. Existing
 models, token ceilings and ingest budgets remain unchanged.
+
+Production builds must use a clean, ordinary Git checkout of the release
+commit. Go 1.26 can omit VCS metadata in linked worktrees even with
+`-buildvcs=true` ([Go issue 58218](https://github.com/golang/go/issues/58218)).
+Build both daemons with `GOOS=linux GOARCH=amd64 CGO_ENABLED=0` and
+`-buildvcs=true`, then use `go version -m` to require the intended
+`vcs.revision`, `vcs.modified=false`, and those platform settings. Missing
+metadata fails the release check. Keep the binary SHA256 alongside the commit
+and audit both files with `govulncheck -mode=binary` before deployment.

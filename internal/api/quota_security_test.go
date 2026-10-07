@@ -27,8 +27,8 @@ func TestQuotaCapacityAndExpiration(t *testing.T) {
 	if len(q.clients) != 10000 {
 		t.Fatal("idle cleanup evicted live identities")
 	}
-	// At exactly 24h the inactive windows may expire, but the recently used
-	// identity remains and resets its own window on use.
+	// At exactly 24h these inactive windows have all expired, so cleanup may
+	// free capacity without discarding any live daily budget.
 	cb = q.bucketFor("fresh", now.Add(24*time.Hour))
 	if cb == nil {
 		t.Fatal("expired identities did not free capacity")
