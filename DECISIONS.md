@@ -828,3 +828,25 @@ contract and must not acquire live LLM work as a side effect.
   LLM-free boundary, ingest schedule, models, token limits, or existing ports.
   Units, reader/writer permissions, Linux WAL verification and safe deployment
   are subsequent work. The canonical header must be present before app rollout.
+
+### Daemon confinement and SQLite reader/writer separation (2026-10-07)
+
+- Status: accepted for security implementation, pending deployment.
+- The API uses a dedicated `eventsintel-api` account with the shared
+  `eventsintel-read` group. The existing `eventsintel` writer, its primary
+  group, Chrome state and timer remain. A writer-owned setgid data directory
+  (2750) and writer UMask0027 keep DB/WAL/SHM group-readable (0640) without
+  reader write permissions. MCP uses a separate `eventmcp` account with no
+  event-data group and only its private quota persistent write exception.
+- Both HTTP units use strict filesystem/home/tmp/device confinement, no new
+  privileges, no capabilities and explicit resource bounds. EnvironmentFile
+  stays root0600 and is loaded by PID1. No product Go code or event schema changes.
+- Read-only WAL startup fails when sidecars are absent. A bounded writer
+  `eventsintel-wal-prepare` oneshot uses SQLite persist_wal and schema reads to
+  prepare sidecars before each API start; it never remains active or creates a
+  missing DB. This confines SQLite bootstrap to the writer instead of granting
+  the API data writes or treating the changing database as immutable.
+- Deploy both daemons only after C0 adds the canonical header. Preserve prior
+  binaries, units/drop-ins and permissions; restore affected services by atomic
+  rename on failure. Keep event data and current quota reservations. An old MCP
+  without the durable budget stays restricted rather than exposing paid calls.

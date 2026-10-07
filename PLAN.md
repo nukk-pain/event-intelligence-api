@@ -17,6 +17,10 @@
 > approach; the v0.1 schema in `prototype/manual-dataset-schema.md` is retained as
 > the data contract. Single execution scope lives in the `.tasks` plan.
 
+The 2026-10-07 deployment security preparation is scoped separately in
+`.tasks/261007-vps-security-c3b/PLAN.md`, following the C3a contracts. It does
+not change the product shaping scope or authorize a live deployment.
+
 ## Summary
 
 Shape a free public event intelligence UI and read-only API for AI, humanoid,

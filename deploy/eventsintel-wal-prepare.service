@@ -1,0 +1,41 @@
+[Unit]
+Description=Prepare SQLite WAL sidecars for the read-only events API
+Before=eventsintel-api.service
+
+[Service]
+Type=oneshot
+User=eventsintel
+Group=eventsintel
+SupplementaryGroups=eventsintel-read
+UMask=0027
+# A missing DB is a deployment error; never create an empty replacement.
+ExecStartPre=/usr/bin/test -f /srv/developer/events-intel/data/events.db
+# Keep sidecars on this connection's close. Subsequent writer cleanup can
+# remove them while the API is down, so this inactive oneshot runs each start.
+ExecStart=/usr/bin/sqlite3 -bail /srv/developer/events-intel/data/events.db ".timeout 5000" ".filectrl persist_wal 1" "SELECT count(*) FROM sqlite_schema;"
+ExecStartPost=/usr/bin/test -r /srv/developer/events-intel/data/events.db-wal
+ExecStartPost=/usr/bin/test -r /srv/developer/events-intel/data/events.db-shm
+TimeoutStartSec=15
+ProtectSystem=strict
+ReadWritePaths=/srv/developer/events-intel/data
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+NoNewPrivileges=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_UNIX
+SystemCallArchitectures=native
+MemoryMax=32M
+CPUQuota=50%
+TasksMax=16
+LimitNOFILE=64

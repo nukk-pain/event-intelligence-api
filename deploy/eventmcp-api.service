@@ -4,7 +4,9 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-User=root
+Type=simple
+User=eventmcp
+Group=eventmcp
 WorkingDirectory=/srv/developer/events-intel
 ExecStart=/srv/developer/events-intel/eventsintel-mcp -http 127.0.0.1:3008 -api-base http://127.0.0.1:3005
 Restart=on-failure
@@ -14,6 +16,36 @@ RestartSec=5
 # backend picker tries 127.0.0.1:18900 first and every ask fails.
 Environment=EVENTSINTEL_LOCAL_BASE_URL=off
 EnvironmentFile=/srv/developer/events-intel/solar.env
+Environment=EVENTMCP_QUOTA_DIR=/var/lib/eventmcp-quota
+StateDirectory=eventmcp-quota
+StateDirectoryMode=0700
+UMask=0077
+# Only the private provider reservation journal is persistently writable.
+ProtectSystem=strict
+ReadWritePaths=/var/lib/eventmcp-quota
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+NoNewPrivileges=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+InaccessiblePaths=-/srv/developer/events-intel/data -/var/lib/eventsintel
+# Observed idle peak was 11 MiB; allow headroom for two model calls.
+MemoryMax=192M
+CPUQuota=75%
+TasksMax=96
+LimitNOFILE=1024
 
 [Install]
 WantedBy=multi-user.target

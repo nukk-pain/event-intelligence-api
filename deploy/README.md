@@ -101,6 +101,10 @@ then flip `proxied:true`.
 
 ## Re-deploy (code update to an already-live service)
 
+For the two-daemon security rollout, account/SQLite permissions and reversible
+release recovery, follow [security-redeploy.md](security-redeploy.md). It
+supersedes the API-only steps below for that release.
+
 1. Cross-compile the linux binary (step 1 above).
 2. `scp` it to `eventsintel.new`, back up the current binary (`cp -a eventsintel
    eventsintel.bak-$(date -u +%Y%m%dT%H%M%SZ)`), verify the uploaded sha256, then
@@ -146,8 +150,7 @@ purge once manually (see the cache-rule doc) so the edge drops the stale HTML.
 
 ## Rollback
 
-- `systemctl disable --now eventsintel-api eventsintel-ingest.timer`
-- Remove the `events.nukk.net` block from `/etc/caddy/Caddyfile` → reload.
-- Remove the Cloudflare Cache Rule (`http_request_cache_settings` entrypoint) if rolling back edge caching.
-- Delete the Cloudflare A record.
-- `git revert` is not applicable (no repo); keep the prior binary as `eventsintel.bak`.
+Restore the preserved executable and unit for the affected daemon using
+[the release rollback procedure](security-redeploy.md#rollback), then verify
+the origin and public edge. Keep the event DB and current MCP quota state.
+DNS/site/cache-rule removal belongs to a separately authorized decommission.

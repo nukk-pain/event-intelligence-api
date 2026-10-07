@@ -7,6 +7,9 @@ Wants=network-online.target
 Type=oneshot
 User=eventsintel
 Group=eventsintel
+SupplementaryGroups=eventsintel-read
+# The setgid data directory gives newly created WAL/SHM files the read group.
+UMask=0027
 StateDirectory=eventsintel
 StateDirectoryMode=0750
 WorkingDirectory=/srv/developer/events-intel

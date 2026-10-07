@@ -1,12 +1,15 @@
 [Unit]
 Description=eventsintel read-only API (events.nukk.net)
-After=network-online.target
+After=network-online.target eventsintel-wal-prepare.service
 Wants=network-online.target
+Requires=eventsintel-wal-prepare.service
 
 [Service]
 Type=simple
-User=eventsintel
-Group=eventsintel
+User=eventsintel-api
+Group=eventsintel-api
+SupplementaryGroups=eventsintel-read
+UMask=0027
 WorkingDirectory=/srv/developer/events-intel
 ExecStart=/srv/developer/events-intel/eventsintel serve
 Environment=EVENTSINTEL_HTTP_ADDR=127.0.0.1:3005
@@ -14,8 +17,30 @@ Environment=EVENTSINTEL_DB_PATH=/srv/developer/events-intel/data/events.db
 Restart=on-failure
 RestartSec=3
 # Read-only API: hardening
-ProtectSystem=full
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
 NoNewPrivileges=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+InaccessiblePaths=-/srv/developer/events-intel/solar.env -/srv/developer/events-intel/cf-purge.env -/var/lib/eventsintel -/var/lib/eventmcp-quota
+# Observed idle peak was 26 MiB; allow headroom for the 100-handler cap.
+MemoryMax=256M
+CPUQuota=100%
+TasksMax=128
+LimitNOFILE=4096
 
 [Install]
 WantedBy=multi-user.target

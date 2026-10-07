@@ -10,11 +10,15 @@
 
 ## Current Focus
 
-(2026-10-07) C3a security implementation is committed locally. Scoped evidence
-and contracts live in `.tasks/261007-vps-security-c3a/PROGRESS.md`. Scoped security
-tests and race checks, vet, builds and source/Linux binary audits pass. The full
-test gate awaits the coordinator's decision on a pre-existing dated fixture.
-Unit hardening and Linux permission/deployment verification follow in C3b.
+(2026-10-07) C3b follows the C3a security contracts. The approved Markdown
+fixture now uses today +30/+32 days; full tests, vet, both builds and the API
+race gate pass. Daemon unit hardening verifies under systemd 255, with static
+exposure scores improving to 3.1 for each daemon. Isolated Linux tests confirm
+reader/writer permissions, denied reader writes and durable MCP reservations.
+An inactive writer-side WAL preparation unit now runs before every API start,
+preserving read-only startup even when ingest removed sidecars while API was down.
+Current scope and evidence gates live in `.tasks/261007-vps-security-c3b/PLAN.md`;
+deployment remains a separate authorized phase.
 
 (2026-08-29 삽입) 기본 UI 목록을 진행·예정·일정 미정 중심으로 전환하고
 `지난 행사 포함`을 명시적 선택으로 분리했다. 보존된 과거 회차는 읽을 때
