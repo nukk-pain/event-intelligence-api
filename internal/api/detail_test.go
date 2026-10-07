@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/smpain/event-intelligence-api/internal/api"
 	"github.com/smpain/event-intelligence-api/internal/model"
@@ -407,8 +408,11 @@ func TestChanges_PaginationKeysetTotalOrder(t *testing.T) {
 func TestGetEvent_MarkdownNegotiation(t *testing.T) {
 	ev := seedEvent("ev-001", "coex", "ai", false)
 	ev.Name = "AI Summit"
-	ev.StartDate = strptr("2026-09-01")
-	ev.EndDate = strptr("2026-09-03")
+	now := time.Now()
+	startDate := now.AddDate(0, 0, 30).Format("2006-01-02")
+	endDate := now.AddDate(0, 0, 32).Format("2006-01-02")
+	ev.StartDate = strptr(startDate)
+	ev.EndDate = strptr(endDate)
 	ev.Status = "scheduled"
 	srv := newServer(t, []model.Event{ev})
 
@@ -434,7 +438,7 @@ func TestGetEvent_MarkdownNegotiation(t *testing.T) {
 	}
 
 	// The markdown must carry the pinned field set's values and column names.
-	for _, want := range []string{"ev-001", "AI Summit", "2026-09-01", "2026-09-03", "scheduled"} {
+	for _, want := range []string{"ev-001", "AI Summit", startDate, endDate, "scheduled"} {
 		if !strings.Contains(mdQuery, want) {
 			t.Errorf("detail md missing value %q\nmd:\n%s", want, mdQuery)
 		}
