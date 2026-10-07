@@ -18,6 +18,7 @@ import (
 	"github.com/smpain/event-intelligence-api/internal/cfpurge"
 	"github.com/smpain/event-intelligence-api/internal/config"
 	"github.com/smpain/event-intelligence-api/internal/fetch"
+	"github.com/smpain/event-intelligence-api/internal/httpserver"
 	"github.com/smpain/event-intelligence-api/internal/pipeline"
 	"github.com/smpain/event-intelligence-api/internal/render"
 	"github.com/smpain/event-intelligence-api/internal/solarenrich"
@@ -330,5 +331,5 @@ func runServe(cfg config.Config) error {
 		return err
 	}
 	log.Printf("eventsintel serve listening on %s", cfg.HTTPAddr)
-	return http.ListenAndServe(cfg.HTTPAddr, handler)
+	return httpserver.New(cfg.HTTPAddr, handler).ListenAndServe()
 }

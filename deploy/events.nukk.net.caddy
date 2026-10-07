@@ -8,13 +8,19 @@ events.nukk.net {
 	# MCP transport is a separate daemon so the normal read API stays LLM-free;
 	# only the /mcp path (and its health probe) reaches it.
 	handle /mcp {
-		reverse_proxy 127.0.0.1:3008
+		reverse_proxy 127.0.0.1:3008 {
+			header_up X-Real-Client-IP {client_ip}
+		}
 	}
 	handle /mcp/healthz {
 		rewrite * /healthz
-		reverse_proxy 127.0.0.1:3008
+		reverse_proxy 127.0.0.1:3008 {
+			header_up X-Real-Client-IP {client_ip}
+		}
 	}
 	handle {
-		reverse_proxy 127.0.0.1:3005
+		reverse_proxy 127.0.0.1:3005 {
+			header_up X-Real-Client-IP {client_ip}
+		}
 	}
 }

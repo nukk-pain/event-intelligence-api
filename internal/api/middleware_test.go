@@ -76,7 +76,6 @@ func testConfig() api.MiddlewareConfig {
 		PerDay:          2000,
 		MaxConcurrent:   100,
 		MaxResponseSize: 1 << 20,
-		TrustedProxies:  []string{"127.0.0.1/32", "::1/128"},
 	}
 }
 
@@ -182,10 +181,10 @@ func TestQuota_SpoofedXFFFromUntrustedPeer(t *testing.T) {
 	}
 }
 
-// TestQuota_TrustedProxyHonorsCFConnectingIP asserts that when the real peer IS
-// a trusted proxy, the CF-Connecting-IP is honored, so two different forwarded
+// TestQuota_LoopbackHonorsCanonicalIP asserts that when the real peer IS
+// a loopback proxy, X-Real-Client-IP is honored, so two different forwarded
 // client IPs get independent buckets.
-func TestQuota_TrustedProxyHonorsCFConnectingIP(t *testing.T) {
+func TestQuota_LoopbackHonorsCanonicalIP(t *testing.T) {
 	cfg := testConfig()
 	cfg.PerMinute = 2
 	mw, err := api.NewQuotaMiddleware(cfg)
@@ -198,16 +197,16 @@ func TestQuota_TrustedProxyHonorsCFConnectingIP(t *testing.T) {
 
 	// Client A: exhaust then breach.
 	for i := 0; i < cfg.PerMinute; i++ {
-		if rec := doReq(h, trustedPeer, map[string]string{"CF-Connecting-IP": "203.0.113.111"}); rec.Code != http.StatusOK {
+		if rec := doReq(h, trustedPeer, map[string]string{"X-Real-Client-IP": "203.0.113.111"}); rec.Code != http.StatusOK {
 			t.Fatalf("clientA request %d = %d, want 200", i, rec.Code)
 		}
 	}
-	if rec := doReq(h, trustedPeer, map[string]string{"CF-Connecting-IP": "203.0.113.111"}); rec.Code != http.StatusTooManyRequests {
+	if rec := doReq(h, trustedPeer, map[string]string{"X-Real-Client-IP": "203.0.113.111"}); rec.Code != http.StatusTooManyRequests {
 		t.Fatalf("clientA breach = %d, want 429", rec.Code)
 	}
 
 	// Client B (different forwarded IP via the same trusted proxy) is independent.
-	if rec := doReq(h, trustedPeer, map[string]string{"CF-Connecting-IP": "203.0.113.222"}); rec.Code != http.StatusOK {
+	if rec := doReq(h, trustedPeer, map[string]string{"X-Real-Client-IP": "203.0.113.222"}); rec.Code != http.StatusOK {
 		t.Fatalf("clientB first request = %d, want 200 (independent bucket)", rec.Code)
 	}
 }

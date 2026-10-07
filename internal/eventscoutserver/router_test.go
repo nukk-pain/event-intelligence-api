@@ -66,7 +66,7 @@ func TestReadAPIRouter_does_not_expose_discovery_route(t *testing.T) {
 	// Given
 	handler, err := api.Router(nil, api.MiddlewareConfig{
 		PerMinute: 100, PerDay: 1000, MaxConcurrent: 10, MaxResponseSize: 1 << 20,
-		TrustedProxies: []string{"127.0.0.1/32"}, IdleTTL: time.Hour,
+		IdleTTL: time.Hour,
 	})
 	if err != nil {
 		t.Fatalf("api.Router() error = %v", err)

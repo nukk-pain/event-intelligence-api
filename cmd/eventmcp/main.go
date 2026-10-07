@@ -22,8 +22,10 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
@@ -35,7 +37,7 @@ const protocolVersion = "2025-06-18"
 var (
 	// query runs a Filter against the data source (live API or fixture) and
 	// returns matching events. Set in main once the source is chosen.
-	query func(agent.Filter) ([]agent.Event, error)
+	query func(context.Context, agent.Filter) ([]agent.Event, error)
 	// refDateFn returns the reference date for relative queries. The stdio CLI
 	// pins it per process; the HTTP server must not, since it runs for days and
 	// "다음 달" asked in September must not resolve against a July start date.
@@ -60,8 +62,11 @@ func main() {
 	}
 
 	if *source == "api" {
-		query = func(f agent.Filter) ([]agent.Event, error) {
-			return agent.QueryEvents(context.Background(), *apiBase, f, *max, 20*time.Second)
+		query = func(ctx context.Context, f agent.Filter) ([]agent.Event, error) {
+			if *httpAddr != "" {
+				return agent.QueryEventsBounded(ctx, *apiBase, f, *max, 20*time.Second, 2)
+			}
+			return agent.QueryEvents(ctx, *apiBase, f, *max, 20*time.Second)
 		}
 		fmt.Fprintf(os.Stderr, "eventmcp: querying live API %s, ready on stdio\n", *apiBase)
 	} else {
@@ -75,10 +80,14 @@ func main() {
 			fmt.Fprintln(os.Stderr, "parse events:", err)
 			os.Exit(1)
 		}
-		query = func(f agent.Filter) ([]agent.Event, error) { return agent.Match(fixture, f), nil }
+		query = func(ctx context.Context, f agent.Filter) ([]agent.Event, error) { return agent.Match(fixture, f), nil }
 		fmt.Fprintf(os.Stderr, "eventmcp: loaded %d fixture events, ready on stdio\n", len(fixture))
 	}
 	if *httpAddr != "" {
+		if *max < 1 || *max > 200 {
+			fmt.Fprintln(os.Stderr, "HTTP mode requires -max in 1..200")
+			os.Exit(1)
+		}
 		if err := serveHTTP(*httpAddr); err != nil {
 			fmt.Fprintln(os.Stderr, "eventmcp http:", err)
 			os.Exit(1)
@@ -112,6 +121,8 @@ type rpcResp struct {
 type rpcErr struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
+	status  int
+	retry   int
 }
 
 func serve(in *os.File, out *os.File) {
@@ -127,7 +138,7 @@ func serve(in *os.File, out *os.File) {
 		if err := json.Unmarshal(line, &req); err != nil {
 			continue // ignore malformed line
 		}
-		result, rerr, isNotification := handle(req)
+		result, rerr, isNotification := handle(context.Background(), req, nil)
 		if isNotification {
 			continue // notifications get no response
 		}
@@ -141,7 +152,7 @@ func serve(in *os.File, out *os.File) {
 	}
 }
 
-func handle(req rpcReq) (result any, rerr *rpcErr, isNotification bool) {
+func handle(ctx context.Context, req rpcReq, budget *dailyBudget) (result any, rerr *rpcErr, isNotification bool) {
 	switch req.Method {
 	case "initialize":
 		return map[string]any{
@@ -150,11 +161,14 @@ func handle(req rpcReq) (result any, rerr *rpcErr, isNotification bool) {
 			"serverInfo":      map[string]any{"name": "eventmcp", "version": "0.1.0"},
 		}, nil, false
 	case "notifications/initialized", "notifications/cancelled":
+		// Stateless HTTP has no safe ownership binding for a second POST. Do not
+		// cancel by ID/IP: another anonymous client could cancel unrelated work.
+		// Deadline and connection cancellation are carried by the request context.
 		return nil, nil, true
 	case "tools/list":
 		return map[string]any{"tools": toolSchemas()}, nil, false
 	case "tools/call":
-		return callTool(req.Params)
+		return callTool(ctx, req.Params, budget)
 	default:
 		if len(req.ID) == 0 {
 			return nil, nil, true // unknown notification
@@ -191,7 +205,7 @@ func toolSchemas() []map[string]any {
 	}
 }
 
-func callTool(params json.RawMessage) (any, *rpcErr, bool) {
+func callTool(ctx context.Context, params json.RawMessage, budget *dailyBudget) (any, *rpcErr, bool) {
 	var p struct {
 		Name      string          `json:"name"`
 		Arguments json.RawMessage `json:"arguments"`
@@ -202,8 +216,10 @@ func callTool(params json.RawMessage) (any, *rpcErr, bool) {
 	switch p.Name {
 	case "search_events":
 		var f agent.Filter
-		_ = json.Unmarshal(p.Arguments, &f)
-		matched, err := query(f)
+		if err := json.Unmarshal(p.Arguments, &f); err != nil {
+			return nil, &rpcErr{Code: -32602, Message: "invalid filter"}, false
+		}
+		matched, err := query(ctx, f)
 		if err != nil {
 			return toolError("query events: " + err.Error()), nil, false
 		}
@@ -212,23 +228,42 @@ func callTool(params json.RawMessage) (any, *rpcErr, bool) {
 		var a struct {
 			Question string `json:"question"`
 		}
-		_ = json.Unmarshal(p.Arguments, &a)
-		return askEvents(a.Question)
+		if err := json.Unmarshal(p.Arguments, &a); err != nil {
+			return nil, &rpcErr{Code: -32602, Message: "invalid question"}, false
+		}
+		return askEvents(ctx, a.Question, budget)
 	default:
 		return nil, &rpcErr{Code: -32602, Message: "unknown tool: " + p.Name}, false
 	}
 }
 
-func askEvents(question string) (any, *rpcErr, bool) {
+func askEvents(ctx context.Context, question string, budget *dailyBudget) (any, *rpcErr, bool) {
 	backends := agent.LoadBackends()
 	if len(backends) == 0 {
 		return toolError("no LLM backend configured (set EVENTSINTEL_LOCAL_BASE_URL or EVENTSINTEL_SOLAR_API_KEY)"), nil, false
 	}
-	f, _, err := agent.ParseQuery(context.Background(), backends[0], question, refDateFn(), maxTokens, timeout)
+	if err := ctx.Err(); err != nil {
+		return toolError("request cancelled"), nil, false
+	}
+	if question == "" {
+		return nil, &rpcErr{Code: -32602, Message: "question is required"}, false
+	}
+	if budget != nil {
+		if err := budget.reserve(); err != nil {
+			if errors.Is(err, errDailyBudget) {
+				now := budget.now().UTC()
+				retry := retrySeconds(now.Truncate(24 * time.Hour).Add(24 * time.Hour).Sub(now))
+				return nil, &rpcErr{Code: -32000, Message: "daily provider budget exhausted", status: http.StatusTooManyRequests, retry: retry}, false
+			}
+			return nil, &rpcErr{Code: -32000, Message: "provider budget unavailable", status: http.StatusServiceUnavailable, retry: 60}, false
+		}
+		backends[0].DisableRedirects = true
+	}
+	f, _, err := agent.ParseQuery(ctx, backends[0], question, refDateFn(), maxTokens, timeout)
 	if err != nil {
 		return toolError("parse question: " + err.Error()), nil, false
 	}
-	matched, err := query(f)
+	matched, err := query(ctx, f)
 	if err != nil {
 		return toolError("query events: " + err.Error()), nil, false
 	}

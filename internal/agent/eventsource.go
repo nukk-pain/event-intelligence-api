@@ -26,6 +26,12 @@ var categoryAlias = map[string]string{
 // so the tool returns useful results rather than the oldest rows. The read API
 // is public and read-only, so no auth is needed.
 func QueryEvents(ctx context.Context, baseURL string, f Filter, max int, timeout time.Duration) ([]Event, error) {
+	return QueryEventsBounded(ctx, baseURL, f, max, timeout, 0)
+}
+
+// QueryEventsBounded limits upstream page requests, including empty pages with
+// a next cursor. maxPages <= 0 preserves the normal agent's pagination contract.
+func QueryEventsBounded(ctx context.Context, baseURL string, f Filter, max int, timeout time.Duration, maxPages int) ([]Event, error) {
 	q := url.Values{}
 	q.Set("limit", "100")
 	if cat := strings.ToLower(strings.TrimSpace(f.Category)); cat != "" {
@@ -47,11 +53,11 @@ func QueryEvents(ctx context.Context, baseURL string, f Filter, max int, timeout
 	base := strings.TrimRight(baseURL, "/") + "/api/v1/events"
 	var fetched []Event
 	cursor := ""
-	for len(fetched) < max {
+	for pages := 0; len(fetched) < max && (maxPages <= 0 || pages < maxPages); pages++ {
 		if cursor != "" {
 			q.Set("cursor", cursor)
 		}
-		page, err := fetchPage(ctx, base+"?"+q.Encode(), timeout)
+		page, err := fetchPage(ctx, base+"?"+q.Encode(), timeout, maxPages > 0)
 		if err != nil {
 			return fetched, err
 		}
@@ -117,7 +123,7 @@ func (a apiEvent) toEvent() Event {
 	return e
 }
 
-func fetchPage(ctx context.Context, u string, timeout time.Duration) (*apiResp, error) {
+func fetchPage(ctx context.Context, u string, timeout time.Duration, bounded bool) (*apiResp, error) {
 	cctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	req, err := http.NewRequestWithContext(cctx, http.MethodGet, u, nil)
@@ -126,7 +132,11 @@ func fetchPage(ctx context.Context, u string, timeout time.Duration) (*apiResp, 
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", "eventsintel-agent/0.1 (+https://events.nukk.net)")
-	resp, err := http.DefaultClient.Do(req)
+	client := http.DefaultClient
+	if bounded {
+		client = &http.Client{CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}

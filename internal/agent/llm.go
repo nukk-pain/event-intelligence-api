@@ -26,6 +26,9 @@ type Backend struct {
 	BaseURL string
 	APIKey  string
 	Model   string
+	// DisableRedirects lets a bounded caller guarantee one provider request
+	// per durable reservation. Other existing callers retain their behavior.
+	DisableRedirects bool
 }
 
 // Usage is the token accounting returned by the endpoint.
@@ -86,7 +89,11 @@ func (b Backend) Chat(ctx context.Context, system, user string, maxTokens int, t
 	}
 
 	start := time.Now()
-	resp, err := http.DefaultClient.Do(req)
+	client := http.DefaultClient
+	if b.DisableRedirects {
+		client = &http.Client{CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", Usage{}, 0, err
 	}

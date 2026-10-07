@@ -798,3 +798,33 @@ contract and must not acquire live LLM work as a side effect.
   country values are not guessed into either list and remain available through
   `list=all`. Source adapter, event-ID prefix, and organizer nationality do not
   affect the partition.
+
+### Anonymous MCP security budgets and cancellation (2026-10-07)
+
+- Status: accepted for the security implementation, pending deployment.
+- Supersedes the unlimited search and forwarded-header assumptions in the
+  2026-07-27 remote MCP decision. All HTTP tools share client limits of
+  10/minute and 120/day; ask retains 10/ten-minutes and 60/day. Tool execution
+  caps default to 8 global, 2/client, and 2 model-backed calls, without queues.
+- Anonymous HTTP model requests reserve against a durable UTC daily budget
+  (default 200, 0 disables), in a private directory separate from event data.
+  Append-only reservations are synced before provider I/O, held across restart,
+  never refunded, and fail closed on storage errors or conflicting processes.
+  This writable quota directory is the sole additional MCP unit write exception.
+- Both tools share a conservative read budget of 20/minute and 800/day, with
+  at most two API GETs per lookup. This leaves headroom in the shared loopback
+  bucket without trusting an arbitrary service identity or exempting loopback.
+  These search/client windows remain process-local; upstream exhaustion is an
+  MCP tool error and can still affect other users.
+- API/MCP identity trusts only a single valid X-Real-Client-IP from a loopback
+  peer, unwraps mapped IPv4 and groups IPv6 by /64. Invalid or duplicate headers
+  fall back to the peer. CF/XFF headers are never identities. Maps hold at most
+  10000 identities and evict only when all quota windows have expired.
+- HTTP deadline (30 seconds) and disconnect cancellation reach the provider and
+  read API. Execution slots are held until work returns. Stateless clients and
+  GET 405 remain compatible. notifications/cancelled is deliberately ignored:
+  an ID or IP alone cannot prove request ownership. No session system is added.
+- Code work does not change event data/schema, the cache-first read API's
+  LLM-free boundary, ingest schedule, models, token limits, or existing ports.
+  Units, reader/writer permissions, Linux WAL verification and safe deployment
+  are subsequent work. The canonical header must be present before app rollout.

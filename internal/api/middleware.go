@@ -4,8 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
-	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -13,6 +11,8 @@ import (
 	"time"
 
 	"golang.org/x/time/rate"
+
+	"github.com/smpain/event-intelligence-api/internal/clientidentity"
 )
 
 // jsonMarshal serializes v, falling back to a minimal hardcoded error envelope
@@ -29,7 +29,7 @@ func jsonMarshal(v any) []byte {
 // middleware.go implements the cache-first delivery guards for the read API:
 //   - ETag / Last-Modified conditional GET (304 on If-None-Match match)
 //   - the public-IP keyed two-counter quota (60/min token bucket + 2000/day
-//     rolling bucket) with trusted-proxy CF-Connecting-IP resolution
+//     rolling bucket) with loopback-only canonical proxy identity
 //   - a global bounded-concurrency limiter and a hard response-size cap
 //   - WriteError: the single error-envelope writer used everywhere
 //
@@ -213,10 +213,10 @@ type MiddlewareConfig struct {
 	MaxConcurrent int
 	// MaxResponseSize caps the bytes a handler may write. Default 1 MiB.
 	MaxResponseSize int64
-	// TrustedProxies is the CIDR set whose RemoteAddr is allowed to assert the
-	// real client via CF-Connecting-IP. Default: Cloudflare ranges + localhost.
-	TrustedProxies []string
-	// IdleTTL evicts a client's buckets after this much inactivity. Default 1h.
+	// MaxTrackedClients bounds the identity map. Default 10000. A full map
+	// rejects new identities rather than forgetting an active daily budget.
+	MaxTrackedClients int
+	// IdleTTL is the cleanup interval, never the lifetime of active quota.
 	IdleTTL time.Duration
 }
 
@@ -236,27 +236,10 @@ func (c MiddlewareConfig) withDefaults() MiddlewareConfig {
 	if c.IdleTTL <= 0 {
 		c.IdleTTL = time.Hour
 	}
-	if len(c.TrustedProxies) == 0 {
-		c.TrustedProxies = DefaultTrustedProxies()
+	if c.MaxTrackedClients <= 0 {
+		c.MaxTrackedClients = 10000
 	}
 	return c
-}
-
-// DefaultTrustedProxies returns Cloudflare's published IPv4/IPv6 egress ranges
-// plus loopback. Only requests whose RemoteAddr falls in this set may assert a
-// client IP via CF-Connecting-IP.
-func DefaultTrustedProxies() []string {
-	return []string{
-		"127.0.0.1/32", "::1/128",
-		// Cloudflare IPv4 (https://www.cloudflare.com/ips-v4)
-		"173.245.48.0/20", "103.21.244.0/22", "103.22.200.0/22", "103.31.4.0/22",
-		"141.101.64.0/18", "108.162.192.0/18", "190.93.240.0/20", "188.114.96.0/20",
-		"197.234.240.0/22", "198.41.128.0/17", "162.158.0.0/15", "104.16.0.0/13",
-		"104.24.0.0/14", "172.64.0.0/13", "131.0.72.0/22",
-		// Cloudflare IPv6 (https://www.cloudflare.com/ips-v6)
-		"2400:cb00::/32", "2606:4700::/32", "2803:f800::/32", "2405:b500::/32",
-		"2405:8100::/32", "2a06:98c0::/29", "2c0f:f248::/32",
-	}
 }
 
 // clientBuckets holds one client's two quota counters plus a last-seen stamp
@@ -293,28 +276,16 @@ func (d *dayBucket) allow(now time.Time) (ok bool, resetIn time.Duration) {
 
 // quotaMiddleware is the stateful per-IP limiter.
 type quotaMiddleware struct {
-	cfg     MiddlewareConfig
-	trusted []*net.IPNet
+	cfg       MiddlewareConfig
+	nextSweep time.Time
 
 	mu      sync.Mutex
 	clients map[string]*clientBuckets
 }
 
-// NewQuotaMiddleware builds the per-IP two-counter quota guard. It returns an
-// error if a configured trusted-proxy CIDR is malformed. The returned value is
-// a func(http.Handler) http.Handler suitable for chaining.
+// NewQuotaMiddleware builds the bounded per-IP two-counter quota guard.
 func NewQuotaMiddleware(cfg MiddlewareConfig) (func(http.Handler) http.Handler, error) {
-	cfg = cfg.withDefaults()
-	nets := make([]*net.IPNet, 0, len(cfg.TrustedProxies))
-	for _, c := range cfg.TrustedProxies {
-		_, n, err := net.ParseCIDR(c)
-		if err != nil {
-			return nil, fmt.Errorf("trusted proxy CIDR %q: %w", c, err)
-		}
-		nets = append(nets, n)
-	}
-	q := &quotaMiddleware{cfg: cfg, trusted: nets, clients: map[string]*clientBuckets{}}
-	go q.evictLoop()
+	q := &quotaMiddleware{cfg: cfg.withDefaults(), clients: map[string]*clientBuckets{}}
 	return q.handler, nil
 }
 
@@ -323,6 +294,10 @@ func (q *quotaMiddleware) handler(next http.Handler) http.Handler {
 		key := q.clientKey(r)
 		now := time.Now()
 		cb := q.bucketFor(key, now)
+		if cb == nil {
+			WriteRateLimited(w, "client quota capacity reached", 60)
+			return
+		}
 
 		// Day bucket first (cheaper to reject, and the harder cap).
 		dayOK, dayReset := cb.day.allow(now)
@@ -356,8 +331,15 @@ func (q *quotaMiddleware) handler(next http.Handler) http.Handler {
 func (q *quotaMiddleware) bucketFor(key string, now time.Time) *clientBuckets {
 	q.mu.Lock()
 	defer q.mu.Unlock()
+	if !now.Before(q.nextSweep) {
+		q.evictExpired(now)
+		q.nextSweep = now.Add(q.cfg.IdleTTL)
+	}
 	cb, ok := q.clients[key]
 	if !ok {
+		if len(q.clients) >= q.cfg.MaxTrackedClients {
+			return nil
+		}
 		cb = &clientBuckets{
 			minute: rate.NewLimiter(rate.Limit(float64(q.cfg.PerMinute)/60.0), q.cfg.PerMinute),
 			day:    &dayBucket{limit: q.cfg.PerDay, windowStart: now},
@@ -368,74 +350,20 @@ func (q *quotaMiddleware) bucketFor(key string, now time.Time) *clientBuckets {
 	return cb
 }
 
-func (q *quotaMiddleware) evictLoop() {
-	t := time.NewTicker(q.cfg.IdleTTL)
-	defer t.Stop()
-	for range t.C {
-		cutoff := time.Now().Add(-q.cfg.IdleTTL)
-		q.mu.Lock()
-		for k, cb := range q.clients {
-			if cb.lastSeen.Before(cutoff) {
-				delete(q.clients, k)
-			}
-		}
-		q.mu.Unlock()
-	}
-}
-
-// clientKey derives the quota bucket key from the request. It returns the
-// resolved client IP normalized to a /64 for IPv6 (so a single client cannot
-// cycle through a /64 to multiply its quota) or the full /32 for IPv4.
-func (q *quotaMiddleware) clientKey(r *http.Request) string {
-	ip := q.clientIP(r)
-	if ip == nil {
-		// Unparseable RemoteAddr: fall back to the raw value so it still keys to
-		// a single bucket rather than bypassing the quota.
-		return "raw:" + r.RemoteAddr
-	}
-	if v4 := ip.To4(); v4 != nil {
-		return v4.String()
-	}
-	// IPv6: mask to /64.
-	mask := net.CIDRMask(64, 128)
-	return ip.Mask(mask).String() + "/64"
-}
-
-// clientIP resolves the trusted client IP: CF-Connecting-IP is honored ONLY
-// when the direct peer (RemoteAddr) is itself within the trusted-proxy set;
-// otherwise the direct peer IP is used and any forwarded header is ignored.
-func (q *quotaMiddleware) clientIP(r *http.Request) net.IP {
-	peer := remoteIP(r.RemoteAddr)
-	if peer == nil {
-		return nil
-	}
-	if q.isTrusted(peer) {
-		if cf := strings.TrimSpace(r.Header.Get("CF-Connecting-IP")); cf != "" {
-			if ip := net.ParseIP(cf); ip != nil {
-				return ip
-			}
+// evictExpired is called under q.mu. Both windows must be expired/refilled;
+// inactivity alone must never replenish the client's daily quota.
+func (q *quotaMiddleware) evictExpired(now time.Time) {
+	for k, cb := range q.clients {
+		cb.day.mu.Lock()
+		expired := !now.Before(cb.day.windowStart.Add(24 * time.Hour))
+		cb.day.mu.Unlock()
+		if expired && cb.minute.TokensAt(now) >= float64(q.cfg.PerMinute) && !now.Before(cb.lastSeen.Add(q.cfg.IdleTTL)) {
+			delete(q.clients, k)
 		}
 	}
-	return peer
 }
 
-func (q *quotaMiddleware) isTrusted(ip net.IP) bool {
-	for _, n := range q.trusted {
-		if n.Contains(ip) {
-			return true
-		}
-	}
-	return false
-}
-
-// remoteIP extracts the IP from a host:port RemoteAddr, tolerating a bare IP.
-func remoteIP(remoteAddr string) net.IP {
-	host, _, err := net.SplitHostPort(remoteAddr)
-	if err != nil {
-		host = remoteAddr
-	}
-	return net.ParseIP(strings.TrimSpace(host))
-}
+func (q *quotaMiddleware) clientKey(r *http.Request) string { return clientidentity.Key(r) }
 
 // retrySeconds rounds a delay UP to whole seconds, with a floor of 1.
 func retrySeconds(d time.Duration) int {

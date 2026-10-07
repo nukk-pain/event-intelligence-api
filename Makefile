@@ -5,7 +5,8 @@ DB      ?= eventsintel.db
 .PHONY: build test vet refresh-fixtures migrate
 
 build:
-	go build -o bin/$(BINARY) ./cmd/eventsintel
+	go build -buildvcs=true -o bin/$(BINARY) ./cmd/eventsintel
+	go build -buildvcs=true -o bin/eventmcp ./cmd/eventmcp
 
 test:
 	go test $(PKG)

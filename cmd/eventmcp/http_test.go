@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -26,12 +27,17 @@ func mcpHandler(t *testing.T) http.Handler {
 	t.Cleanup(fake.Close)
 	t.Setenv("EVENTSINTEL_SOLAR_BASE_URL", fake.URL)
 	t.Setenv("EVENTSINTEL_LOCAL_BASE_URL", "off")
-	query = func(agent.Filter) ([]agent.Event, error) { return nil, nil }
+	query = func(context.Context, agent.Filter) ([]agent.Event, error) { return nil, nil }
 	refDateFn = func() string { return "2026-07-27" }
-	quota := &askQuota{clients: make(map[string]*askWindows)}
+	quota := newToolQuota(httpConfig{concurrent: 8, clientConcurrent: 2, llmConcurrent: 2})
+	budget, err := openDailyBudget(privateQuotaDir(t), 200)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(budget.Close)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/mcp", func(w http.ResponseWriter, r *http.Request) {
-		mcpPost(w, r, quota)
+		mcpPost(w, r, quota, budget)
 	})
 	return mux
 }
@@ -40,7 +46,7 @@ func postJSON(t *testing.T, h http.Handler, body string, headers map[string]stri
 	t.Helper()
 	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(body))
 	// The deployment shape is Caddy on the same host, so the peer is loopback
-	// and the client identity arrives in X-Forwarded-For.
+	// and the client identity arrives in X-Real-Client-IP.
 	req.RemoteAddr = "127.0.0.1:9999"
 	req.Header.Set("Content-Type", "application/json")
 	for k, v := range headers {
@@ -113,14 +119,14 @@ func TestHTTP_oversizedBodyIsRejected(t *testing.T) {
 	}
 }
 
-// Only ask_events spends the operator's Solar budget, so only it may draw down
-// the quota — and clients must not share one bucket.
-func TestHTTP_quotaBindsOnlyAskEventsPerClient(t *testing.T) {
+// All tools spend request quotas; only ask_events spends the provider budget.
+// Clients must not share a per-client bucket.
+func TestHTTP_askQuotaBindsPerClient(t *testing.T) {
 	// Given
 	h := mcpHandler(t)
 	ask := `{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"ask_events","arguments":{"question":"q"}}}`
-	alice := map[string]string{"X-Forwarded-For": "203.0.113.5"}
-	bob := map[string]string{"X-Forwarded-For": "203.0.113.9"}
+	alice := map[string]string{"X-Real-Client-IP": "203.0.113.5"}
+	bob := map[string]string{"X-Real-Client-IP": "203.0.113.9"}
 
 	// When: alice exhausts her ten-minute window.
 	var last *httptest.ResponseRecorder
@@ -154,13 +160,13 @@ func TestServeHTTP_refusesToStartWithoutKey(t *testing.T) {
 func TestClientKey_trustsForwardedOnlyFromLoopback(t *testing.T) {
 	direct := httptest.NewRequest(http.MethodPost, "/mcp", bytes.NewReader(nil))
 	direct.RemoteAddr = "198.51.100.7:4444"
-	direct.Header.Set("X-Forwarded-For", "10.0.0.1")
+	direct.Header.Set("X-Real-Client-IP", "10.0.0.1")
 	if got := clientKey(direct); got != "198.51.100.7" {
 		t.Fatalf("clientKey = %q, want the direct peer, not its forged header", got)
 	}
 	proxied := httptest.NewRequest(http.MethodPost, "/mcp", bytes.NewReader(nil))
 	proxied.RemoteAddr = "127.0.0.1:5555"
-	proxied.Header.Set("X-Forwarded-For", "203.0.113.5")
+	proxied.Header.Set("X-Real-Client-IP", "203.0.113.5")
 	if got := clientKey(proxied); got != "203.0.113.5" {
 		t.Fatalf("clientKey = %q, want the forwarded client behind the local proxy", got)
 	}

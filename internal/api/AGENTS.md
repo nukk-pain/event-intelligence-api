@@ -25,8 +25,8 @@
   arrays, effective limit echo, and keyset cursor semantics.
 - Keep the middleware order: concurrency cap, per-IP quota, ETag conditional
   handling, response-size cap, then handlers.
-- Trust forwarded client identity only from configured proxy CIDRs. Never use a
-  caller-controlled forwarding header from an untrusted peer.
+- Trust one valid `X-Real-Client-IP` only from loopback socket peers. Legacy
+  CF/XFF headers never establish identity. Normalize mapped IPv4 before /64.
 - Every negotiated response varies on `Accept`; root HTML and root JSON must not
   poison each other's shared cache.
 - Markdown free text is escaped and URLs are bounded autolinks. Do not allow
